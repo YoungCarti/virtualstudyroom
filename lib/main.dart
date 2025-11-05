@@ -1,11 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'auth_page.dart';
 
 Future<void> main() async {
 
   WidgetsFlutterBinding.ensureInitialized();
 
-  Firebase.initializeApp();
+    await Firebase.initializeApp();
 
   runApp(const MyApp());
 }
@@ -36,7 +37,9 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      // For testing auth flows during development, open the AuthPage directly.
+      // Replace with your app's normal home once Firebase auth is wired.
+      home: const AuthPage(),
     );
   }
 }
