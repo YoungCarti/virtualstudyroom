@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1245194928",
+    "project_id": "virtualstudyroom-e5a02",
+    "storage_bucket": "virtualstudyroom-e5a02.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1245194928:android:cbbcbc742c92f3d8a8a975",
+        "android_client_info": {
+          "package_name": "com.example.demoflutter"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVFoRr1x4LpDAPkNpPRqgYx-Z3T6FOnnA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
