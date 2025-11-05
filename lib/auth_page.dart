@@ -113,16 +113,6 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 8),
 
-                // Additional registration-only fields
-                if (_isRegister) ...[
-                  TextField(
-                    controller: _phoneController,
-                    keyboardType: TextInputType.phone,
-                    decoration: const InputDecoration(labelText: 'Phone number'),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
                 TextField(
                   controller: _passController,
                   obscureText: true,
