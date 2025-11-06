@@ -29,7 +29,6 @@ class _AuthPageState extends State<AuthPage> {
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final pass = _passController.text;
-    final phone = _phoneController.text.trim();
     final confirm = _confirmController.text;
 
     // Basic shared validation
@@ -41,14 +40,7 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     if (_isRegister) {
-      // Registration validation: phone required, passwords must match
-      if (phone.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please enter a phone number.')),
-        );
-        return;
-      }
-
+      // Registration validation: passwords must match
       if (pass.length < 6) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Password must be at least 6 characters.')),
