@@ -1,5 +1,7 @@
 {
   "projects": {
     "default": "virtualstudyroom-cfc3a"
-  }
+  },
+  "targets": {},
+  "etags": {}
 }
