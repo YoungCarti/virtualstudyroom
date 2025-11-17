@@ -10,9 +10,6 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-  static const Color _primaryPurple = Color(0xFF6C63FF);
-  static const Color _secondaryPurple = Color(0xFFB4A0FF);
-  static const Color _backgroundTint = Color(0xFFF4F1FF);
 
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
@@ -92,330 +89,291 @@ class _AuthPageState extends State<AuthPage> {
     setState(() => _isRegister = !_isRegister);
   }
 
-  InputDecoration _decoration(String label, {Widget? suffix}) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white.withValues(alpha: 0.85),
-      labelStyle: const TextStyle(
-        fontWeight: FontWeight.w600,
-        color: Color(0xFF3A3A5A),
-      ),
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(24),
-        borderSide: BorderSide.none,
-      ),
-      suffixIcon: suffix,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-
+    
     return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              _backgroundTint,
-              _secondaryPurple.withValues(alpha: 0.35),
-              _primaryPurple.withValues(alpha: .25),
-            ],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final cardWidth = constraints.maxWidth > 500 ? 420.0 : double.infinity;
-              return Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(maxWidth: cardWidth),
-                    child: Column(
-                      children: [
-                        Text(
-                          'StudySpace',
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            color: _primaryPurple,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 400),
-                          child: Text(
-                            _isRegister ? 'Create Account' : 'Welcome Back',
-                            key: ValueKey(_isRegister),
-                            style: theme.textTheme.displaySmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white : const Color(0xFF2B2B40),
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          _isRegister
-                              ? 'Join the community and start studying smarter.'
-                              : 'Log in to focus, collaborate, and stay motivated.',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark ? Colors.white70 : const Color(0xFF5A5A74),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 32),
-                        _GlassCard(
-                          isDark: isDark,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              _ModeSwitch(
-                                isRegister: _isRegister,
-                                onChanged: (_) => _toggleMode(),
-                              ),
-                              const SizedBox(height: 24),
-                              TextField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                decoration: _decoration('Email'),
-                              ),
-                              const SizedBox(height: 16),
-                              TextField(
-                                controller: _passController,
-                                obscureText: _obscurePassword,
-                                decoration: _decoration(
-                                  'Password',
-                                  suffix: IconButton(
-                                    icon: Icon(
-                                      _obscurePassword
-                                          ? Icons.visibility_off_rounded
-                                          : Icons.visibility_rounded,
-                                    ),
-                                    onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 300),
-                                child: !_isRegister
-                                    ? const SizedBox.shrink()
-                                    : Padding(
-                                        padding: const EdgeInsets.only(top: 16),
-                                        child: TextField(
-                                          controller: _confirmController,
-                                          obscureText: _obscureConfirm,
-                                          decoration: _decoration(
-                                            'Confirm Password',
-                                            suffix: IconButton(
-                                              icon: Icon(
-                                                _obscureConfirm
-                                                    ? Icons.visibility_off_rounded
-                                                    : Icons.visibility_rounded,
-                                              ),
-                                              onPressed: () => setState(
-                                                () => _obscureConfirm = !_obscureConfirm,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                              const SizedBox(height: 28),
-                              SizedBox(
-                                width: double.infinity,
-                                child: ElevatedButton(
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: _primaryPurple,
-                                    padding: const EdgeInsets.symmetric(vertical: 16),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(28),
-                                    ),
-                                    elevation: 6,
-                                  ),
-                                  onPressed: _loading ? null : _submit,
-                                  child: AnimatedSwitcher(
-                                    duration: const Duration(milliseconds: 250),
-                                    child: _loading
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            _isRegister ? 'Create Account' : 'Login',
-                                            style: const TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              TextButton(
-                                onPressed: _loading ? null : _toggleMode,
-                                child: Text(
-                                  _isRegister
-                                      ? 'Already have an account? Sign in'
-                                      : 'Don’t have an account? Sign up',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w600,
-                                    color: _primaryPurple,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _GlassCard extends StatelessWidget {
-  const _GlassCard({required this.child, required this.isDark});
-
-  final Widget child;
-  final bool isDark;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 400),
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: isDark ? Colors.black.withValues(alpha: 0.35) : Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(32),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.1),
-            offset: const Offset(0, 20),
-            blurRadius: 45,
-            spreadRadius: -15,
-          ),
-        ],
-        border: Border.all(
-          color: Colors.white.withValues(alpha: isDark ? 0.2 : 0.5),
-          width: 1,
-        ),
-      ),
-      child: child,
-    );
-  }
-}
-
-class _ModeSwitch extends StatelessWidget {
-  const _ModeSwitch({
-    required this.isRegister,
-    required this.onChanged,
-  });
-
-  final bool isRegister;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
+      body: Stack(
+        fit: StackFit.expand,
         children: [
-          Expanded(
-            child: _SwitchButton(
-              label: 'Login',
-              selected: !isRegister,
-              onTap: () {
-                if (isRegister) onChanged(false);
-              },
+          // TODO: Replace the AssetImage below with your cozy study background.
+          // e.g. AssetImage('assets/images/studystream_bg.jpg')
+          // Ensure the asset is added to pubspec.yaml.
+          Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/images/placeholder_cozy_bg.jpg'),
+                fit: BoxFit.cover,
+              ),
             ),
           ),
-          Expanded(
-            child: _SwitchButton(
-              label: 'Register',
-              selected: isRegister,
-              onTap: () {
-                if (!isRegister) onChanged(true);
-              },
+          DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.black.withValues(alpha: 0.75),
+                  Colors.black.withValues(alpha: 0.65),
+                  Colors.black.withValues(alpha: 0.85),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchButton extends StatelessWidget {
-  const _SwitchButton({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-      decoration: BoxDecoration(
-        color: selected ? const Color(0xFF6C63FF) : Colors.transparent,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: selected
-            ? [
-                BoxShadow(
-                  color: const Color(0xFF6C63FF).withValues(alpha: 0.4),
-                  blurRadius: 12,
-                  offset: const Offset(0, 8),
-                ),
-              ]
-            : null,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
-            child: Center(
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: selected ? Colors.white : const Color(0xFF6C63FF),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 16,
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Spacer(),
+                      _LogoHeader(),
+                      const SizedBox(height: 24),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 300),
+                        child: Text(
+                          _isRegister ? 'Create your account' : 'Welcome back!',
+                          key: ValueKey(_isRegister),
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.headlineSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      _AuthFields(
+                        emailController: _emailController,
+                        passController: _passController,
+                        confirmController: _confirmController,
+                        isRegister: _isRegister,
+                        obscurePassword: _obscurePassword,
+                        obscureConfirm: _obscureConfirm,
+                        onTogglePassword: () => setState(
+                          () => _obscurePassword = !_obscurePassword,
+                        ),
+                        onToggleConfirm: () => setState(
+                          () => _obscureConfirm = !_obscureConfirm,
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      SizedBox(
+                        height: 52,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withValues(alpha: 0.15),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(26),
+                            ),
+                          ),
+                          onPressed: _loading ? null : _submit,
+                          child: AnimatedSwitcher(
+                            duration: const Duration(milliseconds: 250),
+                            child: _loading
+                                ? const SizedBox(
+                                    height: 20,
+                                    width: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : Text(
+                                    _isRegister ? 'Register' : 'Log In',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 18,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Center(
+                        child: TextButton(
+                          onPressed: _toggleMode,
+                          child: Text(
+                            _isRegister
+                                ? 'Already have an account? Log in'
+                                : 'New to StudyStream? Register here',
+                            style: const TextStyle(
+                              color: Color(0xFF8AB7FF),
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
                 ),
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+}
+
+class _LogoHeader extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                gradient: const LinearGradient(
+                  colors: [
+                    Color(0xFF6C63FF),
+                    Color(0xFF8B7BFF),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: const Icon(Icons.layers_rounded, color: Colors.white),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              'StudyStream',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Welcome to StudyStream',
+          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                color: Colors.white70,
+              ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AuthFields extends StatelessWidget {
+  const _AuthFields({
+    required this.emailController,
+    required this.passController,
+    required this.confirmController,
+    required this.isRegister,
+    required this.obscurePassword,
+    required this.obscureConfirm,
+    required this.onTogglePassword,
+    required this.onToggleConfirm,
+  });
+
+  final TextEditingController emailController;
+  final TextEditingController passController;
+  final TextEditingController confirmController;
+  final bool isRegister;
+  final bool obscurePassword;
+  final bool obscureConfirm;
+  final VoidCallback onTogglePassword;
+  final VoidCallback onToggleConfirm;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        _DarkField(
+          controller: emailController,
+          hint: 'Email address',
+          icon: Icons.mail_outline_rounded,
+          keyboardType: TextInputType.emailAddress,
+        ),
+        const SizedBox(height: 16),
+        _DarkField(
+          controller: passController,
+          hint: 'Password',
+          icon: Icons.lock_outline_rounded,
+          obscureText: obscurePassword,
+          onToggleVisibility: onTogglePassword,
+        ),
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: !isRegister
+              ? const SizedBox.shrink()
+              : Padding(
+                  padding: const EdgeInsets.only(top: 16),
+                  child: _DarkField(
+                    controller: confirmController,
+                    hint: 'Confirm password',
+                    icon: Icons.lock_person_rounded,
+                    obscureText: obscureConfirm,
+                    onToggleVisibility: onToggleConfirm,
+                  ),
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DarkField extends StatelessWidget {
+  const _DarkField({
+    required this.controller,
+    required this.hint,
+    required this.icon,
+    this.keyboardType,
+    this.obscureText = false,
+    this.onToggleVisibility,
+  });
+
+  final TextEditingController controller;
+  final String hint;
+  final IconData icon;
+  final TextInputType? keyboardType;
+  final bool obscureText;
+  final VoidCallback? onToggleVisibility;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      obscureText: obscureText,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        filled: true,
+        fillColor: Colors.white.withValues(alpha: 0.08),
+        hintText: hint,
+        hintStyle: const TextStyle(color: Colors.white60),
+        prefixIcon: Icon(icon, color: Colors.white70),
+        suffixIcon: onToggleVisibility == null
+            ? null
+            : IconButton(
+                onPressed: onToggleVisibility,
+                icon: Icon(
+                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  color: Colors.white70,
+                ),
+              ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(24),
+          borderSide: BorderSide.none,
         ),
       ),
     );
   }
 }
+
