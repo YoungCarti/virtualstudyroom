@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'ai_tools_page.dart';
 import 'study_rooms_page.dart';
-import 'theme_controller.dart';
 
 const Color _primaryPurple = Color(0xFF6C63FF);
 const Color _secondaryPurple = Color(0xFFB4A0FF);
@@ -17,7 +15,7 @@ class HomeDashboardPage extends StatefulWidget {
 }
 
 class _HomeDashboardPageState extends State<HomeDashboardPage> {
-  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  int _selectedIndex = 0;
 
   static final List<_SubjectProgress> _subjects = [
     const _SubjectProgress('Biology', 0.72),
@@ -51,85 +49,43 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     const _ScheduleItem(day: '11', subject: 'English', color: Color(0xFFE4E2FF)),
   ];
 
-  final List<_DrawerItem> _drawerItems = const [
-    _DrawerItem(id: 'home', title: 'Home', icon: Icons.home_rounded),
-    _DrawerItem(
-      id: 'study_rooms',
-      title: 'Study Rooms',
-      icon: Icons.meeting_room_outlined,
-    ),
-    _DrawerItem(
-      id: 'subjects',
-      title: 'Subjects',
-      icon: Icons.auto_stories_rounded,
-    ),
-    _DrawerItem(
-      id: 'files',
-      title: 'Files',
-      icon: Icons.folder_open_rounded,
-    ),
-    _DrawerItem(
-      id: 'ai_tools',
-      title: 'AI Tools',
-      icon: Icons.auto_awesome_rounded,
-    ),
-    _DrawerItem(
-      id: 'profile',
-      title: 'Profile',
-      icon: Icons.person_rounded,
-    ),
-    _DrawerItem(
-      id: 'settings',
-      title: 'Settings',
-      icon: Icons.settings_rounded,
-    ),
-    _DrawerItem(
-      id: 'logout',
-      title: 'Logout',
-      icon: Icons.logout_rounded,
-    ),
-  ];
+  void _onBottomNavTap(int index) {
+    if (index == _selectedIndex) return;
+    
+    setState(() {
+      _selectedIndex = index;
+    });
 
-  void _handleDrawerItem(_DrawerItem item) {
-    if (!mounted) return;
-
-    switch (item.id) {
-      case 'home':
-        break;
-      case 'study_rooms':
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const StudyRoomsPage(),
-          ),
-        );
-        break;
-      case 'ai_tools':
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const AiToolsPage(),
-          ),
-        );
-        break;
-      case 'logout':
+    // Navigate to respective pages based on index
+    switch (index) {
+      case 1: // Calendar/Schedule
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Logging out (simulated)...')),
+          const SnackBar(content: Text('Schedule coming soon!')),
+        );
+        break;
+      case 2: // Documents/Files
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Documents coming soon!')),
+        );
+        break;
+      case 3: // Profile
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Profile coming soon!')),
         );
         break;
       default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${item.title} coming soon!')),
-        );
+        break;
     }
   }
 
   void _handleQuickAction(String id) {
     switch (id) {
       case 'study_rooms':
-        _handleDrawerItem(_DrawerItem(
-          id: 'study_rooms',
-          title: 'Study Rooms',
-          icon: Icons.meeting_room_outlined,
-        ));
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const StudyRoomsPage(),
+          ),
+        );
         break;
       case 'subjects':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,16 +110,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      key: _scaffoldKey,
       backgroundColor: isDark ? const Color(0xFF12121E) : _lightBlueBackground,
-      drawer: _SidebarDrawer(
-        isDark: isDark,
-        items: _drawerItems,
-        onItemSelected: (item) {
-          Navigator.of(context).pop();
-          _handleDrawerItem(item);
-        },
-      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
@@ -172,7 +119,6 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
             children: [
               _DashboardHeader(
                 isDark: isDark,
-                onAvatarTap: () => _scaffoldKey.currentState?.openDrawer(),
               ),
               const SizedBox(height: 20),
               _StatsGrid(metrics: _metrics, isDark: isDark),
@@ -243,6 +189,56 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           ),
         ),
       ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1F1F2F) : Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
+              blurRadius: 20,
+              offset: const Offset(0, -5),
+            ),
+          ],
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _BottomNavItem(
+                  icon: Icons.apps_rounded,
+                  label: 'Home',
+                  isSelected: _selectedIndex == 0,
+                  onTap: () => _onBottomNavTap(0),
+                  isDark: isDark,
+                ),
+                _BottomNavItem(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Schedule',
+                  isSelected: _selectedIndex == 1,
+                  onTap: () => _onBottomNavTap(1),
+                  isDark: isDark,
+                ),
+                _BottomNavItem(
+                  icon: Icons.description_rounded,
+                  label: 'Documents',
+                  isSelected: _selectedIndex == 2,
+                  onTap: () => _onBottomNavTap(2),
+                  isDark: isDark,
+                ),
+                _BottomNavItem(
+                  icon: Icons.person_rounded,
+                  label: 'Profile',
+                  isSelected: _selectedIndex == 3,
+                  onTap: () => _onBottomNavTap(3),
+                  isDark: isDark,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -250,11 +246,9 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 class _DashboardHeader extends StatelessWidget {
   const _DashboardHeader({
     required this.isDark,
-    required this.onAvatarTap,
   });
 
   final bool isDark;
-  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
@@ -296,47 +290,6 @@ class _DashboardHeader extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        const SizedBox(height: 16),
-        GestureDetector(
-          onTap: onAvatarTap,
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    colors: [_primaryPurple, _secondaryPurple],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: _primaryPurple.withValues(alpha: 0.3),
-                      blurRadius: 20,
-                      offset: const Offset(0, 12),
-                    ),
-                  ],
-                ),
-                child: const Center(
-                  child: Text(
-                    'M',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Text(
-                'Tap avatar for menu',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isDark ? Colors.white70 : const Color(0xFF6A6A84),
-                    ),
-              ),
-            ],
-          ),
         ),
       ],
     );
@@ -1011,215 +964,54 @@ class _AiToolTile extends StatelessWidget {
   }
 }
 
-class _SidebarDrawer extends StatelessWidget {
-  const _SidebarDrawer({
+class _BottomNavItem extends StatelessWidget {
+  const _BottomNavItem({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
     required this.isDark,
-    required this.items,
-    required this.onItemSelected,
   });
 
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
   final bool isDark;
-  final List<_DrawerItem> items;
-  final ValueChanged<_DrawerItem> onItemSelected;
 
   @override
   Widget build(BuildContext context) {
-    final background = isDark ? const Color(0xFF1B1B2A) : Colors.white;
-    final accent = _primaryPurple;
+    final color = isSelected 
+        ? _primaryPurple 
+        : (isDark ? Colors.white54 : Colors.grey[600]);
 
-    return Drawer(
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
       child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              background,
-              isDark
-                  ? const Color(0xFF24243A)
-                  : _secondaryPurple.withValues(alpha: 0.08),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20).copyWith(top: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 60,
-                      height: 60,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: LinearGradient(
-                          colors: [
-                            accent,
-                            _secondaryPurple,
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: accent.withValues(alpha: 0.35),
-                            blurRadius: 20,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'M',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Maya Chen',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1F1F33),
-                                ),
-                          ),
-                          Text(
-                            'Premium member',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: isDark
-                                      ? Colors.white70
-                                      : const Color(0xFF5C5C7A),
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      icon: Icon(
-                        Icons.close_rounded,
-                        color: isDark ? Colors.white70 : Colors.grey[700],
-                      ),
-                    ),
-                  ],
-                ),
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              color: color,
+              size: 26,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
               ),
-              const SizedBox(height: 16),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: items.length,
-                  padding: EdgeInsets.zero,
-                  separatorBuilder: (_, __) => Divider(
-                    indent: 72,
-                    endIndent: 20,
-                    color: Colors.white.withValues(alpha: isDark ? 0.05 : 0.15),
-                  ),
-                  itemBuilder: (context, index) {
-                    final item = items[index];
-                    final isLogout = item.id == 'logout';
-                    return ListTile(
-                      leading: Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: accent.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Icon(
-                          item.icon,
-                          color: accent,
-                        ),
-                      ),
-                      title: Text(
-                        item.title,
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: isLogout
-                                  ? Colors.redAccent
-                                  : isDark
-                                      ? Colors.white
-                                      : const Color(0xFF1E1E2F),
-                              fontWeight: FontWeight.w600,
-                            ),
-                      ),
-                      onTap: () => onItemSelected(item),
-                      trailing: isLogout
-                          ? null
-                          : Icon(
-                              Icons.chevron_right_rounded,
-                              color: isDark ? Colors.white54 : Colors.grey[500],
-                            ),
-                    );
-                  },
-                ),
-              ),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                child: Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: themeController.toggle,
-                    child: Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark
-                            ? Colors.white.withValues(alpha: 0.1)
-                            : Colors.white,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black
-                                .withValues(alpha: isDark ? 0.4 : 0.12),
-                            blurRadius: 20,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        themeController.isDark
-                            ? Icons.nightlight_round
-                            : Icons.wb_sunny_rounded,
-                        color: themeController.isDark
-                            ? Colors.white
-                            : _primaryPurple,
-                        size: 24,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-}
-
-class _DrawerItem {
-  const _DrawerItem({
-    required this.id,
-    required this.title,
-    required this.icon,
-  });
-
-  final String id;
-  final String title;
-  final IconData icon;
 }
 
 class _MetricCardData {
