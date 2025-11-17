@@ -1,22 +1,96 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'auth_page.dart';
+import 'splash_screen.dart';
 
 Future<void> main() async {
-
   WidgetsFlutterBinding.ensureInitialized();
-
-    await Firebase.initializeApp();
-
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  bool _showOnboarding = true;
+  bool _firebaseReady = false;
+  Object? _initializationError;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeFirebase();
+  }
+
+  Future<void> _initializeFirebase() async {
+    try {
+      await Firebase.initializeApp();
+      if (mounted) {
+        setState(() => _firebaseReady = true);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() => _initializationError = error);
+      }
+    }
+  }
+
+  void _handleOnboardingFinished() {
+    setState(() => _showOnboarding = false);
+  }
 
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
+    Widget home;
+
+    if (_showOnboarding) {
+      home = SplashScreen(
+        onFinished: _handleOnboardingFinished,
+        isReadyToProceed: _firebaseReady && _initializationError == null,
+      );
+    } else if (_initializationError != null) {
+      home = Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.error_outline, size: 48),
+                const SizedBox(height: 16),
+                Text(
+                  'Initialization error:\n$_initializationError',
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      _initializationError = null;
+                      _firebaseReady = false;
+                    });
+                    _initializeFirebase();
+                  },
+                  child: const Text('Retry'),
+                )
+              ],
+            ),
+          ),
+        ),
+      );
+    } else if (!_firebaseReady) {
+      home = const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    } else {
+      home = const AuthPage();
+    }
+
     return MaterialApp(
       title: 'Flutter Demo',
       theme: ThemeData(
@@ -37,9 +111,7 @@ class MyApp extends StatelessWidget {
         // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
-      // For testing auth flows during development, open the AuthPage directly.
-      // Replace with your app's normal home once Firebase auth is wired.
-      home: const AuthPage(),
+      home: home,
     );
   }
 }
