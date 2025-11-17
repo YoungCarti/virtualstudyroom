@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'profile_page.dart';
 import 'study_rooms_page.dart';
 
 const Color _primaryPurple = Color(0xFF6C63FF);
@@ -50,7 +51,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
   ];
 
   void _onBottomNavTap(int index) {
-    if (index == _selectedIndex) return;
+    if (index == _selectedIndex && index == 0) return;
     
     setState(() {
       _selectedIndex = index;
@@ -58,20 +59,35 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 
     // Navigate to respective pages based on index
     switch (index) {
+      case 0: // Home - already on this page
+        break;
       case 1: // Calendar/Schedule
+        setState(() {
+          _selectedIndex = 0; // Reset to home
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Schedule coming soon!')),
         );
         break;
       case 2: // Documents/Files
+        setState(() {
+          _selectedIndex = 0; // Reset to home
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Documents coming soon!')),
         );
         break;
       case 3: // Profile
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile coming soon!')),
-        );
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const ProfilePage(),
+          ),
+        ).then((_) {
+          // Reset selection when coming back
+          setState(() {
+            _selectedIndex = 0;
+          });
+        });
         break;
       default:
         break;
@@ -202,26 +218,26 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _BottomNavItem(
-                  icon: Icons.apps_rounded,
+                  icon: Icons.grid_view_rounded,
                   label: 'Home',
                   isSelected: _selectedIndex == 0,
                   onTap: () => _onBottomNavTap(0),
                   isDark: isDark,
                 ),
                 _BottomNavItem(
-                  icon: Icons.calendar_today_rounded,
+                  icon: Icons.calendar_month_rounded,
                   label: 'Schedule',
                   isSelected: _selectedIndex == 1,
                   onTap: () => _onBottomNavTap(1),
                   isDark: isDark,
                 ),
                 _BottomNavItem(
-                  icon: Icons.description_rounded,
+                  icon: Icons.receipt_long_rounded,
                   label: 'Documents',
                   isSelected: _selectedIndex == 2,
                   onTap: () => _onBottomNavTap(2),
@@ -982,32 +998,18 @@ class _BottomNavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isSelected 
-        ? _primaryPurple 
-        : (isDark ? Colors.white54 : Colors.grey[600]);
+        ? const Color(0xFF5BB5D9)
+        : (isDark ? Colors.white54 : Colors.grey[400]);
 
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: color,
-              size: 26,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        child: Icon(
+          icon,
+          color: color,
+          size: 28,
         ),
       ),
     );
