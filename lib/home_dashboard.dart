@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
+import 'ai_tools_page.dart';
+import 'study_rooms_page.dart';
+import 'theme_controller.dart';
+
 const Color _primaryPurple = Color(0xFF6C63FF);
 const Color _secondaryPurple = Color(0xFFB4A0FF);
 const Color _backgroundTint = Color(0xFFF4F1FF);
+const Color _lightBlueBackground = Color(0xFFE5EDF7);
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -33,16 +38,116 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     const _FileItem('History-slides.ppt', 'PPT · 4 MB'),
   ];
 
-  final List<_DrawerItem> _drawerItems = const [
-    _DrawerItem('Home', Icons.home_rounded),
-    _DrawerItem('Study Rooms', Icons.meeting_room_outlined),
-    _DrawerItem('Subjects', Icons.auto_stories_rounded),
-    _DrawerItem('Files', Icons.folder_open_rounded),
-    _DrawerItem('AI Tools', Icons.auto_awesome_rounded),
-    _DrawerItem('Profile', Icons.person_rounded),
-    _DrawerItem('Settings', Icons.settings_rounded),
-    _DrawerItem('Logout', Icons.logout_rounded),
+  static final List<_MetricCardData> _metrics = [
+    const _MetricCardData(title: 'Presence', value: '89%', accent: Color(0xFFFF8A3D)),
+    const _MetricCardData(title: 'Completeness', value: '100%', accent: Color(0xFF4185FF)),
+    const _MetricCardData(title: 'Assignments', value: '18', accent: Color(0xFF4CB5FF)),
+    const _MetricCardData(title: 'Subjects', value: '12', accent: Color(0xFFFFC24C)),
   ];
+
+  static final List<_ScheduleItem> _schedule = [
+    const _ScheduleItem(day: '7', subject: 'Economy', color: Color(0xFFFFE1B2)),
+    const _ScheduleItem(day: '9', subject: 'Geography', color: Color(0xFFD0E8FF)),
+    const _ScheduleItem(day: '11', subject: 'English', color: Color(0xFFE4E2FF)),
+  ];
+
+  final List<_DrawerItem> _drawerItems = const [
+    _DrawerItem(id: 'home', title: 'Home', icon: Icons.home_rounded),
+    _DrawerItem(
+      id: 'study_rooms',
+      title: 'Study Rooms',
+      icon: Icons.meeting_room_outlined,
+    ),
+    _DrawerItem(
+      id: 'subjects',
+      title: 'Subjects',
+      icon: Icons.auto_stories_rounded,
+    ),
+    _DrawerItem(
+      id: 'files',
+      title: 'Files',
+      icon: Icons.folder_open_rounded,
+    ),
+    _DrawerItem(
+      id: 'ai_tools',
+      title: 'AI Tools',
+      icon: Icons.auto_awesome_rounded,
+    ),
+    _DrawerItem(
+      id: 'profile',
+      title: 'Profile',
+      icon: Icons.person_rounded,
+    ),
+    _DrawerItem(
+      id: 'settings',
+      title: 'Settings',
+      icon: Icons.settings_rounded,
+    ),
+    _DrawerItem(
+      id: 'logout',
+      title: 'Logout',
+      icon: Icons.logout_rounded,
+    ),
+  ];
+
+  void _handleDrawerItem(_DrawerItem item) {
+    if (!mounted) return;
+
+    switch (item.id) {
+      case 'home':
+        break;
+      case 'study_rooms':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const StudyRoomsPage(),
+          ),
+        );
+        break;
+      case 'ai_tools':
+        Navigator.of(context).push(
+          MaterialPageRoute<void>(
+            builder: (_) => const AiToolsPage(),
+          ),
+        );
+        break;
+      case 'logout':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Logging out (simulated)...')),
+        );
+        break;
+      default:
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${item.title} coming soon!')),
+        );
+    }
+  }
+
+  void _handleQuickAction(String id) {
+    switch (id) {
+      case 'study_rooms':
+        _handleDrawerItem(_DrawerItem(
+          id: 'study_rooms',
+          title: 'Study Rooms',
+          icon: Icons.meeting_room_outlined,
+        ));
+        break;
+      case 'subjects':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Subjects overview coming soon!')),
+        );
+        break;
+      case 'classes':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Class schedule coming soon!')),
+        );
+        break;
+      case 'presence':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Presence analytics coming soon!')),
+        );
+        break;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,10 +155,14 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 
     return Scaffold(
       key: _scaffoldKey,
-      backgroundColor: isDark ? const Color(0xFF1C1C28) : _backgroundTint,
+      backgroundColor: isDark ? const Color(0xFF12121E) : _lightBlueBackground,
       drawer: _SidebarDrawer(
         isDark: isDark,
         items: _drawerItems,
+        onItemSelected: (item) {
+          Navigator.of(context).pop();
+          _handleDrawerItem(item);
+        },
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -61,12 +170,29 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _HeaderRow(
+              _DashboardHeader(
                 isDark: isDark,
-                onProfileTap: () => _scaffoldKey.currentState?.openDrawer(),
+                onAvatarTap: () => _scaffoldKey.currentState?.openDrawer(),
+              ),
+              const SizedBox(height: 20),
+              _StatsGrid(metrics: _metrics, isDark: isDark),
+              const SizedBox(height: 24),
+              _QuickActionsRow(
+                onStudyRooms: () => _handleQuickAction('study_rooms'),
+                onSubjects: () => _handleQuickAction('subjects'),
+                onClasses: () => _handleQuickAction('classes'),
+                onPresence: () => _handleQuickAction('presence'),
               ),
               const SizedBox(height: 24),
+              _SectionTitle(title: 'Schedule', isDark: isDark),
+              const SizedBox(height: 12),
+              _ScheduleStrip(items: _schedule),
+              const SizedBox(height: 24),
               _QuickJoinCard(isDark: isDark),
+              const SizedBox(height: 24),
+              _SectionTitle(title: 'AI Tools', isDark: isDark),
+              const SizedBox(height: 12),
+              _AiToolsCard(isDark: isDark),
               const SizedBox(height: 24),
               _SectionTitle(title: 'Your Subjects', isDark: isDark),
               const SizedBox(height: 12),
@@ -86,10 +212,6 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                   },
                 ),
               ),
-              const SizedBox(height: 24),
-              _SectionTitle(title: 'AI Tools', isDark: isDark),
-              const SizedBox(height: 12),
-              _AiToolsCard(isDark: isDark),
               const SizedBox(height: 24),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -125,82 +247,317 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
   }
 }
 
-class _HeaderRow extends StatelessWidget {
-  const _HeaderRow({required this.isDark, required this.onProfileTap});
+class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader({
+    required this.isDark,
+    required this.onAvatarTap,
+  });
 
   final bool isDark;
-  final VoidCallback onProfileTap;
+  final VoidCallback onAvatarTap;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        GestureDetector(
-          onTap: onProfileTap,
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  _primaryPurple,
-                  _secondaryPurple,
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Hi, Maya Chen',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: isDark ? Colors.white : const Color(0xFF1F1F33),
+                        ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Here is your activity today.',
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          color:
+                              isDark ? Colors.white70 : const Color(0xFF6A6A84),
+                        ),
+                  ),
                 ],
               ),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: _primaryPurple.withValues(alpha: 0.3),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
-                ),
-              ],
             ),
-            child: const Center(
-              child: Text(
-                'M',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
+            IconButton(
+              onPressed: () {},
+              icon: Icon(
+                Icons.notifications_none_rounded,
+                color: isDark ? Colors.white : const Color(0xFF1F1F33),
+              ),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withValues(alpha: isDark ? 0.1 : 0.9),
               ),
             ),
-          ),
+          ],
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        const SizedBox(height: 16),
+        GestureDetector(
+          onTap: onAvatarTap,
+          child: Row(
             children: [
-              Text(
-                'Hey, Maya',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: isDark ? Colors.white : const Color(0xFF2A2A40),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(
+                    colors: [_primaryPurple, _secondaryPurple],
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: _primaryPurple.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 12),
                     ),
+                  ],
+                ),
+                child: const Center(
+                  child: Text(
+                    'M',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
               ),
+              const SizedBox(width: 12),
               Text(
-                'Ready to dive back in?',
+                'Tap avatar for menu',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: isDark ? Colors.white70 : const Color(0xFF60607A),
+                      color: isDark ? Colors.white70 : const Color(0xFF6A6A84),
                     ),
               ),
             ],
           ),
         ),
-        IconButton(
-          onPressed: () {},
-          style: IconButton.styleFrom(
-            backgroundColor: Colors.white.withValues(alpha: 0.6),
-          ),
-          icon: Icon(
-            Icons.notifications_outlined,
-            color: isDark ? Colors.white : const Color(0xFF2A2A40),
-            size: 24,
-          ),
-        ),
       ],
+    );
+  }
+}
+
+class _StatsGrid extends StatelessWidget {
+  const _StatsGrid({required this.metrics, required this.isDark});
+
+  final List<_MetricCardData> metrics;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 1.6,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+      ),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: metrics.length,
+      itemBuilder: (_, index) {
+        final metric = metrics[index];
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1F1F2F) : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                metric.value,
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: metric.accent,
+                    ),
+              ),
+              const Spacer(),
+              Text(
+                metric.title,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: isDark ? Colors.white70 : const Color(0xFF5A5A74),
+                    ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _QuickActionsRow extends StatelessWidget {
+  const _QuickActionsRow({
+    required this.onStudyRooms,
+    required this.onSubjects,
+    required this.onClasses,
+    required this.onPresence,
+  });
+
+  final VoidCallback onStudyRooms;
+  final VoidCallback onSubjects;
+  final VoidCallback onClasses;
+  final VoidCallback onPresence;
+
+  @override
+  Widget build(BuildContext context) {
+    final actions = [
+      _QuickActionData(
+        label: 'Course',
+        icon: Icons.menu_book_rounded,
+        color: const Color(0xFF0FADCF),
+        onTap: onStudyRooms,
+      ),
+      _QuickActionData(
+        label: 'Subjects',
+        icon: Icons.school_rounded,
+        color: const Color(0xFF132F82),
+        onTap: onSubjects,
+      ),
+      _QuickActionData(
+        label: 'Class',
+        icon: Icons.class_rounded,
+        color: const Color(0xFFF3A329),
+        onTap: onClasses,
+      ),
+      _QuickActionData(
+        label: 'Presence',
+        icon: Icons.verified_user_rounded,
+        color: const Color(0xFF2BB673),
+        onTap: onPresence,
+      ),
+    ];
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: actions
+          .map(
+            (action) => Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                child: _QuickActionButton(data: action),
+              ),
+            ),
+          )
+          .toList(),
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  const _QuickActionButton({required this.data});
+
+  final _QuickActionData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: data.onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(data.icon, color: data.color),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF59627A),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ScheduleStrip extends StatelessWidget {
+  const _ScheduleStrip({required this.items});
+
+  final List<_ScheduleItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: items
+              .map(
+                (item) => Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Column(
+                    children: [
+                      Text(
+                        item.day,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              color: const Color(0xFF9BA4C2),
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      _ScheduleCard(item: item),
+                    ],
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+    );
+  }
+}
+
+class _ScheduleCard extends StatelessWidget {
+  const _ScheduleCard({required this.item});
+
+  final _ScheduleItem item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 90,
+      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      decoration: BoxDecoration(
+        color: item.color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Center(
+        child: Text(
+          item.subject,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3E4A66),
+              ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }
@@ -655,10 +1012,15 @@ class _AiToolTile extends StatelessWidget {
 }
 
 class _SidebarDrawer extends StatelessWidget {
-  const _SidebarDrawer({required this.isDark, required this.items});
+  const _SidebarDrawer({
+    required this.isDark,
+    required this.items,
+    required this.onItemSelected,
+  });
 
   final bool isDark;
   final List<_DrawerItem> items;
+  final ValueChanged<_DrawerItem> onItemSelected;
 
   @override
   Widget build(BuildContext context) {
@@ -768,7 +1130,7 @@ class _SidebarDrawer extends StatelessWidget {
                   ),
                   itemBuilder: (context, index) {
                     final item = items[index];
-                    final isLogout = item.title == 'Logout';
+                    final isLogout = item.id == 'logout';
                     return ListTile(
                       leading: Container(
                         width: 44,
@@ -793,12 +1155,7 @@ class _SidebarDrawer extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                       ),
-                      onTap: () {
-                        Navigator.of(context).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('${item.title} tapped')),
-                        );
-                      },
+                      onTap: () => onItemSelected(item),
                       trailing: isLogout
                           ? null
                           : Icon(
@@ -807,6 +1164,42 @@ class _SidebarDrawer extends StatelessWidget {
                             ),
                     );
                   },
+                ),
+              ),
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: themeController.toggle,
+                    child: Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark
+                            ? Colors.white.withValues(alpha: 0.1)
+                            : Colors.white,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black
+                                .withValues(alpha: isDark ? 0.4 : 0.12),
+                            blurRadius: 20,
+                            offset: const Offset(0, 12),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        themeController.isDark
+                            ? Icons.nightlight_round
+                            : Icons.wb_sunny_rounded,
+                        color: themeController.isDark
+                            ? Colors.white
+                            : _primaryPurple,
+                        size: 24,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ],
@@ -818,10 +1211,53 @@ class _SidebarDrawer extends StatelessWidget {
 }
 
 class _DrawerItem {
-  const _DrawerItem(this.title, this.icon);
+  const _DrawerItem({
+    required this.id,
+    required this.title,
+    required this.icon,
+  });
 
+  final String id;
   final String title;
   final IconData icon;
+}
+
+class _MetricCardData {
+  const _MetricCardData({
+    required this.title,
+    required this.value,
+    required this.accent,
+  });
+
+  final String title;
+  final String value;
+  final Color accent;
+}
+
+class _QuickActionData {
+  const _QuickActionData({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+}
+
+class _ScheduleItem {
+  const _ScheduleItem({
+    required this.day,
+    required this.subject,
+    required this.color,
+  });
+
+  final String day;
+  final String subject;
+  final Color color;
 }
 
 class _SubjectProgress {
