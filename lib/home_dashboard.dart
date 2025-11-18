@@ -3,10 +3,14 @@ import 'package:flutter/material.dart';
 import 'profile_page.dart';
 import 'study_rooms_page.dart';
 
+const Color _darkBackground = Color(0xFF1C1C28);
+const Color _cardBackground = Color(0xFF2A2A3E);
+const Color _accentPurple = Color(0xFF8B7BFF);
+const Color _limeGreen = Color(0xFFB8E986);
+// Legacy colors for old widgets
 const Color _primaryPurple = Color(0xFF6C63FF);
 const Color _secondaryPurple = Color(0xFFB4A0FF);
 const Color _backgroundTint = Color(0xFFF4F1FF);
-const Color _lightBlueBackground = Color(0xFFE5EDF7);
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -77,21 +81,83 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           const SnackBar(content: Text('Documents coming soon!')),
         );
         break;
-      case 3: // Profile
-        Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => const ProfilePage(),
-          ),
-        ).then((_) {
-          // Reset selection when coming back
-          setState(() {
-            _selectedIndex = 0;
-          });
-        });
-        break;
       default:
         break;
     }
+  }
+
+  void _showProfileMenu(BuildContext context, Offset position) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    showMenu(
+      context: context,
+      position: RelativeRect.fromLTRB(
+        position.dx,
+        position.dy + 50, // Below the avatar
+        position.dx + 200,
+        0,
+      ),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      color: isDark ? const Color(0xFF2A2A3E) : Colors.white,
+      items: [
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                Icons.person_outline,
+                size: 20,
+                color: isDark ? Colors.white70 : const Color(0xFF6A6A84),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Profile',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF2A2A40),
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => ProfilePage(),
+                ),
+              );
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                Icons.settings_outlined,
+                size: 20,
+                color: isDark ? Colors.white70 : const Color(0xFF6A6A84),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                'Settings',
+                style: TextStyle(
+                  color: isDark ? Colors.white : const Color(0xFF2A2A40),
+                  fontSize: 15,
+                ),
+              ),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Settings coming soon!')),
+              );
+            });
+          },
+        ),
+      ],
+    );
   }
 
   void _handleQuickAction(String id) {
@@ -126,81 +192,25 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF12121E) : _lightBlueBackground,
+      backgroundColor: isDark ? _darkBackground : const Color(0xFFE5EDF7),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _DashboardHeader(
+              _ModernHeader(
                 isDark: isDark,
+                onProfileMenuTap: (offset) => _showProfileMenu(context, offset),
               ),
+              const SizedBox(height: 24),
+              _GreetingSection(isDark: isDark),
+              const SizedBox(height: 24),
+              _FocusRoomCard(isDark: isDark),
               const SizedBox(height: 20),
-              _StatsGrid(metrics: _metrics, isDark: isDark),
+              _ActionTilesGrid(isDark: isDark),
               const SizedBox(height: 24),
-              _QuickActionsRow(
-                onStudyRooms: () => _handleQuickAction('study_rooms'),
-                onSubjects: () => _handleQuickAction('subjects'),
-                onClasses: () => _handleQuickAction('classes'),
-                onPresence: () => _handleQuickAction('presence'),
-              ),
-              const SizedBox(height: 24),
-              _SectionTitle(title: 'Schedule', isDark: isDark),
-              const SizedBox(height: 12),
-              _ScheduleStrip(items: _schedule),
-              const SizedBox(height: 24),
-              _QuickJoinCard(isDark: isDark),
-              const SizedBox(height: 24),
-              _SectionTitle(title: 'AI Tools', isDark: isDark),
-              const SizedBox(height: 12),
-              _AiToolsCard(isDark: isDark),
-              const SizedBox(height: 24),
-              _SectionTitle(title: 'Your Subjects', isDark: isDark),
-              const SizedBox(height: 12),
-              SizedBox(
-                height: 165,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  itemCount: _subjects.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 16),
-                  itemBuilder: (_, index) {
-                    final subject = _subjects[index];
-                    return _SubjectCard(
-                      subject: subject,
-                      isDark: isDark,
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionTitle(title: 'Upcoming Tasks', isDark: isDark),
-                        const SizedBox(height: 12),
-                        _TaskList(isDark: isDark, tasks: _tasks),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _SectionTitle(title: 'Recent Files', isDark: isDark),
-                        const SizedBox(height: 12),
-                        _RecentFilesList(isDark: isDark, files: _files),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              _TasksSection(isDark: isDark),
             ],
           ),
         ),
@@ -241,13 +251,6 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                   label: 'Documents',
                   isSelected: _selectedIndex == 2,
                   onTap: () => _onBottomNavTap(2),
-                  isDark: isDark,
-                ),
-                _BottomNavItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _onBottomNavTap(3),
                   isDark: isDark,
                 ),
               ],
@@ -1073,5 +1076,485 @@ class _FileItem {
 
   final String name;
   final String meta;
+}
+
+// New Modern Widgets for Screenshot Design
+class _ModernHeader extends StatelessWidget {
+  const _ModernHeader({required this.isDark, required this.onProfileMenuTap});
+
+  final bool isDark;
+  final void Function(Offset) onProfileMenuTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        // Profile Avatar with Lime Green - clickable
+        GestureDetector(
+          onTapDown: (TapDownDetails details) {
+            onProfileMenuTap(details.globalPosition);
+          },
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: _limeGreen,
+              shape: BoxShape.circle,
+            ),
+            child: const Center(
+              child: Text(
+                'SL',
+                style: TextStyle(
+                  color: Color(0xFF2A2A3E),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        // Flame Icon with Badge
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: const Color(0xFF3A3A52),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.local_fire_department_rounded,
+                color: Color(0xFFFF9D42),
+                size: 20,
+              ),
+            ),
+            Positioned(
+              right: -4,
+              top: -4,
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF5B7FFF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Text(
+                  '0',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const Spacer(),
+        // Notification Icon
+        IconButton(
+          onPressed: () {},
+          icon: const Icon(Icons.notifications_none_rounded, color: Color(0xFF8B8B9F)),
+          style: IconButton.styleFrom(
+            backgroundColor: const Color(0xFF3A3A52),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GreetingSection extends StatelessWidget {
+  const _GreetingSection({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Hello, Saabiresh!',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                color: isDark ? Colors.white : const Color(0xFF1F1F33),
+                fontWeight: FontWeight.bold,
+                fontSize: 28,
+              ),
+        ),
+        const SizedBox(height: 6),
+        Row(
+          children: [
+            Text(
+              'Today\'s effort, tomorrow\'s success ',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDark ? const Color(0xFF8B8B9F) : const Color(0xFF6A6A84),
+                    fontSize: 15,
+                  ),
+            ),
+            const Text(
+              '💪',
+              style: TextStyle(fontSize: 16),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _FocusRoomCard extends StatelessWidget {
+  const _FocusRoomCard({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: isDark ? _cardBackground : Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: isDark ? const Color(0xFF3A3A52) : Colors.grey[200]!,
+              width: 1,
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Focus Room 1',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: isDark ? Colors.white : const Color(0xFF1F1F33),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 20,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFF4ADE80),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '498 online',
+                    style: TextStyle(
+                      color: isDark ? const Color(0xFF8B8B9F) : const Color(0xFF6A6A84),
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  // User Avatars Row
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: 0,
+                            child: _UserAvatar(
+                              imageUrl: 'https://i.pravatar.cc/150?img=33',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                          Positioned(
+                            left: 28,
+                            child: _UserAvatar(
+                              imageUrl: 'https://i.pravatar.cc/150?img=12',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                          Positioned(
+                            left: 56,
+                            child: _UserAvatar(
+                              backgroundColor: const Color(0xFFB197FC),
+                              text: 'SY',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                          Positioned(
+                            left: 84,
+                            child: _UserAvatar(
+                              backgroundColor: const Color(0xFF74C0FC),
+                              text: 'NZ',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                          Positioned(
+                            left: 112,
+                            child: _UserAvatar(
+                              imageUrl: 'https://i.pravatar.cc/150?img=25',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                          Positioned(
+                            left: 140,
+                            child: _UserAvatar(
+                              imageUrl: 'https://i.pravatar.cc/150?img=47',
+                              borderColor: isDark ? _cardBackground : Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: _accentPurple.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward_rounded,
+                      color: _accentPurple,
+                      size: 20,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () {},
+            child: Text(
+              'See more',
+              style: TextStyle(
+                color: isDark ? const Color(0xFF8B8B9F) : const Color(0xFF6A6A84),
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _UserAvatar extends StatelessWidget {
+  const _UserAvatar({
+    this.imageUrl,
+    this.backgroundColor,
+    this.text,
+    required this.borderColor,
+  });
+
+  final String? imageUrl;
+  final Color? backgroundColor;
+  final String? text;
+  final Color borderColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: borderColor, width: 2),
+      ),
+      child: ClipOval(
+        child: imageUrl != null
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    color: backgroundColor ?? const Color(0xFF8B7BFF),
+                    child: Center(
+                      child: Text(
+                        text ?? 'U',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              )
+            : Container(
+                color: backgroundColor ?? const Color(0xFF8B7BFF),
+                child: Center(
+                  child: Text(
+                    text ?? 'U',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _ActionTilesGrid extends StatelessWidget {
+  const _ActionTilesGrid({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      crossAxisCount: 2,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.2,
+      children: [
+        _ActionTile(
+          icon: Icons.alarm_rounded,
+          label: 'Set daily\nreminder',
+          backgroundColor: const Color(0xFFC4B5FD),
+          isDark: isDark,
+        ),
+        _ActionTile(
+          icon: Icons.bar_chart_rounded,
+          label: 'Session\nsummary',
+          backgroundColor: const Color(0xFFFCD34D),
+          isDark: isDark,
+        ),
+        _ActionTile(
+          icon: Icons.chat_bubble_outline_rounded,
+          label: 'Send\nfeedback',
+          backgroundColor: const Color(0xFFD1D5DB),
+          isDark: isDark,
+        ),
+        _ActionTile(
+          icon: Icons.push_pin_outlined,
+          label: 'See who\npinned you',
+          backgroundColor: const Color(0xFF6EE7B7),
+          isDark: isDark,
+        ),
+      ],
+    );
+  }
+}
+
+class _ActionTile extends StatelessWidget {
+  const _ActionTile({
+    required this.icon,
+    required this.label,
+    required this.backgroundColor,
+    required this.isDark,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color backgroundColor;
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: const BoxDecoration(
+              color: Color(0xFF2A2A3E),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 24,
+            ),
+          ),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: const Color(0xFF2A2A3E),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                  height: 1.3,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TasksSection extends StatelessWidget {
+  const _TasksSection({required this.isDark});
+
+  final bool isDark;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: isDark ? _cardBackground : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: isDark ? const Color(0xFF3A3A52) : Colors.grey[200]!,
+          width: 1,
+        ),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isDark ? const Color(0xFF3A3A52) : Colors.grey[300]!,
+                width: 2,
+              ),
+            ),
+            child: Icon(
+              Icons.add_rounded,
+              color: isDark ? const Color(0xFF8B8B9F) : const Color(0xFF6A6A84),
+              size: 28,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'No tasks for today',
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: isDark ? const Color(0xFF8B8B9F) : const Color(0xFF6A6A84),
+                  fontSize: 16,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
