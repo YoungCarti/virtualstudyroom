@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
-const Color _lightBlueBackground = Color(0xFFE5EDF7);
+const Color _limeGreen = Color(0xFFB8E986);
+const Color _darkBackground = Color(0xFF1C1C28);
+const Color _lightBlue = Color(0xFF5BB5D9);
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -10,494 +12,314 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  int _selectedIndex = 3; // Profile is selected
-
-  void _onBottomNavTap(int index) {
-    if (index == 3) return; // Already on profile
-    
-    setState(() {
-      _selectedIndex = index;
-    });
-
-    // Navigate to respective pages based on index
-    switch (index) {
-      case 0: // Home
-        Navigator.of(context).pop(); // Go back to home dashboard
-        break;
-      case 1: // Calendar/Schedule
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Schedule coming soon!')),
-        );
-        break;
-      case 2: // Documents/Files
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Documents coming soon!')),
-        );
-        break;
-      default:
-        break;
-    }
-  }
+  int _selectedTab = 0;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF12121E) : _lightBlueBackground,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          child: Column(
-            children: [
-              const SizedBox(height: 8),
-              // Header with "Study" title and icon
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      color: const Color(0xFF5BB5D9),
-                    ),
-                    child: const Icon(
-                      Icons.circle,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    'StudyStream',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : const Color(0xFF2D3748),
-                          fontSize: 18,
-                        ),
-                  ),
-                ],
+      backgroundColor: _darkBackground,
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.only(top: 50, left: 20, right: 20, bottom: 60),
+            decoration: const BoxDecoration(
+              color: _limeGreen,
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(30),
+                bottomRight: Radius.circular(30),
               ),
-              const SizedBox(height: 28),
-              
-              // Welcome section with profile picture
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-                decoration: BoxDecoration(
-                  color: isDark ? const Color(0xFF1F1F2F) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 52,
-                          height: 52,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Colors.white,
-                              width: 2,
-                            ),
-                          ),
-                          child: ClipOval(
-                            child: Image.network(
-                              'https://i.pravatar.cc/150?img=47',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return Container(
-                                  color: const Color(0xFF5BB5D9),
-                                  child: const Center(
-                                    child: Text(
-                                      'M',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 20,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Welcome',
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: isDark ? Colors.white70 : const Color(0xFF718096),
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w400,
-                                    ),
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                'Marvin McKinney',
-                                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: isDark ? Colors.white : const Color(0xFF1A202C),
-                                      fontSize: 16,
-                                    ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          width: 36,
-                          height: 36,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFEDF2F7),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(
-                            Icons.arrow_forward_rounded,
-                            color: Color(0xFF718096),
-                            size: 18,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 20),
-              
-              // Menu items
-              _ProfileMenuItem(
-                icon: Icons.person_outline,
-                title: 'Profile',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Profile details coming soon!')),
-                  );
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 14),
-              _ProfileMenuItem(
-                icon: Icons.security_outlined,
-                title: 'Account',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Account settings coming soon!')),
-                  );
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 14),
-              _ProfileMenuItem(
-                icon: Icons.settings_outlined,
-                title: 'Setting',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Settings coming soon!')),
-                  );
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 14),
-              _ProfileMenuItem(
-                icon: Icons.info_outline,
-                title: 'About',
-                onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('About page coming soon!')),
-                  );
-                },
-                isDark: isDark,
-              ),
-              const SizedBox(height: 26),
-              
-              // Help card
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF5BB5D9),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.25),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Icon(
-                        Icons.headset_mic_rounded,
-                        color: Colors.white,
-                        size: 22,
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        'How can we help you?',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 26),
-              
-              // Bottom links
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                        TextButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Privacy Policy coming soon!')),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'Privacy Policy',
-                            style: TextStyle(
-                              color: isDark ? Colors.white70 : const Color(0xFF718096),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 14,
-                          color: isDark ? Colors.white54 : const Color(0xFFA0AEC0),
-                        ),
-                        const SizedBox(width: 4),
-                        TextButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Terms coming soon!')),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Text(
-                            'Terms',
-                            style: TextStyle(
-                              color: isDark ? Colors.white70 : const Color(0xFF718096),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.chevron_right,
-                          size: 14,
-                          color: isDark ? Colors.white54 : const Color(0xFFA0AEC0),
-                        ),
-                        const SizedBox(width: 4),
-                        TextButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Language selection coming soon!')),
-                            );
-                          },
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            minimumSize: Size.zero,
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'English',
-                                style: TextStyle(
-                                  color: isDark ? Colors.white70 : const Color(0xFF718096),
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w400,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                size: 16,
-                                color: isDark ? Colors.white54 : const Color(0xFFA0AEC0),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-            ],
-          ),
-        ),
-      ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1F1F2F) : Colors.white,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, -5),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            child: Column(
               children: [
-                _BottomNavItem(
-                  icon: Icons.grid_view_rounded,
-                  label: 'Home',
-                  isSelected: _selectedIndex == 0,
-                  onTap: () => _onBottomNavTap(0),
-                  isDark: isDark,
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Color(0xFF2A2A3E)),
+                      onPressed: () => Navigator.of(context).pop(),
+                    ),
+                  ),
                 ),
-                _BottomNavItem(
-                  icon: Icons.calendar_month_rounded,
-                  label: 'Schedule',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _onBottomNavTap(1),
-                  isDark: isDark,
-                ),
-                _BottomNavItem(
-                  icon: Icons.receipt_long_rounded,
-                  label: 'Documents',
-                  isSelected: _selectedIndex == 2,
-                  onTap: () => _onBottomNavTap(2),
-                  isDark: isDark,
-                ),
-                _BottomNavItem(
-                  icon: Icons.person_rounded,
-                  label: 'Profile',
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _onBottomNavTap(3),
-                  isDark: isDark,
+                const SizedBox(height: 20),
+                Container(
+                  width: 100,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: _limeGreen,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 4),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'SL',
+                      style: TextStyle(
+                        color: Color(0xFF2A2A3E),
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ],
             ),
           ),
-        ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      const Text(
+                        'Saabiresh Loganathan',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '(SL)',
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        '🇱🇰',
+                        style: TextStyle(fontSize: 20),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    children: [
+                      _TabButton(
+                        label: 'Profile',
+                        isSelected: _selectedTab == 0,
+                        onTap: () => setState(() => _selectedTab = 0),
+                      ),
+                      const SizedBox(width: 8),
+                      _TabButton(
+                        label: 'Stats',
+                        isSelected: _selectedTab == 1,
+                        onTap: () => setState(() => _selectedTab = 1),
+                      ),
+                      const SizedBox(width: 8),
+                      _TabButton(
+                        label: 'Feed',
+                        isSelected: _selectedTab == 2,
+                        onTap: () => setState(() => _selectedTab = 2),
+                      ),
+                      const SizedBox(width: 8),
+                      _TabButton(
+                        label: 'Badges',
+                        isSelected: _selectedTab == 3,
+                        onTap: () => setState(() => _selectedTab = 3),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+                  if (_selectedTab == 0) ...[
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _InfoItem(
+                            label: 'Age',
+                            value: '23',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _InfoItem(
+                            label: 'Joined',
+                            value: 'Jan 2024',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _InfoItem(
+                            label: 'Followers',
+                            value: '248',
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _InfoItem(
+                            label: 'Following',
+                            value: '156',
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'Bio',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'You haven\'t added a bio yet.',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    const Text(
+                      'Interests',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    const Text(
+                      'You haven\'t added any interests yet.',
+                      style: TextStyle(
+                        color: Colors.white54,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Edit Profile coming soon!')),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _lightBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(25),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: const Text(
+                          'Edit Profile',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                  ] else ...[
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(40),
+                        child: Text(
+                          _selectedTab == 1
+                              ? 'Stats coming soon!'
+                              : _selectedTab == 2
+                                  ? 'Feed coming soon!'
+                                  : 'Badges coming soon!',
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.icon,
+class _TabButton extends StatelessWidget {
+  const _TabButton({
     required this.label,
     required this.isSelected,
     required this.onTap,
-    required this.isDark,
   });
 
-  final IconData icon;
   final String label;
   final bool isSelected;
   final VoidCallback onTap;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final color = isSelected 
-        ? const Color(0xFF5BB5D9)
-        : (isDark ? Colors.white54 : Colors.grey[400]);
-
     return GestureDetector(
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        child: Icon(
-          icon,
-          color: color,
-          size: 28,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isSelected ? _lightBlue : const Color(0xFF2A2A3E),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.white54,
+            fontSize: 14,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
         ),
       ),
     );
   }
 }
 
-class _ProfileMenuItem extends StatelessWidget {
-  const _ProfileMenuItem({
-    required this.icon,
-    required this.title,
-    required this.onTap,
-    required this.isDark,
+class _InfoItem extends StatelessWidget {
+  const _InfoItem({
+    required this.label,
+    required this.value,
   });
 
-  final IconData icon;
-  final String title;
-  final VoidCallback onTap;
-  final bool isDark;
+  final String label;
+  final String value;
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF2A2A3E) : const Color(0xFFF7FAFC),
-          borderRadius: BorderRadius.circular(14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
         ),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: const BoxDecoration(
-                color: Color(0xFFE6F4F9),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                icon,
-                color: const Color(0xFF5BB5D9),
-                size: 20,
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: isDark ? Colors.white : const Color(0xFF2D3748),
-                      fontSize: 15,
-                    ),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              size: 20,
-              color: isDark ? Colors.white54 : const Color(0xFFA0AEC0),
-            ),
-          ],
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(
+            color: Colors.white54,
+            fontSize: 14,
+          ),
         ),
-      ),
+      ],
     );
   }
 }
