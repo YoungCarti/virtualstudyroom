@@ -32,18 +32,34 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
             child: Column(
               children: [
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.arrow_back, color: Color(0xFF2A2A3E)),
+                        onPressed: () => Navigator.of(context).pop(),
+                      ),
                     ),
-                    child: IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Color(0xFF2A2A3E)),
-                      onPressed: () => Navigator.of(context).pop(),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.edit_outlined, color: Color(0xFF2A2A3E)),
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Edit Profile coming soon!')),
+                          );
+                        },
+                      ),
                     ),
-                  ),
+                  ],
                 ),
                 const SizedBox(height: 20),
                 Container(
@@ -197,33 +213,6 @@ class _ProfilePageState extends State<ProfilePage> {
                       style: TextStyle(
                         color: Colors.white54,
                         fontSize: 15,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Edit Profile coming soon!')),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: _lightBlue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(25),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: const Text(
-                          'Edit Profile',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
                       ),
                     ),
                     const SizedBox(height: 32),
