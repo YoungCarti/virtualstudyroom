@@ -24,10 +24,3 @@ set_global_options(max_instances=10)
 #     return https_fn.Response("Hello world!")
 
 # Prefer Application Default Credentials in production.
-cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-if cred_path:
-    cred = credentials.Certificate(cred_path)
-    firebase_admin.initialize_app(cred)
-else:
-    # Uses ADC (when running on Cloud Functions / Cloud Run this is the best practice)
-    firebase_admin.initialize_app()
