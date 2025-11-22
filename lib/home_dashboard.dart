@@ -1113,45 +1113,6 @@ class _ModernHeader extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 12),
-        // Flame Icon with Badge
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: const Color(0xFF3A3A52),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(
-                Icons.local_fire_department_rounded,
-                color: Color(0xFFFF9D42),
-                size: 20,
-              ),
-            ),
-            Positioned(
-              right: -4,
-              top: -4,
-              child: Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  color: Color(0xFF5B7FFF),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  '0',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
         const Spacer(),
         // Notification Icon
         IconButton(
