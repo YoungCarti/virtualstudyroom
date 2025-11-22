@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 const Color _primaryCyan = Color(0xFF5BB5D9);
@@ -5,7 +7,9 @@ const Color _darkBackground = Color(0xFF1C1C28);
 const Color _cardBackground = Color(0xFF2A2A3E);
 
 class EditProfilePage extends StatefulWidget {
-  const EditProfilePage({super.key});
+  // accept optional userDocId to edit; default to current auth user
+  final String? userDocId;
+  const EditProfilePage({super.key, this.userDocId});
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -13,58 +17,97 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController(text: 'Saabiresh Loganathan');
-  final _ageController = TextEditingController(text: '23');
-  final _bioController = TextEditingController();
-  final _socialMediaController = TextEditingController();
-  final _countryController = TextEditingController(text: 'Sri Lanka');
+  final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _dobController = TextEditingController(text: '11/08/1947');
-  
-  String _selectedGender = 'Male';
-  String _selectedPronoun = 'He/Him';
-  final List<String> _interests = [];
-  final _interestController = TextEditingController();
+  final _programController = TextEditingController();
+  final _studentIdController = TextEditingController();
+
+  String _role = 'student'; // student | lecturer
+
+  bool _loading = false;
+  late final String _docId;
+  final _users = FirebaseFirestore.instance.collection('users');
 
   @override
-  void dispose() {
-    _nameController.dispose();
-    _ageController.dispose();
-    _bioController.dispose();
-    _socialMediaController.dispose();
-    _countryController.dispose();
-    _emailController.dispose();
-    _dobController.dispose();
-    _interestController.dispose();
-    super.dispose();
+  void initState() {
+    super.initState();
+    _docId = widget.userDocId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
+    if (_docId.isNotEmpty) _loadProfile();
   }
 
-  void _addInterest() {
-    if (_interestController.text.trim().isNotEmpty) {
+  Future<void> _loadProfile() async {
+    try {
+      final snap = await _users.doc(_docId).get();
+      if (!snap.exists) return;
+      final data = snap.data()!;
       setState(() {
-        _interests.add(_interestController.text.trim());
-        _interestController.clear();
+        // prefer fullName, fallback to legacy name
+        _fullNameController.text = data['fullName'] ?? data['name'] ?? '';
+        _emailController.text = data['email'] ?? '';
+        _role = (data['role'] ?? 'student') as String;
+        _programController.text = data['program'] ?? '';
+        _studentIdController.text = data['studentID'] ?? '';
       });
+    } catch (e) {
+      // ignore load errors
     }
   }
 
-  void _removeInterest(int index) {
-    setState(() {
-      _interests.removeAt(index);
-    });
+  @override
+  void dispose() {
+    _fullNameController.dispose();
+    _emailController.dispose();
+    _programController.dispose();
+    _studentIdController.dispose();
+    super.dispose();
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime(1947, 8, 11),
-      firstDate: DateTime(1900),
-      lastDate: DateTime.now(),
-    );
-    if (picked != null) {
-      setState(() {
-        _dobController.text = '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-      });
+  Future<void> _saveProfile() async {
+    if (_docId.isEmpty) return;
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _loading = true);
+
+    final updateData = <String, dynamic>{
+      'fullName': _fullNameController.text.trim(),
+      // keep legacy 'name' in sync for older code
+      'name': _fullNameController.text.trim(),
+      'email': _emailController.text.trim(),
+      'role': _role,
+    };
+
+    if (_role == 'student') {
+      updateData['program'] = _programController.text.trim();
+      final sid = _studentIdController.text.trim();
+      if (sid.isNotEmpty) updateData['studentID'] = sid;
+      else updateData['studentID'] = FieldValue.delete();
+    } else {
+      // remove student-specific keys when lecturer
+      updateData['program'] = FieldValue.delete();
+      updateData['studentID'] = FieldValue.delete();
+    }
+
+    try {
+      // merge to avoid clobbering other fields (createdAt, enrolledClasses, etc.)
+      await _users.doc(_docId).set(updateData, SetOptions(merge: true));
+
+      // also update displayName in Auth user if changed
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null && user.displayName != _fullNameController.text.trim()) {
+        try {
+          await user.updateDisplayName(_fullNameController.text.trim());
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated successfully!')));
+      Navigator.of(context).pop();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Failed to update profile: $e')));
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
   }
 
@@ -96,7 +139,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Profile Picture
+              // Profile Picture (unchanged)
               Center(
                 child: Stack(
                   children: [
@@ -135,116 +178,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 32),
 
-              // Name Field
-              _buildLabel('Name'),
-              _buildTextField(
-                controller: _nameController,
-                hintText: 'Enter your name',
-              ),
+              // Full Name Field
+              _buildLabel('Full name'),
+              _buildTextField(controller: _fullNameController, hintText: 'Enter your full name'),
               const SizedBox(height: 20),
 
-              // Age Field
-              _buildLabel('Age'),
-              _buildTextField(
-                controller: _ageController,
-                hintText: 'Enter your age',
-                keyboardType: TextInputType.number,
-              ),
-              const SizedBox(height: 20),
-
-              // Bio Field
-              _buildLabel('Bio'),
-              _buildTextField(
-                controller: _bioController,
-                hintText: 'Add bio or anything about yourself',
-                maxLines: 3,
-              ),
-              const SizedBox(height: 20),
-
-              // Social Media Field
-              _buildLabel('Social Media'),
-              _buildTextField(
-                controller: _socialMediaController,
-                hintText: 'Link to your profile',
-              ),
-              const SizedBox(height: 20),
-
-              // Interests Field
-              _buildLabel('Interests'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildTextField(
-                      controller: _interestController,
-                      hintText: 'Add an interest',
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: _primaryCyan,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: IconButton(
-                      icon: const Icon(Icons.add, color: Colors.white),
-                      onPressed: _addInterest,
-                    ),
-                  ),
-                ],
-              ),
-              if (_interests.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: _interests.asMap().entries.map((entry) {
-                    return Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: _primaryCyan.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: _primaryCyan, width: 1),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            entry.value,
-                            style: const TextStyle(
-                              color: _primaryCyan,
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          GestureDetector(
-                            onTap: () => _removeInterest(entry.key),
-                            child: const Icon(
-                              Icons.close,
-                              size: 16,
-                              color: _primaryCyan,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-              const SizedBox(height: 20),
-
-              // Country Field
-              _buildLabel('Country'),
-              _buildTextField(
-                controller: _countryController,
-                hintText: 'Enter your country',
-              ),
-              const SizedBox(height: 20),
-
-              // Pronouns Field
-              _buildLabel('Pronouns'),
+              // Role Field (student / lecturer)
+              _buildLabel('Role'),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
@@ -254,22 +194,18 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 ),
                 child: DropdownButtonHideUnderline(
                   child: DropdownButton<String>(
-                    value: _selectedPronoun,
+                    value: _role,
                     isExpanded: true,
                     dropdownColor: _cardBackground,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     icon: const Icon(Icons.keyboard_arrow_down, color: Color(0xFF8B8B9F)),
-                    items: ['Do not show', 'She/Her', 'He/Him', 'They/Them']
-                        .map((String value) {
-                      return DropdownMenuItem<String>(
-                        value: value,
-                        child: Text(value),
-                      );
+                    items: ['student', 'lecturer'].map((String value) {
+                      return DropdownMenuItem<String>(value: value, child: Text(value));
                     }).toList(),
                     onChanged: (String? newValue) {
                       if (newValue != null) {
                         setState(() {
-                          _selectedPronoun = newValue;
+                          _role = newValue;
                         });
                       }
                     },
@@ -278,80 +214,34 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
               const SizedBox(height: 20),
 
-              // Student Email Field
-              _buildLabel('Student Email'),
-              _buildTextField(
-                controller: _emailController,
-                hintText: 'marvin@email.com',
-                keyboardType: TextInputType.emailAddress,
-              ),
+              // Email Field
+              _buildLabel('Email'),
+              _buildTextField(controller: _emailController, hintText: 'you@university.edu', keyboardType: TextInputType.emailAddress),
               const SizedBox(height: 20),
 
-              // Date of Birth Field
-              _buildLabel('Date of birth'),
-              GestureDetector(
-                onTap: () => _selectDate(context),
-                child: AbsorbPointer(
-                  child: _buildTextField(
-                    controller: _dobController,
-                    hintText: 'Select date',
-                    suffixIcon: Icons.calendar_today,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Gender Selection
-              _buildLabel('Gender'),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildGenderOption(
-                      'Male',
-                      _selectedGender == 'Male',
-                      () => setState(() => _selectedGender = 'Male'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildGenderOption(
-                      'Female',
-                      _selectedGender == 'Female',
-                      () => setState(() => _selectedGender = 'Female'),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 32),
+              // Academic fields for students only
+              if (_role == 'student') ...[
+                _buildLabel('Program'),
+                _buildTextField(controller: _programController, hintText: 'e.g. BSc Computer Science'),
+                const SizedBox(height: 20),
+                _buildLabel('Student ID (optional)'),
+                _buildTextField(controller: _studentIdController, hintText: 'Student ID / registration number'),
+                const SizedBox(height: 20),
+              ],
 
               // Update Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Profile updated successfully!')),
-                      );
-                      Navigator.of(context).pop();
-                    }
-                  },
+                  onPressed: _loading ? null : _saveProfile,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: _primaryCyan,
                     foregroundColor: Colors.white,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
                   ),
-                  child: const Text(
-                    'Update Profile',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: _loading ? const CircularProgressIndicator(color: Colors.white) : const Text('Update Profile', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(height: 32),
@@ -365,14 +255,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Text(
-        text,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 14,
-          fontWeight: FontWeight.w500,
-        ),
-      ),
+      child: Text(text, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w500)),
     );
   }
 
@@ -384,67 +267,28 @@ class _EditProfilePageState extends State<EditProfilePage> {
     IconData? suffixIcon,
   }) {
     return Container(
-      decoration: BoxDecoration(
-        color: _cardBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFF3A3A52)),
-      ),
+      decoration: BoxDecoration(color: _cardBackground, borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFF3A3A52))),
       child: TextFormField(
         controller: controller,
         maxLines: maxLines,
         keyboardType: keyboardType,
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 15,
-        ),
+        style: const TextStyle(color: Colors.white, fontSize: 15),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle: const TextStyle(
-            color: Color(0xFF8B8B9F),
-            fontSize: 15,
-          ),
+          hintStyle: const TextStyle(color: Color(0xFF8B8B9F), fontSize: 15),
           border: InputBorder.none,
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          suffixIcon: suffixIcon != null
-              ? Icon(suffixIcon, color: const Color(0xFF8B8B9F), size: 20)
-              : null,
+          suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: const Color(0xFF8B8B9F), size: 20) : null,
         ),
-      ),
-    );
-  }
-
-  Widget _buildGenderOption(String label, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? _primaryCyan.withOpacity(0.1) : _cardBackground,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-            color: isSelected ? _primaryCyan : const Color(0xFF3A3A52),
-            width: 1.5,
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isSelected ? _primaryCyan : const Color(0xFF8B8B9F),
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: TextStyle(
-                color: isSelected ? _primaryCyan : Colors.white,
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-              ),
-            ),
-          ],
-        ),
+        validator: (v) {
+          if (hintText.toLowerCase().contains('email') && (v == null || !v.contains('@'))) {
+            return 'Enter a valid email';
+          }
+          if (hintText.toLowerCase().contains('name') && (v == null || v.trim().isEmpty)) {
+            return 'Enter your name';
+          }
+          return null;
+        },
       ),
     );
   }
