@@ -5,6 +5,9 @@
 from firebase_functions import https_fn
 from firebase_functions.options import set_global_options
 from firebase_admin import initialize_app
+import os
+import firebase_admin
+from firebase_admin import credentials
 
 # For cost control, you can set the maximum number of containers that can be
 # running at the same time. This helps mitigate the impact of unexpected
@@ -19,3 +22,12 @@ set_global_options(max_instances=10)
 # @https_fn.on_request()
 # def on_request_example(req: https_fn.Request) -> https_fn.Response:
 #     return https_fn.Response("Hello world!")
+
+# Prefer Application Default Credentials in production.
+cred_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
+if cred_path:
+    cred = credentials.Certificate(cred_path)
+    firebase_admin.initialize_app(cred)
+else:
+    # Uses ADC (when running on Cloud Functions / Cloud Run this is the best practice)
+    firebase_admin.initialize_app()
