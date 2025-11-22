@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
+import 'edit_profile_page.dart';
+
 const Color _limeGreen = Color(0xFFB8E986);
 const Color _darkBackground = Color(0xFF1C1C28);
-const Color _lightBlue = Color(0xFF5BB5D9);
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,8 +13,6 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  int _selectedTab = 0;
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -53,8 +52,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       child: IconButton(
                         icon: const Icon(Icons.edit_outlined, color: Color(0xFF2A2A3E)),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Edit Profile coming soon!')),
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => const EditProfilePage(),
+                            ),
                           );
                         },
                       ),
@@ -117,35 +118,6 @@ class _ProfilePageState extends State<ProfilePage> {
                     ],
                   ),
                   const SizedBox(height: 24),
-                  Row(
-                    children: [
-                      _TabButton(
-                        label: 'Profile',
-                        isSelected: _selectedTab == 0,
-                        onTap: () => setState(() => _selectedTab = 0),
-                      ),
-                      const SizedBox(width: 8),
-                      _TabButton(
-                        label: 'Stats',
-                        isSelected: _selectedTab == 1,
-                        onTap: () => setState(() => _selectedTab = 1),
-                      ),
-                      const SizedBox(width: 8),
-                      _TabButton(
-                        label: 'Feed',
-                        isSelected: _selectedTab == 2,
-                        onTap: () => setState(() => _selectedTab = 2),
-                      ),
-                      const SizedBox(width: 8),
-                      _TabButton(
-                        label: 'Badges',
-                        isSelected: _selectedTab == 3,
-                        onTap: () => setState(() => _selectedTab = 3),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  if (_selectedTab == 0) ...[
                     Row(
                       children: [
                         Expanded(
@@ -216,63 +188,34 @@ class _ProfilePageState extends State<ProfilePage> {
                       ),
                     ),
                     const SizedBox(height: 32),
-                  ] else ...[
-                    Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(40),
-                        child: Text(
-                          _selectedTab == 1
-                              ? 'Stats coming soon!'
-                              : _selectedTab == 2
-                                  ? 'Feed coming soon!'
-                                  : 'Badges coming soon!',
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 16,
+                    // Streak Section
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _StreakCard(
+                            icon: Icons.local_fire_department_rounded,
+                            iconColor: const Color(0xFFFF9D42),
+                            title: 'Current streak',
+                            value: '0 days',
                           ),
                         ),
-                      ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _StreakCard(
+                            icon: null,
+                            iconColor: const Color(0xFFFF9D42),
+                            title: 'Best streak',
+                            value: '1 days',
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                    const SizedBox(height: 32),
                 ],
               ),
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: isSelected ? _lightBlue : const Color(0xFF2A2A3E),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected ? Colors.white : Colors.white54,
-            fontSize: 14,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-          ),
-        ),
       ),
     );
   }
@@ -312,3 +255,72 @@ class _InfoItem extends StatelessWidget {
     );
   }
 }
+
+class _StreakCard extends StatelessWidget {
+  const _StreakCard({
+    required this.icon,
+    required this.iconColor,
+    required this.title,
+    required this.value,
+  });
+
+  final IconData? icon;
+  final Color iconColor;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2D3250),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (icon != null)
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    iconColor.withValues(alpha: 0.3),
+                    iconColor.withValues(alpha: 0.1),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: iconColor,
+                size: 28,
+              ),
+            ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white70,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
