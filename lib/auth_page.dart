@@ -14,7 +14,7 @@ class _AuthPageState extends State<AuthPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
   final TextEditingController _confirmController = TextEditingController();
-  final AuthService _auth = AuthService();
+  final AuthService _auth = AuthService.instance;
 
   bool _isRegister = false;
   bool _loading = false;
@@ -56,18 +56,27 @@ class _AuthPageState extends State<AuthPage> {
     }
 
     setState(() => _loading = true);
-    final ok = _isRegister
-        ? await _auth.register(email, pass)
-        : await _auth.signIn(email, pass);
+
+    bool ok = false;
+    String? errorMsg;
+    try {
+      if (_isRegister) {
+        await _auth.registerWithEmail(email, pass);
+      } else {
+        await _auth.signInWithEmail(email, pass);
+      }
+      ok = true;
+    } catch (e) {
+      errorMsg = e.toString();
+    }
     if (!mounted) return;
     setState(() => _loading = false);
 
-    final successMessage =
-        _isRegister ? 'Registered (simulated)' : 'Signed in (simulated)';
+    final successMessage = _isRegister ? 'Registered' : 'Signed in';
 
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Operation failed (simulated)')),
+        SnackBar(content: Text(errorMsg ?? 'Operation failed')),
       );
       return;
     }
