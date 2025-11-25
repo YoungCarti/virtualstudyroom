@@ -10,11 +10,10 @@ class AuthPage extends StatefulWidget {
 }
 
 class _AuthPageState extends State<AuthPage> {
-
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passController = TextEditingController();
-  final TextEditingController _confirmController = TextEditingController();
-  final AuthService _auth = AuthService.instance;
+  final _emailController = TextEditingController();
+  final _passController = TextEditingController();
+  final _confirmController = TextEditingController();
+  final _auth = AuthService.instance;
 
   bool _isRegister = false;
   bool _loading = false;
