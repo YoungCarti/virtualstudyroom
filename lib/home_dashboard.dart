@@ -1,4 +1,7 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'profile_menu_page.dart';
 
 class HomeDashboardPage extends StatefulWidget {
@@ -21,6 +24,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 
   @override
   Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
     return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
@@ -40,23 +45,44 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
               bottom: false,
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _HeaderSection(
-                      onProfileTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const ProfileMenuPage(),
-                          ),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 24),
-                    const _AssignmentsCard(),
-                    const SizedBox(height: 24),
-                    const _FeatureGrid(),
-                  ],
+                child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                  stream: uid != null
+                      ? FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .snapshots()
+                      : null,
+                  builder: (context, snapshot) {
+                    String userName = 'User';
+                    if (snapshot.hasData && snapshot.data!.data() != null) {
+                      final data = snapshot.data!.data()!;
+                      userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
+                      // Extract first name for "Hello, [Name]!"
+                      if (userName.contains(' ')) {
+                        userName = userName.split(' ')[0];
+                      }
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _HeaderSection(
+                          userName: userName,
+                          onProfileTap: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => const ProfileMenuPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 24),
+                        const _AssignmentsCard(),
+                        const SizedBox(height: 24),
+                        const _FeatureGrid(),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
@@ -80,9 +106,13 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 }
 
 class _HeaderSection extends StatelessWidget {
-  const _HeaderSection({required this.onProfileTap});
+  const _HeaderSection({
+    required this.onProfileTap,
+    required this.userName,
+  });
 
   final VoidCallback onProfileTap;
+  final String userName;
 
   @override
   Widget build(BuildContext context) {
@@ -127,9 +157,9 @@ class _HeaderSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 24),
-        const Text(
-          'Hello, Saabiresh!',
-          style: TextStyle(
+        Text(
+          'Hello, $userName!',
+          style: const TextStyle(
             color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.w600, // Semi-bold
