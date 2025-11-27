@@ -29,7 +29,9 @@ A modern, feature-rich Flutter application designed as a student dashboard. This
 
 ## 📱 Screenshots
 
-*(Add your screenshots here)*
+**Homepage**:
+<img width="484" height="925" alt="image" src="https://github.com/user-attachments/assets/557c0d4a-61a9-4b76-a0e4-568d13cb446d" />
+
 
 ## 🏁 Getting Started
 
