@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'profile_page.dart';
+import 'profile_menu_page.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -17,49 +17,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     });
   }
 
-  void _showProfileMenu(BuildContext context, Offset position) {
-    showMenu(
-      context: context,
-      position: RelativeRect.fromLTRB(
-        position.dx,
-        position.dy + 50,
-        position.dx + 200,
-        0,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      color: const Color(0xFF2A2A3E),
-      items: [
-        PopupMenuItem(
-          child: Row(
-            children: const [
-              Icon(Icons.person_outline, size: 20, color: Colors.white70),
-              SizedBox(width: 12),
-              Text('Profile', style: TextStyle(color: Colors.white, fontSize: 15)),
-            ],
-          ),
-          onTap: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (context) => const ProfilePage()),
-            );
-          },
-        ),
-        PopupMenuItem(
-          child: Row(
-            children: const [
-              Icon(Icons.settings_outlined, size: 20, color: Colors.white70),
-              SizedBox(width: 12),
-              Text('Settings', style: TextStyle(color: Colors.white, fontSize: 15)),
-            ],
-          ),
-          onTap: () {
-            // Navigate to settings
-          },
-        ),
-      ],
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -86,7 +44,13 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _HeaderSection(
-                      onProfileTap: (offset) => _showProfileMenu(context, offset),
+                      onProfileTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const ProfileMenuPage(),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 24),
                     const _AssignmentsCard(),
@@ -118,7 +82,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 class _HeaderSection extends StatelessWidget {
   const _HeaderSection({required this.onProfileTap});
 
-  final Function(Offset) onProfileTap;
+  final VoidCallback onProfileTap;
 
   @override
   Widget build(BuildContext context) {
@@ -130,7 +94,7 @@ class _HeaderSection extends StatelessWidget {
           children: [
             // Profile Picture
             GestureDetector(
-              onTapDown: (details) => onProfileTap(details.globalPosition),
+              onTap: onProfileTap,
               child: Container(
                 width: 48,
                 height: 48,
