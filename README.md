@@ -1,10 +1,8 @@
-# demoflutter
+# Virtual Study Room App (Under Development)
 
-A new Flutter project.
+## Description
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
+A mobile application that provides virtual study rooms with chat, video, AI tools, goal tracking, and more — enabling students to collaborate, stay focused, and study together in an engaging digital environment.
 
 A few resources to get you started if this is your first Flutter project:
 
