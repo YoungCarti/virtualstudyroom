@@ -80,9 +80,7 @@ If you have any feedback, please reach out to us at @opiumcarti. in Discord
 
 ## 📄 License
 
-This project is licensed under the MIT License [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
-
-MIT License
+This project is licensed under the [![MIT License](https://img.shields.io/badge/License-MIT-green.svg)](https://choosealicense.com/licenses/mit/)
 
 Saabiresh | Terrell (c) [2025]
 
