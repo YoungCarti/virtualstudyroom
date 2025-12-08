@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
@@ -31,7 +31,13 @@ class AuthService {
   }
 
   // Register, set a display name and create profile document.
-  Future<void> registerWithEmail(String email, String password) async {
+  Future<void> registerWithEmail({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String phone,
+  }) async {
     try {
       final userCred = await _auth.createUserWithEmailAndPassword(
         email: email.trim(),
@@ -40,11 +46,21 @@ class AuthService {
       final user = userCred.user;
       if (user == null) throw Exception('Registration returned no user.');
 
-      // Set a default display name (local part of email) if none set.
-      final defaultName = email.split('@').first;
-      await user.updateDisplayName(defaultName);
+      // Set display name
+      final displayName = '$firstName $lastName';
+      await user.updateDisplayName(displayName);
 
-      await _ensureUserProfile(user);
+      // Create user profile in Firestore
+      await _firestore.collection('users').doc(user.uid).set({
+        'email': email.trim(),
+        'firstName': firstName.trim(),
+        'lastName': lastName.trim(),
+        'name': displayName,
+        'phone': phone.trim(),
+        'role': 'student',
+        'enrolledClasses': <String>[],
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     } on FirebaseAuthException {
       rethrow;
     } catch (e) {
@@ -74,25 +90,6 @@ class AuthService {
     }
   }
 
-  // Facebook Sign In
-  Future<UserCredential?> signInWithFacebook() async {
-    try {
-      final LoginResult result = await FacebookAuth.instance.login();
-      if (result.status == LoginStatus.success) {
-        final AccessToken accessToken = result.accessToken!;
-        final OAuthCredential credential = FacebookAuthProvider.credential(accessToken.token);
-        
-        final userCred = await _auth.signInWithCredential(credential);
-        if (userCred.user != null) {
-          await _ensureUserProfile(userCred.user!);
-        }
-        return userCred;
-      }
-      return null;
-    } catch (e) {
-      throw Exception('Facebook Sign In failed: $e');
-    }
-  }
 
   // Secure Storage for Remember Me
   Future<void> saveCredentials(String email, String password) async {

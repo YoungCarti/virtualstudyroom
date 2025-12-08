@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'profile_page.dart';
-import 'auth_page.dart';
+import 'login_page.dart';
 import 'account_page.dart';
 
 class ProfileMenuPage extends StatefulWidget {
@@ -204,16 +204,14 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                               iconColor: const Color(0xFFF43F5E),
                               onTap: () async {
                                 await FirebaseAuth.instance.signOut();
-                                if (context.mounted) {
-                                  Navigator.of(context).pushAndRemoveUntil(
-                                    MaterialPageRoute(
-                                      builder: (context) => const AuthPage(
-                                        initialMessage: 'Successfully logged out',
+                                  if (context.mounted) {
+                                    Navigator.of(context).pushAndRemoveUntil(
+                                      MaterialPageRoute(
+                                        builder: (context) => const LoginPage(),
                                       ),
-                                    ),
-                                    (route) => false,
-                                  );
-                                }
+                                      (route) => false,
+                                    );
+                                  }
                               },
                             ),
                           ],

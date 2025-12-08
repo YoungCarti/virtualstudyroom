@@ -1,9 +1,12 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'auth_service.dart';
 import 'auth_page.dart';
 import 'home_dashboard.dart';
+import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -228,7 +231,7 @@ class _LoginPageState extends State<LoginPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const AuthPage(isRegister: true),
+                            builder: (_) => const RegisterPage(),
                           ),
                         );
                       },
@@ -402,24 +405,10 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 16),
 
                     // Social Buttons
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildSocialButton(
-                            text: 'Google',
-                            icon: Icons.g_mobiledata_rounded, // Placeholder for Google Icon
-                            onTap: () => _handleSocialLogin(_auth.signInWithGoogle),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: _buildSocialButton(
-                            text: 'Facebook',
-                            icon: Icons.facebook_rounded,
-                            onTap: () => _handleSocialLogin(_auth.signInWithFacebook),
-                          ),
-                        ),
-                      ],
+                    _buildSocialButton(
+                      text: 'Continue with Google',
+                      icon: FontAwesomeIcons.google,
+                      onTap: () => _handleSocialLogin(_auth.signInWithGoogle),
                     ),
                     const SizedBox(height: 24),
 

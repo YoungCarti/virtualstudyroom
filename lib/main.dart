@@ -4,6 +4,7 @@ import 'auth_page.dart';
 import 'login_page.dart';
 import 'splash_screen.dart';
 import 'theme_controller.dart';
+import 'register_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -95,7 +96,11 @@ class _MyAppState extends State<MyApp> {
         body: Center(child: CircularProgressIndicator()),
       );
     } else {
-      home = const LoginPage();
+      if (_initialRegisterMode) {
+        home = const RegisterPage();
+      } else {
+        home = const LoginPage();
+      }
     }
 
     return AnimatedBuilder(

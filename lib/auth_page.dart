@@ -82,7 +82,13 @@ class _AuthPageState extends State<AuthPage> {
     String? errorMsg;
     try {
       if (_isRegister) {
-        await _auth.registerWithEmail(email, pass);
+        await _auth.registerWithEmail(
+          email: email,
+          password: pass,
+          firstName: 'New',
+          lastName: 'User',
+          phone: '',
+        );
       } else {
         await _auth.signInWithEmail(email, pass);
       }
