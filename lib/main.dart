@@ -40,8 +40,13 @@ class _MyAppState extends State<MyApp> {
     }
   }
 
-  void _handleOnboardingFinished() {
-    setState(() => _showOnboarding = false);
+  bool _initialRegisterMode = false;
+
+  void _handleOnboardingFinished(bool isRegister) {
+    setState(() {
+      _showOnboarding = false;
+      _initialRegisterMode = isRegister;
+    });
   }
 
   // This widget is the root of your application.
@@ -89,7 +94,7 @@ class _MyAppState extends State<MyApp> {
         body: Center(child: CircularProgressIndicator()),
       );
     } else {
-      home = const AuthPage();
+      home = AuthPage(isRegister: _initialRegisterMode);
     }
 
     return AnimatedBuilder(

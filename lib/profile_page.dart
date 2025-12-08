@@ -34,13 +34,13 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           // Background Gradient
           Container(
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xFF1A1625),
-                  Color(0xFF231B2E),
+                  Color(0xFF7C3AED).withValues(alpha: 0.1),
+                  Color(0xFFC026D3).withValues(alpha: 0.08),
                 ],
               ),
             ),
@@ -87,7 +87,10 @@ class _ProfilePageState extends State<ProfilePage> {
                       final data = snapshot.data?.data() ?? {};
                       final fullName = (data['fullName'] ?? data['name'] ?? 'Saabiresh Letchumanan') as String;
                       final program = (data['program'] ?? 'Bachelor of Computer Science (Hons.)') as String;
-                      // final role = (data['role'] ?? 'Student') as String;
+                      final campus = (data['campus'] ?? 'Management & Science University (MSU)') as String;
+                      final favGroup = (data['favGroup'] ?? 'Machine Learning Room') as String;
+                      final bio = (data['bio'] ?? 'Passionate computer science student with a love for problem-solving and algorithms. Always eager to learn new technologies and collaborate on exciting projects.🔬') as String;
+                      final interests = List<String>.from(data['interests'] ?? ['Machine Learning', 'Web Development', 'Data Science', 'Cybersecurity', 'Mobile Apps']);
                       final joinedDate = _formatCreatedAt(data['createdAt']);
 
                       return SingleChildScrollView(
@@ -273,7 +276,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             icon: Icons.location_on_outlined,
                                             iconColor: const Color(0xFF22D3EE),
                                             label: "Campus",
-                                            title: "Management & Science University (MSU)",
+                                            title: campus,
                                           ),
                                         ),
                                         const SizedBox(width: 12),
@@ -290,7 +293,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             icon: Icons.group_outlined,
                                             iconColor: const Color(0xFF22D3EE),
                                             label: "Fav Group",
-                                            title: "Machine Learning Room",
+                                            title: favGroup,
                                           ),
                                         ),
                                       ],
@@ -389,7 +392,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     ),
                                     const SizedBox(height: 12),
                                     Text(
-                                      "Passionate computer science student with a love for problem-solving and algorithms. Always eager to learn new technologies and collaborate on exciting projects.🔬",
+                                      bio,
                                       style: GoogleFonts.inter(
                                         color: Colors.white.withValues(alpha: 0.75),
                                         fontSize: 14,
@@ -429,12 +432,28 @@ class _ProfilePageState extends State<ProfilePage> {
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
-                                      children: const [
-                                        _InterestTag(label: "Machine Learning", color: Color(0xFF7C3AED)),
-                                        _InterestTag(label: "Web Development", color: Color(0xFF0D9488)),
-                                        _InterestTag(label: "Data Science", color: Color(0xFF0D9488)), // Reusing teal
-                                        _InterestTag(label: "Cybersecurity", color: Color(0xFFEA580C)),
-                                        _InterestTag(label: "Mobile Apps", color: Color(0xFFDC2626)),
+                                      children: [
+                                        ...interests.asMap().entries.map((entry) {
+                                          final index = entry.key;
+                                          final interest = entry.value;
+                                          // Cycle through colors
+                                          final colors = [
+                                            const Color(0xFF7C3AED), // Purple
+                                            const Color(0xFF0D9488), // Teal
+                                            const Color(0xFF3B82F6), // Blue
+                                            const Color(0xFFDC2626), // Red
+                                            const Color(0xFFEA580C), // Orange
+                                            const Color(0xFFEC4899), // Pink
+                                            const Color(0xFF10B981), // Green
+                                            const Color(0xFF6366F1), // Indigo
+                                            const Color(0xFFF59E0B), // Amber
+                                            const Color(0xFF06B6D4), // Cyan
+                                          ];
+                                          return _InterestTag(
+                                            label: interest,
+                                            color: colors[index % colors.length],
+                                          );
+                                        }),
                                       ],
                                     ),
                                   ],

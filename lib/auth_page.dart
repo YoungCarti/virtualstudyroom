@@ -3,7 +3,14 @@ import 'auth_service.dart';
 import 'home_dashboard.dart';
 
 class AuthPage extends StatefulWidget {
-  const AuthPage({super.key});
+  final String? initialMessage;
+  final bool isRegister;
+
+  const AuthPage({
+    super.key,
+    this.initialMessage,
+    this.isRegister = false,
+  });
 
   @override
   State<AuthPage> createState() => _AuthPageState();
@@ -15,10 +22,25 @@ class _AuthPageState extends State<AuthPage> {
   final _confirmController = TextEditingController();
   final _auth = AuthService.instance;
 
-  bool _isRegister = false;
+  late bool _isRegister;
   bool _loading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _isRegister = widget.isRegister;
+    if (widget.initialMessage != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(widget.initialMessage!)),
+          );
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {

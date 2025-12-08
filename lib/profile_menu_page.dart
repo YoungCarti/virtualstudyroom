@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'profile_page.dart';
+import 'auth_page.dart';
+import 'account_page.dart';
 
 class ProfileMenuPage extends StatefulWidget {
   const ProfileMenuPage({super.key});
@@ -19,14 +21,22 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
   @override
   Widget build(BuildContext context) {
     // Background Colors
-    const Color topColor = Color(0xFF2D1B4E);
-    const Color bottomColor = Color(0xFF0A0118);
+    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
+    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
 
     if (_uid == null) {
-      return const Scaffold(
-        backgroundColor: bottomColor,
-        body: Center(
-          child: Text('Not signed in', style: TextStyle(color: Colors.white)),
+      return Scaffold(
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [topColor, bottomColor],
+            ),
+          ),
+          child: Center(
+            child: Text('Not signed in', style: TextStyle(color: Colors.white)),
+          ),
         ),
       );
     }
@@ -37,9 +47,9 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
       stream: docRef.snapshots(),
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
             backgroundColor: bottomColor,
-            body: Center(child: CircularProgressIndicator()),
+            body: const Center(child: CircularProgressIndicator()),
           );
         }
         
@@ -52,7 +62,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
             children: [
               // 1. Background Gradient
               Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -67,11 +77,11 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                 top: -40,
                 left: -40,
                 child: Container(
-                  width: 200,
-                  height: 200,
+                  width: 300,
+                  height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.4), // Violet
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.15), // Violet
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -195,7 +205,14 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                               onTap: () async {
                                 await FirebaseAuth.instance.signOut();
                                 if (context.mounted) {
-                                  Navigator.of(context).popUntil((route) => route.isFirst);
+                                  Navigator.of(context).pushAndRemoveUntil(
+                                    MaterialPageRoute(
+                                      builder: (context) => const AuthPage(
+                                        initialMessage: 'Successfully logged out',
+                                      ),
+                                    ),
+                                    (route) => false,
+                                  );
                                 }
                               },
                             ),
@@ -233,7 +250,13 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                           const Color(0xFF10B981).withValues(alpha: 0.2),
                           const Color(0xFF14B8A6).withValues(alpha: 0.2),
                         ],
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AccountPage(),
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 12),
 

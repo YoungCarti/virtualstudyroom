@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'dart:async';
+// import 'dart:async';
 import 'profile_menu_page.dart';
 
 class HomeDashboardPage extends StatefulWidget {
@@ -28,13 +28,13 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
+        decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF2d1b4e), // Dark purple at top
-              Color(0xFF1a0f2e), // Slightly darker at bottom
+              Color(0xFF7C3AED).withValues(alpha: 0.1), // Violet 10%
+              Color(0xFFC026D3).withValues(alpha: 0.08), // Fuchsia 8%
             ],
           ),
         ),
