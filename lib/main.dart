@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'auth_page.dart';
+import 'login_page.dart';
 import 'splash_screen.dart';
 import 'theme_controller.dart';
 
@@ -94,7 +95,7 @@ class _MyAppState extends State<MyApp> {
         body: Center(child: CircularProgressIndicator()),
       );
     } else {
-      home = AuthPage(isRegister: _initialRegisterMode);
+      home = const LoginPage();
     }
 
     return AnimatedBuilder(
