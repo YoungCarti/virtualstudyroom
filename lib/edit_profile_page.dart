@@ -20,8 +20,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   
   // Controllers
   final _fullNameController = TextEditingController();
-  final _roleController = TextEditingController();
-  final _programController = TextEditingController();
   final _campusController = TextEditingController();
   final _favGroupController = TextEditingController();
   final _bioController = TextEditingController();
@@ -32,6 +30,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late final String _docId;
   final _users = FirebaseFirestore.instance.collection('users');
   bool _hasUnsavedChanges = false;
+  String _role = 'student';      // student | lecturer
+  String _program = 'BCS';       // BCS | BSE
 
   // Interest Colors Palette
   final List<Color> _tagColors = [
@@ -55,8 +55,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     
     // Listen for changes to set unsaved flag
     _fullNameController.addListener(_onFieldChanged);
-    _roleController.addListener(_onFieldChanged);
-    _programController.addListener(_onFieldChanged);
     _campusController.addListener(_onFieldChanged);
     _favGroupController.addListener(_onFieldChanged);
     _bioController.addListener(_onFieldChanged);
@@ -75,9 +73,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final data = snap.data()!;
       setState(() {
         _fullNameController.text = data['fullName'] ?? data['name'] ?? '';
-        _roleController.text = data['role'] ?? 'Student';
-        _programController.text = data['program'] ?? '';
-        _campusController.text = data['campus'] ?? '';
+        _role = (data['role'] ?? 'student').toString().toLowerCase();
+        _program = (data['program'] ?? 'BCS').toString().toUpperCase();
+        _campusController.text = (data['campus'] ?? '').toString().isEmpty
+            ? 'UNIMY'
+            : data['campus'];
         _favGroupController.text = data['favGroup'] ?? '';
         _bioController.text = data['bio'] ?? '';
         
@@ -103,8 +103,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void dispose() {
     _fullNameController.dispose();
-    _roleController.dispose();
-    _programController.dispose();
     _campusController.dispose();
     _favGroupController.dispose();
     _bioController.dispose();
@@ -202,9 +200,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final updateData = <String, dynamic>{
       'fullName': _fullNameController.text.trim(),
       'name': _fullNameController.text.trim(), // Legacy support
-      'role': _roleController.text.trim(),
-      'program': _programController.text.trim(),
-      'campus': _campusController.text.trim(),
+      'role': _role,
+      'program': _program,
+      'campus': _campusController.text.trim().isEmpty
+          ? 'UNIMY'
+          : _campusController.text.trim(),
       'favGroup': _favGroupController.text.trim(),
       'bio': _bioController.text.trim(),
       'interests': _interests,
@@ -411,21 +411,71 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             ),
                             const SizedBox(height: 16),
                             
-                            _buildTextField(
-                              controller: _roleController,
-                              label: "Role",
-                              icon: Icons.badge_outlined,
-                              iconColor: const Color(0xFF22D3EE),
-                              validator: (v) => (v == null || v.isEmpty) ? 'Role is required' : null,
+                            // Role toggle
+                            _buildLabel("Role"),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _toggleButton(
+                                    label: 'Student',
+                                    selected: _role == 'student',
+                                    onTap: () {
+                                      setState(() {
+                                        _role = 'student';
+                                        _hasUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _toggleButton(
+                                    label: 'Lecturer',
+                                    selected: _role == 'lecturer',
+                                    onTap: () {
+                                      setState(() {
+                                        _role = 'lecturer';
+                                        _hasUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             
-                            _buildTextField(
-                              controller: _programController,
-                              label: "Program",
-                              icon: Icons.school_outlined,
-                              iconColor: const Color(0xFF9333EA),
-                              validator: (v) => (v == null || v.length < 5) ? 'Min 5 characters required' : null,
+                            // Program toggle
+                            _buildLabel("Program"),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _toggleButton(
+                                    label: 'BCS',
+                                    selected: _program == 'BCS',
+                                    onTap: () {
+                                      setState(() {
+                                        _program = 'BCS';
+                                        _hasUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                Expanded(
+                                  child: _toggleButton(
+                                    label: 'BSE',
+                                    selected: _program == 'BSE',
+                                    onTap: () {
+                                      setState(() {
+                                        _program = 'BSE';
+                                        _hasUnsavedChanges = true;
+                                      });
+                                    },
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             
@@ -459,16 +509,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                             const SizedBox(height: 16),
 
                             // 5. Interests Section
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                "Interests",
-                                style: GoogleFonts.inter(
-                                  color: Colors.white.withValues(alpha: 0.4),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
+                            _buildLabel("Interests"),
                             const SizedBox(height: 8),
                             _GlassContainer(
                               padding: const EdgeInsets.all(12),
@@ -580,6 +621,47 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLabel(String text) => Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          text,
+          style: GoogleFonts.inter(
+            color: Colors.white.withValues(alpha: 0.4),
+            fontSize: 12,
+          ),
+        ),
+      );
+
+  Widget _toggleButton({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: BoxDecoration(
+          color: selected ? const Color(0xFF22D3EE).withOpacity(0.12) : Colors.white.withValues(alpha: 0.05),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? const Color(0xFF22D3EE) : Colors.white.withValues(alpha: 0.12),
+            width: 1.5,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: GoogleFonts.inter(
+            color: selected ? const Color(0xFF22D3EE) : Colors.white,
+            fontSize: 15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }
