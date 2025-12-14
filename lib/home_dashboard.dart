@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 // import 'dart:async';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
+import 'group_chats_page.dart';
+import 'classes_page.dart'; // added
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -14,11 +16,41 @@ class HomeDashboardPage extends StatefulWidget {
 
 class _HomeDashboardPageState extends State<HomeDashboardPage> {
   int _selectedIndex = 0;
+  String _role = 'student'; // track current role
 
   void _onBottomNavTap(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    if (index == 1) {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => ClassesPage(role: _role),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var offsetAnimation = animation.drive(tween);
+            return SlideTransition(position: offsetAnimation, child: child);
+          },
+        ),
+      );
+    } else if (index == 2) {
+      Navigator.of(context).push(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => const GroupChatsPage(),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+            var offsetAnimation = animation.drive(tween);
+            return SlideTransition(position: offsetAnimation, child: child);
+          },
+        ),
+      );
+    }
   }
 
 
@@ -61,6 +93,12 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                       // Extract first name for "Hello, [Name]!"
                       if (userName.contains(' ')) {
                         userName = userName.split(' ')[0];
+                      }
+                      final role = (data['role'] ?? 'student') as String;
+                      if (role != _role && mounted) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) setState(() => _role = role);
+                        });
                       }
                     }
 
@@ -537,17 +575,19 @@ class _FloatingBottomNav extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           _NavIcon(
-            icon: Icons.home_filled,
+            icon: Icons.home_rounded,
             isSelected: selectedIndex == 0,
             onTap: () => onTap(0),
           ),
+          // Middle button -> Classes
           _NavIcon(
-            icon: Icons.calendar_today_rounded,
+            icon: Icons.class_outlined,
             isSelected: selectedIndex == 1,
             onTap: () => onTap(1),
           ),
+          // Right button -> Group Chats
           _NavIcon(
-            icon: Icons.description_outlined,
+            icon: Icons.forum_rounded,
             isSelected: selectedIndex == 2,
             onTap: () => onTap(2),
           ),
