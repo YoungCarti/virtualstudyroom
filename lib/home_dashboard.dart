@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
 import 'group_chats_page.dart';
-import 'classes_page.dart'; // added
+import 'classes_page.dart';
+import 'assignment_service.dart';
+import 'package:intl/intl.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -230,130 +232,164 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
+
+
 class _AssignmentsCard extends StatelessWidget {
   const _AssignmentsCard();
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF33264a), // Dark purple/gray background
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Assignments Due',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFe63946), // Red background
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.white, size: 14),
-                    SizedBox(width: 4),
-                    Text(
-                      '3 pending',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          const _AssignmentItem(
-            title: 'Discrete Math',
-            subject: 'Mathematics 2',
-            status: 'Today',
-            statusColor: Color(0xFFe63946), // Red
-          ),
-          const SizedBox(height: 12),
-          const _AssignmentItem(
-            title: 'Tutorial 1',
-            subject: 'Programming Technique',
-            status: 'Tomorrow',
-            statusColor: Color(0xFFf59e0b), // Amber/Orange
-          ),
-          const SizedBox(height: 12),
-          const _AssignmentItem(
-            title: 'Group Assignment',
-            subject: 'Industrial Workshop',
-            status: '27 Nov',
-            statusColor: Color(0xFF3b82f6), // Blue
-          ),
-          const SizedBox(height: 8), // Margin top 8px
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'View all assignments',
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5), // White/50%
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+
+    if (uid == null) return const SizedBox.shrink();
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final data = snapshot.data!.data() ?? {};
+        final enrolledClasses = List<String>.from(data['enrolledClasses'] ?? []);
+
+        return FutureBuilder<List<Assignment>>(
+          future: AssignmentService.instance.getUpcomingAssignments(enrolledClasses),
+          builder: (context, assignmentSnapshot) {
+            if (assignmentSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            final assignments = assignmentSnapshot.data ?? [];
+            final pendingCount = assignments.length;
+
+            return Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFF33264a),
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white.withValues(alpha: 0.5),
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+                ],
+              ),
+              child: Column(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Assignments Due',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (pendingCount > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFe63946),
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                '$pendingCount pending',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                  if (assignments.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Text(
+                        'No upcoming assignments!',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    )
+                  else
+                    ...assignments.map((a) => _AssignmentItem(assignment: a)),
+                  const SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'View all assignments',
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          Icons.arrow_forward_rounded,
+                          color: Colors.white.withValues(alpha: 0.5),
+                          size: 16,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }
 
 class _AssignmentItem extends StatelessWidget {
-  final String title;
-  final String subject;
-  final String status;
-  final Color statusColor;
+  final Assignment assignment;
 
-  const _AssignmentItem({
-    required this.title,
-    required this.subject,
-    required this.status,
-    required this.statusColor,
-  });
+  const _AssignmentItem({required this.assignment});
 
   @override
   Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final diff = assignment.dueDate.difference(now);
+    
+    String status;
+    Color statusColor;
+
+    if (diff.inDays == 0 && diff.isNegative == false) {
+      status = 'Today';
+      statusColor = const Color(0xFFe63946);
+    } else if (diff.inDays == 1) {
+      status = 'Tomorrow';
+      statusColor = const Color(0xFFf59e0b);
+    } else if (diff.isNegative) {
+      status = 'Overdue';
+      statusColor = Colors.grey;
+    } else {
+      status = DateFormat('d MMM').format(assignment.dueDate);
+      statusColor = const Color(0xFF3b82f6);
+    }
+
     return Container(
+      margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2d2140), // Slightly darker than container
+        color: const Color(0xFF2d2140),
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
@@ -364,7 +400,7 @@ class _AssignmentItem extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3), // White/30% opacity
+                color: Colors.white.withValues(alpha: 0.3),
                 width: 2,
               ),
             ),
@@ -375,7 +411,7 @@ class _AssignmentItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  title,
+                  assignment.title,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -384,9 +420,9 @@ class _AssignmentItem extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  subject,
+                  assignment.classCode,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5), // White/50%
+                    color: Colors.white.withValues(alpha: 0.5),
                     fontSize: 13,
                   ),
                 ),

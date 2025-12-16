@@ -2,7 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'assignment_details_page.dart';
+import 'create_assignment_page.dart';
 import 'group_details.dart';
+import 'assignment_service.dart';
+import 'package:intl/intl.dart';
 
 class ClassDetailsPage extends StatefulWidget {
   const ClassDetailsPage({
@@ -20,12 +23,11 @@ class ClassDetailsPage extends StatefulWidget {
   State<ClassDetailsPage> createState() => _ClassDetailsPageState();
 }
 
+
+
 class _ClassDetailsPageState extends State<ClassDetailsPage> {
   // Temporary sample data for testing
-  List<Map<String, String>> get _assignments => [
-        {'id': 'assignment1', 'title': 'Assignment 1', 'due': 'Due: Jan 15'},
-        {'id': 'assignment2', 'title': 'Project Proposal', 'due': 'Due: Jan 25'},
-      ];
+
 
   List<Map<String, String>> get _materials => [
         {'title': 'Syllabus.pdf', 'note': 'Course overview'},
@@ -202,30 +204,66 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Assignments', style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            if (_assignments.isEmpty)
-              const Text('No assignments yet.')
-            else
-              ..._assignments.map((a) => InkWell(
-                    onTap: () {
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Assignments', style: Theme.of(context).textTheme.titleLarge),
+                if (widget.isLecturer)
+                  TextButton.icon(
+                    onPressed: () {
                       Navigator.of(context).push(
                         MaterialPageRoute<void>(
-                          builder: (_) => AssignmentDetailsPage(
+                          builder: (_) => CreateAssignmentPage(
                             classCode: widget.classCode,
-                            assignmentId: a['id'] ?? '',
-                            isLecturer: widget.isLecturer,
                           ),
                         ),
                       );
                     },
-                    child: _CardTile(
-                      title: a['title'] ?? '',
-                      subtitle: a['due'] ?? '',
-                      icon: Icons.assignment_outlined,
-                      isDark: isDark,
-                    ),
-                  )),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Create'),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (uid == null)
+              const Text('Sign in to view assignments.')
+            else
+              StreamBuilder<List<Assignment>>(
+                stream: AssignmentService.instance.getAssignmentsForClass(widget.classCode),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  
+                  final assignments = snapshot.data ?? [];
+                  
+                  if (assignments.isEmpty) {
+                    return const Text('No assignments yet.');
+                  }
+
+                  return Column(
+                    children: assignments.map((a) => InkWell(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => AssignmentDetailsPage(
+                              classCode: widget.classCode,
+                              assignmentId: a.id,
+                              isLecturer: widget.isLecturer,
+                            ),
+                          ),
+                        );
+                      },
+                      child: _CardTile(
+                        title: a.title,
+                        subtitle: 'Due: ${DateFormat('MMM d').format(a.dueDate)}',
+                        icon: Icons.assignment_outlined,
+                        isDark: isDark,
+                      ),
+                    )).toList(),
+                  );
+                },
+              ),
             const SizedBox(height: 24),
 
             // Groups section (from Firebase)
