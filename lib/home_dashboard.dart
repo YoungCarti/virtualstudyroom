@@ -22,38 +22,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     setState(() {
       _selectedIndex = index;
     });
-    if (index == 1) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => ClassesPage(role: _role),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-            return SlideTransition(position: offsetAnimation, child: child);
-          },
-        ),
-      );
-    } else if (index == 2) {
-      Navigator.of(context).push(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) => const GroupChatsPage(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0);
-            const end = Offset.zero;
-            const curve = Curves.easeInOut;
-            var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-            return SlideTransition(position: offsetAnimation, child: child);
-          },
-        ),
-      );
-    }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -72,58 +41,67 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
           ),
         ),
         child: Stack(
+          fit: StackFit.expand,
           children: [
             // Main Content
-            SafeArea(
-              bottom: false,
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                  stream: uid != null
-                      ? FirebaseFirestore.instance
-                          .collection('users')
-                          .doc(uid)
-                          .snapshots()
-                      : null,
-                  builder: (context, snapshot) {
-                    String userName = 'User';
-                    if (snapshot.hasData && snapshot.data!.data() != null) {
-                      final data = snapshot.data!.data()!;
-                      userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
-                      // Extract first name for "Hello, [Name]!"
-                      if (userName.contains(' ')) {
-                        userName = userName.split(' ')[0];
-                      }
-                      final role = (data['role'] ?? 'student') as String;
-                      if (role != _role && mounted) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) setState(() => _role = role);
-                        });
-                      }
-                    }
+            IndexedStack(
+              index: _selectedIndex,
+              children: [
+                // Home Tab
+                SafeArea(
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                    child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      stream: uid != null
+                          ? FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .snapshots()
+                          : null,
+                      builder: (context, snapshot) {
+                        String userName = 'User';
+                        if (snapshot.hasData && snapshot.data!.data() != null) {
+                          final data = snapshot.data!.data()!;
+                          userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
+                          // Extract first name for "Hello, [Name]!"
+                          if (userName.contains(' ')) {
+                            userName = userName.split(' ')[0];
+                          }
+                          final role = (data['role'] ?? 'student') as String;
+                          if (role != _role && mounted) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _role = role);
+                            });
+                          }
+                        }
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _HeaderSection(
-                          userName: userName,
-                          onProfileTap: () {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => const ProfileMenuPage(),
-                              ),
-                            );
-                          },
-                        ),
-                        const SizedBox(height: 24),
-                        const _AssignmentsCard(),
-                        const SizedBox(height: 24),
-                        const _FeatureGrid(),
-                      ],
-                    );
-                  },
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _HeaderSection(
+                              userName: userName,
+                              onProfileTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const ProfileMenuPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 24),
+                            const _AssignmentsCard(),
+                          ],
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
+                // Classes Tab
+                ClassesPage(role: _role),
+                // Group Chats Tab
+                const GroupChatsPage(),
+              ],
             ),
             // Floating Bottom Navigation
             Positioned(
@@ -436,114 +414,7 @@ class _AssignmentItem extends StatelessWidget {
   }
 }
 
-class _FeatureGrid extends StatelessWidget {
-  const _FeatureGrid();
 
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 16,
-      crossAxisSpacing: 16,
-      childAspectRatio: 1.1, // Adjusted for height ~140px
-      children: const [
-        _FeatureCard(
-          titlePrefix: 'My',
-          titleSuffix: 'Learnings',
-          icon: Icons.book_outlined,
-          gradientColors: [Color(0xFFa855f7), Color(0xFFec4899)], // Purple/Magenta
-        ),
-        _FeatureCard(
-          titlePrefix: 'My',
-          titleSuffix: 'Community',
-          icon: Icons.groups_outlined, // Changed to groups for community
-          gradientColors: [Color(0xFFf97316), Color(0xFFfb923c)], // Orange
-        ),
-        _FeatureCard(
-          titlePrefix: 'AI Tutor',
-          titleSuffix: 'Guidance',
-          icon: Icons.smart_toy_outlined,
-          gradientColors: [Color(0xFF475569), Color(0xFF334155)], // Dark Slate
-        ),
-        _FeatureCard(
-          titlePrefix: 'Study',
-          titleSuffix: 'Progress',
-          icon: Icons.bar_chart_outlined, // Changed to bar chart
-          gradientColors: [Color(0xFF14b8a6), Color(0xFF06b6d4)], // Teal/Cyan
-        ),
-      ],
-    );
-  }
-}
-
-class _FeatureCard extends StatelessWidget {
-  final String titlePrefix;
-  final String titleSuffix;
-  final IconData icon;
-  final List<Color> gradientColors;
-
-  const _FeatureCard({
-    required this.titlePrefix,
-    required this.titleSuffix,
-    required this.icon,
-    required this.gradientColors,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: gradientColors,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(0), // No background for icon in new spec
-            child: Icon(icon, color: Colors.white, size: 32),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                titlePrefix,
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.9),
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              Text(
-                titleSuffix,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _FloatingBottomNav extends StatelessWidget {
   final int selectedIndex;

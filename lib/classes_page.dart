@@ -144,8 +144,11 @@ class _ClassesPageState extends State<ClassesPage> {
     final isLecturer = widget.role == 'lecturer';
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return Scaffold(
-      body: Container(
+    return Material(
+      type: MaterialType.transparency,
+      child: Container(
+        width: double.infinity,
+        height: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
@@ -157,28 +160,20 @@ class _ClassesPageState extends State<ClassesPage> {
           ),
         ),
         child: SafeArea(
+          bottom: false, // Allow bottom nav to overlap if needed, or handle padding in dashboard
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100), // Added bottom padding for nav bar
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                    const SizedBox(width: 8),
-                    const Text(
-                      'My Classes',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
+              const Text(
+                'My Classes',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
                 ),
+              ),
                 const SizedBox(height: 24),
 
                 // Enrolled Classes Section (from Firebase)
