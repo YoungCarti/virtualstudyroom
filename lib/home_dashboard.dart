@@ -1,13 +1,13 @@
+import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/material.dart';
-// import 'dart:async';
+import 'package:intl/intl.dart';
+import 'assignment_service.dart';
+import 'assignment_details_page.dart';
+import 'classes_page.dart';
+import 'group_chats_page.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
-import 'group_chats_page.dart';
-import 'classes_page.dart';
-import 'assignment_service.dart';
-import 'package:intl/intl.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -166,7 +166,7 @@ class _HeaderSection extends StatelessWidget {
               onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const NotificationsPage()),
+                  MaterialPageRoute(builder: (context) => NotificationsPage()),
                 );
               },
               child: Stack(
@@ -250,8 +250,10 @@ class _AssignmentsCard extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final data = snapshot.data!.data() ?? {};
+            final data = snapshot.data!.data() ?? {};
         final enrolledClasses = List<String>.from(data['enrolledClasses'] ?? []);
+        final role = data['role'] as String? ?? 'student';
+        final isLecturer = role == 'lecturer';
 
         return FutureBuilder<List<Assignment>>(
           future: AssignmentService.instance.getUpcomingAssignments(enrolledClasses),
@@ -323,7 +325,10 @@ class _AssignmentsCard extends StatelessWidget {
                       ),
                     )
                   else
-                    ...assignments.map((a) => _AssignmentItem(assignment: a)),
+                    ...assignments.map((a) => _AssignmentItem(
+                          assignment: a,
+                          isLecturer: isLecturer,
+                        )),
                   const SizedBox(height: 8),
                   Container(
                     width: double.infinity,
@@ -360,8 +365,12 @@ class _AssignmentsCard extends StatelessWidget {
 
 class _AssignmentItem extends StatelessWidget {
   final Assignment assignment;
+  final bool isLecturer;
 
-  const _AssignmentItem({required this.assignment});
+  const _AssignmentItem({
+    required this.assignment,
+    required this.isLecturer,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -387,64 +396,83 @@ class _AssignmentItem extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF2d2140),
         borderRadius: BorderRadius.circular(16),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.3),
-                width: 2,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => AssignmentDetailsPage(
+                  classCode: assignment.classCode,
+                  assignmentId: assignment.id,
+                  isLecturer: isLecturer,
+                ),
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            );
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
               children: [
-                Text(
-                  assignment.title,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w600,
+                Container(
+                  width: 24,
+                  height: 24,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 2,
+                    ),
                   ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  assignment.classCode,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.5),
-                    fontSize: 13,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        assignment.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        assignment.className.isNotEmpty ? assignment.className : assignment.classCode,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.6),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    status,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: statusColor,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              status,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }

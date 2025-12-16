@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart'; // for kIsWeb
 class Assignment {
   final String id;
   final String classCode;
+  final String className; // Added
   final String title;
   final String description;
   final DateTime dueDate;
@@ -17,6 +18,7 @@ class Assignment {
   Assignment({
     required this.id,
     required this.classCode,
+    required this.className, // Added
     required this.title,
     required this.description,
     required this.dueDate,
@@ -26,11 +28,12 @@ class Assignment {
     this.attachmentName,
   });
 
-  factory Assignment.fromFirestore(DocumentSnapshot doc, String classCode) {
+  factory Assignment.fromFirestore(DocumentSnapshot doc, String classCode, {String className = ''}) {
     final data = doc.data() as Map<String, dynamic>;
     return Assignment(
       id: doc.id,
       classCode: classCode,
+      className: className, // Added
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       dueDate: (data['dueDate'] as Timestamp).toDate(),
@@ -116,6 +119,10 @@ class AssignmentService {
     
     for (final code in classCodes) {
       try {
+        // Fetch class name first
+        final classDoc = await _firestore.collection('classes').doc(code).get();
+        final className = classDoc.data()?['className'] ?? code;
+
         final querySnapshot = await _firestore
             .collection('classes')
             .doc(code)
@@ -124,7 +131,7 @@ class AssignmentService {
             .get();
 
         final assignments = querySnapshot.docs
-            .map((doc) => Assignment.fromFirestore(doc, code))
+            .map((doc) => Assignment.fromFirestore(doc, code, className: className))
             .toList();
         
         allAssignments.addAll(assignments);
@@ -151,7 +158,7 @@ class AssignmentService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => Assignment.fromFirestore(doc, classCode))
+          .map((doc) => Assignment.fromFirestore(doc, classCode)) // className optional, defaults to ''
           .toList();
     });
   }
