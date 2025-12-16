@@ -5,6 +5,7 @@ import 'login_page.dart';
 import 'splash_screen.dart';
 import 'theme_controller.dart';
 import 'register_page.dart';
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,9 +30,13 @@ class _MyAppState extends State<MyApp> {
     _initializeFirebase();
   }
 
+
+
   Future<void> _initializeFirebase() async {
     try {
-      await Firebase.initializeApp();
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
       if (mounted) {
         setState(() => _firebaseReady = true);
       }
