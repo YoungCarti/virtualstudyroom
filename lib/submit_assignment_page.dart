@@ -10,10 +10,14 @@ class SubmitAssignmentPage extends StatefulWidget {
     super.key,
     required this.classCode,
     required this.assignmentId,
+    this.groupId,
+    this.groupName,
   });
 
   final String classCode;
   final String assignmentId;
+  final String? groupId;
+  final String? groupName;
 
   @override
   State<SubmitAssignmentPage> createState() => _SubmitAssignmentPageState();
@@ -75,6 +79,8 @@ class _SubmitAssignmentPageState extends State<SubmitAssignmentPage> {
         file: _selectedFile,
         fileBytes: _selectedFileBytes,
         fileName: _selectedFileName,
+        groupId: widget.groupId,
+        groupName: widget.groupName,
       );
 
       if (mounted) {
@@ -111,6 +117,16 @@ class _SubmitAssignmentPageState extends State<SubmitAssignmentPage> {
               'Upload your work',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
+            if (widget.groupName != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Submitting for group: ${widget.groupName}',
+                style: TextStyle(
+                  color: Theme.of(context).primaryColor,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
             const SizedBox(height: 8),
             const Text(
               'Please select the file you want to submit for this assignment.',

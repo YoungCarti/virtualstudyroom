@@ -1,4 +1,6 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'assignment_service.dart';
 
 class AssignmentEditDetailsPage extends StatefulWidget {
   const AssignmentEditDetailsPage({
@@ -19,13 +21,42 @@ class _AssignmentEditDetailsPageState extends State<AssignmentEditDetailsPage> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   DateTime _dueDate = DateTime.now().add(const Duration(days: 7));
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    // Load existing data (sample for now)
-    _titleCtrl.text = 'Assignment 1';
-    _descCtrl.text = 'Complete the programming exercises in Chapter 3';
+    _loadAssignment();
+  }
+
+  Future<void> _loadAssignment() async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(widget.classCode)
+          .collection('assignments')
+          .doc(widget.assignmentId)
+          .get();
+
+      if (doc.exists && mounted) {
+        final data = doc.data() as Map<String, dynamic>;
+        setState(() {
+          _titleCtrl.text = data['title'] ?? '';
+          _descCtrl.text = data['description'] ?? '';
+          if (data['dueDate'] != null) {
+            _dueDate = (data['dueDate'] as Timestamp).toDate();
+          }
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading assignment: $e')),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -47,19 +78,46 @@ class _AssignmentEditDetailsPageState extends State<AssignmentEditDetailsPage> {
     }
   }
 
-  void _saveChanges() {
+  Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // TODO: save to Firebase later
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Assignment updated (local only)')),
-    );
-    Navigator.of(context).pop();
+    setState(() => _isLoading = true);
+
+    try {
+      await AssignmentService.instance.updateAssignment(
+        classCode: widget.classCode,
+        assignmentId: widget.assignmentId,
+        title: _titleCtrl.text.trim(),
+        description: _descCtrl.text.trim(),
+        dueDate: _dueDate,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Assignment updated successfully')),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating assignment: $e')),
+        );
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Edit Assignment')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(

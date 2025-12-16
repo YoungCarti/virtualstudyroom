@@ -27,6 +27,7 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
   File? _selectedFile; // For mobile
   Uint8List? _selectedFileBytes; // For web
   String? _selectedFileName;
+  String _submissionType = 'individual';
 
   bool _isLoading = false;
 
@@ -86,6 +87,7 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
         file: _selectedFile,
         fileBytes: _selectedFileBytes,
         fileName: _selectedFileName,
+        submissionType: _submissionType,
       );
 
       if (mounted) {
@@ -174,6 +176,23 @@ class _CreateAssignmentPageState extends State<CreateAssignmentPage> {
                   ],
                 ),
               ),
+            ),
+            const SizedBox(height: 24),
+
+            // Submission Type Dropdown
+            DropdownButtonFormField<String>(
+              value: _submissionType,
+              decoration: const InputDecoration(
+                labelText: 'Submission Type',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'individual', child: Text('Individual Submission')),
+                DropdownMenuItem(value: 'group', child: Text('Group Submission')),
+              ],
+              onChanged: (val) {
+                if (val != null) setState(() => _submissionType = val);
+              },
             ),
             const SizedBox(height: 24),
 

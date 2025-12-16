@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart'; // for kIsWeb
 class Assignment {
   final String id;
   final String classCode;
-  final String className; // Added
+  final String className;
   final String title;
   final String description;
   final DateTime dueDate;
@@ -14,11 +14,12 @@ class Assignment {
   final String createdBy;
   final String? attachmentUrl;
   final String? attachmentName;
+  final String submissionType; // 'individual' or 'group'
 
   Assignment({
     required this.id,
     required this.classCode,
-    required this.className, // Added
+    required this.className,
     required this.title,
     required this.description,
     required this.dueDate,
@@ -26,6 +27,7 @@ class Assignment {
     required this.createdBy,
     this.attachmentUrl,
     this.attachmentName,
+    this.submissionType = 'individual',
   });
 
   factory Assignment.fromFirestore(DocumentSnapshot doc, String classCode, {String className = ''}) {
@@ -33,7 +35,7 @@ class Assignment {
     return Assignment(
       id: doc.id,
       classCode: classCode,
-      className: className, // Added
+      className: className,
       title: data['title'] ?? '',
       description: data['description'] ?? '',
       dueDate: (data['dueDate'] as Timestamp).toDate(),
@@ -41,6 +43,7 @@ class Assignment {
       createdBy: data['createdBy'] ?? '',
       attachmentUrl: data['attachmentUrl'],
       attachmentName: data['attachmentName'],
+      submissionType: data['submissionType'] ?? 'individual',
     );
   }
 }
@@ -63,6 +66,7 @@ class AssignmentService {
     File? file, // Mobile file
     Uint8List? fileBytes, // Web file bytes
     String? fileName,
+    String submissionType = 'individual',
   }) async {
     String? attachmentUrl;
 
@@ -82,8 +86,6 @@ class AssignmentService {
         attachmentUrl = await storageRef.getDownloadURL();
       } catch (e) {
         print('Error uploading file: $e');
-        // Proceed without attachment if upload fails, or rethrow?
-        // For now, let's rethrow so the user knows
         rethrow;
       }
     }
@@ -101,6 +103,7 @@ class AssignmentService {
       'createdBy': createdBy,
       'attachmentUrl': attachmentUrl,
       'attachmentName': fileName,
+      'submissionType': submissionType,
     });
   }
 
@@ -110,12 +113,6 @@ class AssignmentService {
 
     List<Assignment> allAssignments = [];
     final now = DateTime.now();
-
-    // Firestore 'in' queries are limited to 10 items.
-    // Since we need to query subcollections, we have to query each class individually
-    // or use collection group queries if we structure it differently.
-    // Given the current structure (classes/{classId}/assignments/{assignmentId}),
-    // we iterate through classCodes.
     
     for (final code in classCodes) {
       try {
@@ -137,7 +134,6 @@ class AssignmentService {
         allAssignments.addAll(assignments);
       } catch (e) {
         print('Error fetching assignments for class $code: $e');
-        // Continue to next class even if one fails
       }
     }
 
@@ -158,9 +154,34 @@ class AssignmentService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs
-          .map((doc) => Assignment.fromFirestore(doc, classCode)) // className optional, defaults to ''
+          .map((doc) => Assignment.fromFirestore(doc, classCode))
           .toList();
     });
+  }
+
+  // Get student's group for a class
+  Future<Map<String, String>?> getStudentGroup(String classCode, String uid) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('classes')
+          .doc(classCode)
+          .collection('groups')
+          .where('members', arrayContains: uid)
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        final doc = querySnapshot.docs.first;
+        return {
+          'groupId': doc.id,
+          'groupName': doc.data()['groupName'] ?? 'Unknown Group',
+        };
+      }
+      return null;
+    } catch (e) {
+      print('Error fetching student group: $e');
+      return null;
+    }
   }
 
   // Submit assignment
@@ -172,6 +193,8 @@ class AssignmentService {
     File? file,
     Uint8List? fileBytes,
     String? fileName,
+    String? groupId, // Optional, for group submissions
+    String? groupName, // Optional
   }) async {
     String? attachmentUrl;
 
@@ -193,32 +216,37 @@ class AssignmentService {
       }
     }
 
+    // Determine document ID: groupId if provided, else studentId
+    final submissionId = groupId ?? studentId;
+
     await _firestore
         .collection('classes')
         .doc(classCode)
         .collection('assignments')
         .doc(assignmentId)
         .collection('submissions')
-        .doc(studentId)
+        .doc(submissionId)
         .set({
       'studentId': studentId,
       'studentName': studentName,
+      'groupId': groupId,
+      'groupName': groupName,
       'attachmentUrl': attachmentUrl,
       'attachmentName': fileName,
       'submittedAt': FieldValue.serverTimestamp(),
     });
   }
 
-  // Get single submission for a student
+  // Get single submission (by studentId or groupId)
   Stream<Submission?> getSubmission(
-      String classCode, String assignmentId, String studentId) {
+      String classCode, String assignmentId, String submissionId) {
     return _firestore
         .collection('classes')
         .doc(classCode)
         .collection('assignments')
         .doc(assignmentId)
         .collection('submissions')
-        .doc(studentId)
+        .doc(submissionId)
         .snapshots()
         .map((doc) {
       if (!doc.exists) return null;
@@ -240,11 +268,57 @@ class AssignmentService {
       return snapshot.docs.map((doc) => Submission.fromFirestore(doc)).toList();
     });
   }
+  // Delete assignment
+  Future<void> deleteAssignment(String classCode, String assignmentId) async {
+    try {
+      // Delete assignment document
+      await _firestore
+          .collection('classes')
+          .doc(classCode)
+          .collection('assignments')
+          .doc(assignmentId)
+          .delete();
+      
+      // Note: This does not delete the subcollections (submissions) or the file from Storage.
+      // In a production app, you'd want to use Cloud Functions to handle recursive deletion
+      // or manually delete them here. For this demo, deleting the doc is sufficient to hide it.
+    } catch (e) {
+      print('Error deleting assignment: $e');
+      rethrow;
+    }
+  }
+
+  // Update assignment
+  Future<void> updateAssignment({
+    required String classCode,
+    required String assignmentId,
+    required String title,
+    required String description,
+    required DateTime dueDate,
+  }) async {
+    try {
+      await _firestore
+          .collection('classes')
+          .doc(classCode)
+          .collection('assignments')
+          .doc(assignmentId)
+          .update({
+        'title': title,
+        'description': description,
+        'dueDate': Timestamp.fromDate(dueDate),
+      });
+    } catch (e) {
+      print('Error updating assignment: $e');
+      rethrow;
+    }
+  }
 }
 
 class Submission {
   final String studentId;
   final String studentName;
+  final String? groupId;
+  final String? groupName;
   final String? attachmentUrl;
   final String? attachmentName;
   final DateTime? submittedAt;
@@ -252,6 +326,8 @@ class Submission {
   Submission({
     required this.studentId,
     required this.studentName,
+    this.groupId,
+    this.groupName,
     this.attachmentUrl,
     this.attachmentName,
     this.submittedAt,
@@ -262,6 +338,8 @@ class Submission {
     return Submission(
       studentId: data['studentId'] ?? '',
       studentName: data['studentName'] ?? 'Unknown',
+      groupId: data['groupId'],
+      groupName: data['groupName'],
       attachmentUrl: data['attachmentUrl'],
       attachmentName: data['attachmentName'],
       submittedAt: (data['submittedAt'] as Timestamp?)?.toDate(),

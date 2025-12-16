@@ -50,10 +50,10 @@ class AssignmentDetailsPage extends StatelessWidget {
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(assignment.title),
+            title: const Text('Assignment Details'),
             centerTitle: true,
             actions: [
-              if (isLecturer)
+              if (isLecturer) ...[
                 IconButton(
                   icon: const Icon(Icons.edit_outlined),
                   onPressed: () {
@@ -67,6 +67,49 @@ class AssignmentDetailsPage extends StatelessWidget {
                     );
                   },
                 ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Assignment'),
+                        content: const Text(
+                            'Are you sure you want to delete this assignment? This action cannot be undone.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      try {
+                        await AssignmentService.instance.deleteAssignment(classCode, assignmentId);
+                        if (context.mounted) {
+                          Navigator.pop(context); // Go back to list
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Assignment deleted')),
+                          );
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed to delete: $e')),
+                          );
+                        }
+                      }
+                    }
+                  },
+                ),
+              ],
             ],
           ),
           body: SingleChildScrollView(
@@ -92,8 +135,8 @@ class AssignmentDetailsPage extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Description',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        assignment.title,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
                               fontWeight: FontWeight.bold,
                             ),
                       ),
@@ -258,86 +301,137 @@ class AssignmentDetailsPage extends StatelessWidget {
                   )
                 else
                   // Student View: Show own submission or submit button
-                  StreamBuilder<Submission?>(
-                    stream: AssignmentService.instance.getSubmission(
-                      classCode, 
-                      assignmentId, 
-                      FirebaseAuth.instance.currentUser?.uid ?? '',
-                    ),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                  FutureBuilder<Map<String, String>?>(
+                    // Fetch group info if needed
+                    future: assignment.submissionType == 'group'
+                        ? AssignmentService.instance.getStudentGroup(
+                            classCode, FirebaseAuth.instance.currentUser?.uid ?? '')
+                        : Future.value(null),
+                    builder: (context, groupSnapshot) {
+                      if (groupSnapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
                       }
-                      
-                      final mySubmission = snapshot.data;
-                      
-                      if (mySubmission != null) {
-                        // Already submitted
+
+                      final groupInfo = groupSnapshot.data;
+                      final groupId = groupInfo?['groupId'];
+                      final groupName = groupInfo?['groupName'];
+                      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+                      // If group assignment but no group found
+                      if (assignment.submissionType == 'group' && groupId == null) {
                         return Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
+                            color: Colors.orange.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.check_circle, color: Colors.green),
+                              const Icon(Icons.warning_amber_rounded, color: Colors.orange),
                               const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Submitted',
-                                      style: TextStyle(
-                                        color: Colors.green,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'On ${mySubmission.submittedAt != null ? DateFormat('MMM d, h:mm a').format(mySubmission.submittedAt!) : ''}',
-                                      style: TextStyle(
-                                        color: isDark ? Colors.white70 : Colors.black87,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                    if (mySubmission.attachmentName != null)
-                                      Text(
-                                        mySubmission.attachmentName!,
-                                        style: TextStyle(
-                                          color: isDark ? Colors.white70 : Colors.black87,
-                                          fontSize: 12,
-                                          fontStyle: FontStyle.italic,
-                                        ),
-                                      ),
-                                  ],
+                              const Expanded(
+                                child: Text(
+                                  'This is a group assignment. You must be in a group to submit.',
+                                  style: TextStyle(color: Colors.orange),
                                 ),
                               ),
                             ],
                           ),
                         );
-                      } else {
-                        // Not submitted yet
-                        return SizedBox(
-                          width: double.infinity,
-                          child: FilledButton.icon(
-                            onPressed: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) => SubmitAssignmentPage(
-                                    classCode: classCode,
-                                    assignmentId: assignmentId,
-                                  ),
-                                ),
-                              );
-                            },
-                            icon: const Icon(Icons.upload_file),
-                            label: const Text('Submit Assignment'),
-                          ),
-                        );
                       }
+
+                      // Determine submission ID to check (groupId or uid)
+                      final submissionIdToCheck = assignment.submissionType == 'group' ? groupId! : uid;
+
+                      return StreamBuilder<Submission?>(
+                        stream: AssignmentService.instance.getSubmission(
+                          classCode, 
+                          assignmentId, 
+                          submissionIdToCheck,
+                        ),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: CircularProgressIndicator());
+                          }
+                          
+                          final mySubmission = snapshot.data;
+                          
+                          if (mySubmission != null) {
+                            // Already submitted
+                            return Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.green.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.check_circle, color: Colors.green),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          assignment.submissionType == 'group' 
+                                              ? 'Submitted by ${mySubmission.studentName}' 
+                                              : 'Submitted',
+                                          style: const TextStyle(
+                                            color: Colors.green,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'On ${mySubmission.submittedAt != null ? DateFormat('MMM d, h:mm a').format(mySubmission.submittedAt!) : ''}',
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white70 : Colors.black87,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        if (mySubmission.attachmentName != null)
+                                          Text(
+                                            mySubmission.attachmentName!,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white70 : Colors.black87,
+                                              fontSize: 12,
+                                              fontStyle: FontStyle.italic,
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          } else {
+                            // Not submitted yet
+                            return SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (_) => SubmitAssignmentPage(
+                                        classCode: classCode,
+                                        assignmentId: assignmentId,
+                                        groupId: groupId,
+                                        groupName: groupName,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                icon: const Icon(Icons.upload_file),
+                                label: Text(assignment.submissionType == 'group' 
+                                    ? 'Submit for Group ($groupName)' 
+                                    : 'Submit Assignment'),
+                              ),
+                            );
+                          }
+                        },
+                      );
                     },
                   ),
               ],
