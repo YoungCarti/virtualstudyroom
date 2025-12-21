@@ -5,6 +5,11 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:gal/gal.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'widgets/gradient_background.dart';
 
@@ -148,7 +153,36 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
       }
     }
   }
+  Future<void> _deleteMessage(String messageId, bool forMe) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
 
+    try {
+      final docRef = FirebaseFirestore.instance
+          .collection('classes')
+          .doc(widget.classCode)
+          .collection('groups')
+          .doc(widget.groupId)
+          .collection('messages')
+          .doc(messageId);
+
+      if (forMe) {
+        // Add user ID to deletedBy array
+        await docRef.update({
+          'deletedBy': FieldValue.arrayUnion([uid]),
+        });
+      } else {
+        // Delete document completely
+        await docRef.delete();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to delete: $e')),
+        );
+      }
+    }
+  }
 
 
   void _showAttachmentOptions() {
@@ -248,6 +282,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 
                 for (final doc in docs) {
                   final data = doc.data();
+                  
+                  // Check if deleted by me
+                  final deletedBy = List<String>.from(data['deletedBy'] ?? []);
+                  if (deletedBy.contains(uid)) continue;
+
                   final createdAt = (data['createdAt'] as Timestamp?)?.toDate();
                   
                   if (createdAt != null) {
@@ -307,6 +346,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                       );
                     } else {
                       return _MessageBubble(
+                        key: ValueKey(item.messageId),
                         text: item.text!,
                         senderId: item.senderId!,
                         createdAt: item.createdAt,
@@ -316,6 +356,8 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                         fileUrl: item.fileUrl,
                         fileType: item.fileType,
                         fileName: item.fileName,
+                        messageId: item.messageId!,
+                        onDelete: _deleteMessage,
                       );
                     }
                   },
@@ -474,7 +516,8 @@ class _MessageItem {
         createdAt = null,
         fileUrl = null,
         fileType = null,
-        fileName = null;
+        fileName = null,
+        messageId = null;
 
   _MessageItem.message({
     required DocumentSnapshot doc,
@@ -488,7 +531,8 @@ class _MessageItem {
         createdAt = createdAt,
         fileUrl = data['fileUrl'] as String?,
         fileType = data['fileType'] as String?,
-        fileName = data['fileName'] as String?;
+        fileName = data['fileName'] as String?,
+        messageId = doc.id;
 
   final bool isDateHeader;
   final String? dateStr;
@@ -498,10 +542,12 @@ class _MessageItem {
   final String? fileUrl;
   final String? fileType;
   final String? fileName;
+  final String? messageId;
 }
 
 class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
+    super.key,
     required this.text,
     required this.senderId,
     required this.createdAt,
@@ -511,6 +557,8 @@ class _MessageBubble extends StatelessWidget {
     this.fileUrl,
     this.fileType,
     this.fileName,
+    required this.messageId,
+    required this.onDelete,
   });
 
   final String text;
@@ -522,6 +570,114 @@ class _MessageBubble extends StatelessWidget {
   final String? fileUrl;
   final String? fileType;
   final String? fileName;
+  final String messageId;
+  final Function(String, bool) onDelete;
+
+  Future<void> _downloadImage(BuildContext context, String url) async {
+    print('Starting download for: $url');
+    try {
+      // Request access permission
+      final hasAccess = await Gal.hasAccess();
+      print('Has access: $hasAccess');
+      if (!hasAccess) {
+        final granted = await Gal.requestAccess();
+        print('Access granted: $granted');
+        if (!granted) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Permission denied')),
+            );
+          }
+          return;
+        }
+      }
+
+      print('Downloading file...');
+      final response = await http.get(Uri.parse(url));
+      print('Download status: ${response.statusCode}');
+      
+      if (response.statusCode == 200) {
+        // Get temp directory
+        final tempDir = await getTemporaryDirectory();
+        final fileName = 'chat_image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final file = File('${tempDir.path}/$fileName');
+        
+        // Write to temp file
+        await file.writeAsBytes(response.bodyBytes);
+        print('File written to: ${file.path}');
+        
+        // Save to gallery using Gal
+        print('Saving to gallery...');
+        await Gal.putImage(file.path, album: 'Study Link');
+        print('Saved to gallery');
+        
+        if (context.mounted) {
+          print('Context is mounted, showing snackbar');
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Image saved to Study Link album')),
+          );
+        } else {
+          print('Context is NOT mounted');
+        }
+      } else {
+        print('Failed to download: ${response.statusCode}');
+      }
+    } catch (e, stack) {
+      print('Error downloading image: $e');
+      print(stack);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error downloading image: $e')),
+        );
+      }
+    }
+  }
+
+  void _showImageOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.download),
+              title: const Text('Download Image'),
+              onTap: () {
+                Navigator.pop(context);
+                if (fileUrl != null) {
+                  _downloadImage(context, fileUrl!);
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Delete for Me'),
+              onTap: () {
+                Navigator.pop(context);
+                onDelete(messageId, true);
+              },
+            ),
+            if (isMe)
+              ListTile(
+                leading: const Icon(Icons.delete_forever, color: Colors.red),
+                title: const Text('Delete for Everyone', style: TextStyle(color: Colors.red)),
+                onTap: () {
+                  Navigator.pop(context);
+                  onDelete(messageId, false);
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -573,19 +729,47 @@ class _MessageBubble extends StatelessWidget {
                     children: [
                       if (fileUrl != null) ...[
                         if (fileType == 'image')
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.network(
-                              fileUrl!,
-                              fit: BoxFit.cover,
-                              loadingBuilder: (context, child, loadingProgress) {
-                                if (loadingProgress == null) return child;
-                                return const SizedBox(
-                                  height: 150,
-                                  width: double.infinity,
-                                  child: Center(child: CircularProgressIndicator()),
-                                );
-                              },
+                          GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => Dialog(
+                                  backgroundColor: Colors.transparent,
+                                  insetPadding: EdgeInsets.zero,
+                                  child: Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      InteractiveViewer(
+                                        child: Image.network(fileUrl!),
+                                      ),
+                                      Positioned(
+                                        top: 40,
+                                        right: 20,
+                                        child: IconButton(
+                                          icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                                          onPressed: () => Navigator.pop(context),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                            onLongPress: () => _showImageOptions(context),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                fileUrl!,
+                                fit: BoxFit.cover,
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const SizedBox(
+                                    height: 150,
+                                    width: double.infinity,
+                                    child: Center(child: CircularProgressIndicator()),
+                                  );
+                                },
+                              ),
                             ),
                           )
                         else
