@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'widgets/gradient_background.dart';
 
@@ -66,6 +70,118 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
         );
       }
     }
+  }
+
+  Future<void> _pickImage() async {
+    try {
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null) {
+        await _uploadAndSendFile(File(pickedFile.path), 'image');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking image: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickFile() async {
+    try {
+      final result = await FilePicker.platform.pickFiles();
+      if (result != null && result.files.single.path != null) {
+        final file = File(result.files.single.path!);
+        await _uploadAndSendFile(file, 'file', fileName: result.files.single.name);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error picking file: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadAndSendFile(File file, String type, {String? fileName}) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      // Show loading indicator
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Uploading...')),
+        );
+      }
+
+      final ref = FirebaseStorage.instance
+          .ref()
+          .child('chat_uploads')
+          .child(widget.classCode)
+          .child(widget.groupId)
+          .child('${DateTime.now().millisecondsSinceEpoch}_${fileName ?? 'image.jpg'}');
+
+      await ref.putFile(file);
+      final url = await ref.getDownloadURL();
+
+      await FirebaseFirestore.instance
+          .collection('classes')
+          .doc(widget.classCode)
+          .collection('groups')
+          .doc(widget.groupId)
+          .collection('messages')
+          .add({
+        'text': type == 'image' ? 'Sent an image' : 'Sent a file',
+        'fileUrl': url,
+        'fileType': type,
+        'fileName': fileName,
+        'senderId': uid,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAttachmentOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blue),
+              title: const Text('Upload Image'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.attach_file, color: Colors.orange),
+              title: const Text('Upload File'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickFile();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   String _formatDate(DateTime date) {
@@ -195,6 +311,9 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                         isMe: uid == item.senderId,
                         isDark: isDark,
                         formatTime: _formatTime,
+                        fileUrl: item.fileUrl,
+                        fileType: item.fileType,
+                        fileName: item.fileName,
                       );
                     }
                   },
@@ -208,6 +327,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
               child: Row(
                 children: [
+                  IconButton(
+                    onPressed: _showAttachmentOptions,
+                    icon: const Icon(Icons.add_circle_outline),
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _msgController,
@@ -258,7 +382,10 @@ class _MessageItem {
       : isDateHeader = true,
         text = null,
         senderId = null,
-        createdAt = null;
+        createdAt = null,
+        fileUrl = null,
+        fileType = null,
+        fileName = null;
 
   _MessageItem.message({
     required DocumentSnapshot doc,
@@ -269,13 +396,19 @@ class _MessageItem {
         dateStr = null,
         text = data['text'] as String? ?? '',
         senderId = data['senderId'] as String? ?? '',
-        createdAt = createdAt;
+        createdAt = createdAt,
+        fileUrl = data['fileUrl'] as String?,
+        fileType = data['fileType'] as String?,
+        fileName = data['fileName'] as String?;
 
   final bool isDateHeader;
   final String? dateStr;
   final String? text;
   final String? senderId;
   final DateTime? createdAt;
+  final String? fileUrl;
+  final String? fileType;
+  final String? fileName;
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -286,6 +419,9 @@ class _MessageBubble extends StatelessWidget {
     required this.isMe,
     required this.isDark,
     required this.formatTime,
+    this.fileUrl,
+    this.fileType,
+    this.fileName,
   });
 
   final String text;
@@ -294,6 +430,9 @@ class _MessageBubble extends StatelessWidget {
   final bool isMe;
   final bool isDark;
   final String Function(DateTime) formatTime;
+  final String? fileUrl;
+  final String? fileType;
+  final String? fileName;
 
   @override
   Widget build(BuildContext context) {
@@ -340,14 +479,70 @@ class _MessageBubble extends StatelessWidget {
                       ),
                     ],
                   ),
-                  child: Text(
-                    text,
-                    style: TextStyle(
-                      color: isMe
-                          ? Colors.white
-                          : (isDark ? Colors.white : const Color(0xFF1F1F33)),
-                      fontSize: 15,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (fileUrl != null) ...[
+                        if (fileType == 'image')
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              fileUrl!,
+                              fit: BoxFit.cover,
+                              loadingBuilder: (context, child, loadingProgress) {
+                                if (loadingProgress == null) return child;
+                                return const SizedBox(
+                                  height: 150,
+                                  width: double.infinity,
+                                  child: Center(child: CircularProgressIndicator()),
+                                );
+                              },
+                            ),
+                          )
+                        else
+                          InkWell(
+                            onTap: () {
+                              // TODO: Implement file download/open
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Downloading file...')),
+                              );
+                            },
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.insert_drive_file,
+                                  color: isMe ? Colors.white : Colors.black87,
+                                ),
+                                const SizedBox(width: 8),
+                                Flexible(
+                                  child: Text(
+                                    fileName ?? 'File',
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white : Colors.black87,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        if (text.isNotEmpty && text != 'Sent an image' && text != 'Sent a file')
+                          const SizedBox(height: 8),
+                      ],
+                      if (text.isNotEmpty && (fileUrl == null || (text != 'Sent an image' && text != 'Sent a file')))
+                        Text(
+                          text,
+                          style: TextStyle(
+                            color: isMe
+                                ? Colors.white
+                                : (isDark ? Colors.white : const Color(0xFF1F1F33)),
+                            fontSize: 15,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               ),
