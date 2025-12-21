@@ -27,6 +27,11 @@ class GroupChatMessagesPage extends StatefulWidget {
 class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   final _msgController = TextEditingController();
   final _scrollCtrl = ScrollController();
+  
+  File? _selectedFile;
+  String? _selectedFileType; // 'image' or 'file'
+  String? _selectedFileName;
+  bool _isUploading = false;
 
   @override
   void dispose() {
@@ -38,10 +43,29 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   Future<void> _sendMessage() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
+    
     final text = _msgController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty && _selectedFile == null) return;
+
+    setState(() => _isUploading = true);
 
     try {
+      String? fileUrl;
+      
+      // Upload file if selected
+      if (_selectedFile != null) {
+        final fileName = _selectedFileName ?? 'file';
+        final ref = FirebaseStorage.instance
+            .ref()
+            .child('chat_uploads')
+            .child(widget.classCode)
+            .child(widget.groupId)
+            .child('${DateTime.now().millisecondsSinceEpoch}_$fileName');
+
+        await ref.putFile(_selectedFile!);
+        fileUrl = await ref.getDownloadURL();
+      }
+
       await FirebaseFirestore.instance
           .collection('classes')
           .doc(widget.classCode)
@@ -52,8 +76,21 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
         'text': text,
         'senderId': uid,
         'createdAt': FieldValue.serverTimestamp(),
+        if (fileUrl != null) ...{
+          'fileUrl': fileUrl,
+          'fileType': _selectedFileType,
+          'fileName': _selectedFileName,
+        }
       });
+      
       _msgController.clear();
+      setState(() {
+        _selectedFile = null;
+        _selectedFileType = null;
+        _selectedFileName = null;
+        _isUploading = false;
+      });
+      
       // Scroll to bottom
       await Future.delayed(const Duration(milliseconds: 100));
       if (_scrollCtrl.hasClients) {
@@ -65,6 +102,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
       }
     } catch (e) {
       if (mounted) {
+        setState(() => _isUploading = false);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to send: $e')),
         );
@@ -77,7 +115,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile != null) {
-        await _uploadAndSendFile(File(pickedFile.path), 'image');
+        setState(() {
+          _selectedFile = File(pickedFile.path);
+          _selectedFileType = 'image';
+          _selectedFileName = pickedFile.name;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -92,8 +134,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     try {
       final result = await FilePicker.platform.pickFiles();
       if (result != null && result.files.single.path != null) {
-        final file = File(result.files.single.path!);
-        await _uploadAndSendFile(file, 'file', fileName: result.files.single.name);
+        setState(() {
+          _selectedFile = File(result.files.single.path!);
+          _selectedFileType = 'file';
+          _selectedFileName = result.files.single.name;
+        });
       }
     } catch (e) {
       if (mounted) {
@@ -104,50 +149,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     }
   }
 
-  Future<void> _uploadAndSendFile(File file, String type, {String? fileName}) async {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
 
-    try {
-      // Show loading indicator
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Uploading...')),
-        );
-      }
-
-      final ref = FirebaseStorage.instance
-          .ref()
-          .child('chat_uploads')
-          .child(widget.classCode)
-          .child(widget.groupId)
-          .child('${DateTime.now().millisecondsSinceEpoch}_${fileName ?? 'image.jpg'}');
-
-      await ref.putFile(file);
-      final url = await ref.getDownloadURL();
-
-      await FirebaseFirestore.instance
-          .collection('classes')
-          .doc(widget.classCode)
-          .collection('groups')
-          .doc(widget.groupId)
-          .collection('messages')
-          .add({
-        'text': type == 'image' ? 'Sent an image' : 'Sent a file',
-        'fileUrl': url,
-        'fileType': type,
-        'fileName': fileName,
-        'senderId': uid,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to upload: $e')),
-        );
-      }
-    }
-  }
 
   void _showAttachmentOptions() {
     showModalBottomSheet(
@@ -325,46 +327,133 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-              child: Row(
+              child: Column(
                 children: [
-                  IconButton(
-                    onPressed: _showAttachmentOptions,
-                    icon: const Icon(Icons.add_circle_outline),
-                    color: isDark ? Colors.white70 : Colors.black54,
-                  ),
-                  Expanded(
-                    child: TextField(
-                      controller: _msgController,
-                      minLines: 1,
-                      maxLines: 5,
-                      decoration: InputDecoration(
-                        hintText: 'Message',
-                        filled: true,
-                        fillColor: isDark ? const Color(0xFF2A2A3E) : Colors.grey[100],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(
-                            color: isDark ? Colors.white12 : Colors.black12,
+                  if (_selectedFile != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? const Color(0xFF2A2A3E) : Colors.grey[200],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark ? Colors.white12 : Colors.black12,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          if (_selectedFileType == 'image')
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                _selectedFile!,
+                                width: 60,
+                                height: 60,
+                                fit: BoxFit.cover,
+                              ),
+                            )
+                          else
+                            Container(
+                              width: 60,
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: isDark ? Colors.white10 : Colors.black12,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(
+                                Icons.insert_drive_file,
+                                color: isDark ? Colors.white70 : Colors.black54,
+                              ),
+                            ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  _selectedFileName ?? 'File',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white : Colors.black87,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  'Tap send to upload',
+                                  style: TextStyle(
+                                    color: isDark ? Colors.white54 : Colors.black54,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () {
+                              setState(() {
+                                _selectedFile = null;
+                                _selectedFileType = null;
+                                _selectedFileName = null;
+                              });
+                            },
+                            icon: const Icon(Icons.close),
+                            color: isDark ? Colors.white70 : Colors.black54,
+                          ),
+                        ],
+                      ),
+                    ),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: _showAttachmentOptions,
+                        icon: const Icon(Icons.add_circle_outline),
+                        color: isDark ? Colors.white70 : Colors.black54,
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _msgController,
+                          minLines: 1,
+                          maxLines: 5,
+                          decoration: InputDecoration(
+                            hintText: 'Message',
+                            filled: true,
+                            fillColor: isDark ? const Color(0xFF2A2A3E) : Colors.grey[100],
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide(
+                                color: isDark ? Colors.white12 : Colors.black12,
+                              ),
+                            ),
+                            contentPadding:
+                                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           ),
                         ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: _sendMessage,
-                      style: ElevatedButton.styleFrom(
-                        shape: const CircleBorder(),
-                        backgroundColor: const Color(0xFF6C63FF),
-                        padding: EdgeInsets.zero,
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _isUploading ? null : _sendMessage,
+                          style: ElevatedButton.styleFrom(
+                            shape: const CircleBorder(),
+                            backgroundColor: const Color(0xFF6C63FF),
+                            padding: EdgeInsets.zero,
+                          ),
+                          child: _isUploading
+                              ? const SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Icon(Icons.send_rounded, color: Colors.white),
+                        ),
                       ),
-                      child: const Icon(Icons.send_rounded, color: Colors.white),
-                    ),
+                    ],
                   ),
                 ],
               ),
