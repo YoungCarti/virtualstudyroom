@@ -1,0 +1,28 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Rule 1: Allow authenticated users to read and write (upload)
+    // files for the general assignment attachments path (used by createAssignment).
+    match /classes/{classCode}/assignments/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Rule 2: Allow authenticated users to read and write (upload)
+    // files for student/group submissions (used by submitAssignment).
+    match /classes/{classCode}/assignments/{assignmentId}/submissions/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Rule 3: Allow authenticated users to read and write (upload)
+    // files for group chat uploads.
+    match /chat_uploads/{classCode}/{groupId}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
+    // Default rule: Deny access to all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
