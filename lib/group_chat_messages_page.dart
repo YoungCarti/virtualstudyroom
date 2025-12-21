@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'widgets/gradient_background.dart';
 
 class GroupChatMessagesPage extends StatefulWidget {
   const GroupChatMessagesPage({
@@ -91,11 +92,15 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.groupName),
-        centerTitle: true,
-      ),
+    return GradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        appBar: AppBar(
+          title: Text(widget.groupName),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+        ),
       body: Column(
         children: [
           Expanded(
@@ -242,6 +247,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

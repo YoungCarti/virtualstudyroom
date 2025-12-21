@@ -7,6 +7,7 @@ import 'auth_service.dart';
 import 'auth_page.dart';
 import 'home_dashboard.dart';
 import 'register_page.dart';
+import 'widgets/gradient_background.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -146,17 +147,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2B2540), // Deep dark purple/navy
-              Color(0xFF1F1A34), // Darker purple
-            ],
-          ),
-        ),
+      body: GradientBackground(
         child: Stack(
           children: [
             // Ambient Glow

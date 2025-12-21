@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'change_password_page.dart';
 import 'change_email_page.dart';
+import 'widgets/gradient_background.dart';
 
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
@@ -13,19 +14,12 @@ class AccountPage extends StatelessWidget {
     final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
     final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // 1. Background Gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
-          ),
+    return GradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // 1. Background Gradient removed
 
           // 2. Ambient Glow (Subtle)
           Positioned(
@@ -110,6 +104,7 @@ class AccountPage extends StatelessWidget {
             ),
           ),
         ],
+      ),
       ),
     );
   }

@@ -5,6 +5,7 @@ import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 import 'auth_service.dart';
 import 'login_page.dart';
 import 'home_dashboard.dart';
+import 'widgets/gradient_background.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -136,17 +137,7 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF2B2540), // Deep dark purple/navy
-              Color(0xFF1F1A34), // Darker purple
-            ],
-          ),
-        ),
+      body: GradientBackground(
         child: Stack(
           children: [
             // Ambient Glow

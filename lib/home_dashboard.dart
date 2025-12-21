@@ -8,6 +8,7 @@ import 'classes_page.dart';
 import 'group_chats_page.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
+import 'widgets/gradient_background.dart';
 
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
@@ -31,17 +32,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF7C3AED).withValues(alpha: 0.1), // Violet 10%
-              Color(0xFFC026D3).withValues(alpha: 0.08), // Fuchsia 8%
-            ],
-          ),
-        ),
+      body: GradientBackground(
         child: Stack(
           fit: StackFit.expand,
           children: [

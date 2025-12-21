@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
+import 'widgets/gradient_background.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String? userDocId;
@@ -270,19 +271,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
           Navigator.of(context).pop();
         }
       },
-      child: Scaffold(
-        body: Stack(
-          children: [
-            // 1. Background
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xFF1A1625), Color(0xFF231B2E)],
-                ),
-              ),
-            ),
+      child: GradientBackground(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          body: Stack(
+            children: [
+              // 1. Background removed
             // Ambient Glow
             Positioned(
               top: -100,
@@ -562,6 +556,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ],
         ),
+      ),
       ),
     );
   }

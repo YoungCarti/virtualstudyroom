@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import 'edit_profile_page.dart';
+import 'widgets/gradient_background.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -29,22 +30,13 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     // 1. Background
     // Base Color: Deep dark purple (#1A1625 to #231B2E gradient)
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background Gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF7C3AED).withValues(alpha: 0.1),
-                  Color(0xFFC026D3).withValues(alpha: 0.08),
-                ],
-              ),
-            ),
-          ),
+    return GradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Stack(
+          children: [
+            // Background Gradient removed
+
           // Ambient Glow: Radial gradient with violet/purple glow emanating from top-center
           Positioned(
             top: -100,
@@ -467,6 +459,7 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
           ),
         ],
+      ),
       ),
     );
   }

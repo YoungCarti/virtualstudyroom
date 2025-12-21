@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import 'group_chat_messages_page.dart';
+import 'widgets/gradient_background.dart';
 
 const Color _primaryPurple = Color(0xFFa855f7);
 const Color _secondaryPurple = Color(0xFFec4899);
@@ -16,10 +17,7 @@ class GroupChatsPage extends StatelessWidget {
 
     return Material(
       type: MaterialType.transparency,
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: _backgroundGradient(),
+      child: GradientBackground(
         child: SafeArea(
           bottom: false,
           child: SingleChildScrollView(
@@ -42,18 +40,7 @@ class GroupChatsPage extends StatelessWidget {
     );
   }
 
-  BoxDecoration _backgroundGradient() {
-    return BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFF7C3AED).withValues(alpha: 0.1),
-          const Color(0xFFC026D3).withValues(alpha: 0.08),
-        ],
-      ),
-    );
-  }
+
 }
 
 /* ----------------------------- GROUP LIST ----------------------------- */

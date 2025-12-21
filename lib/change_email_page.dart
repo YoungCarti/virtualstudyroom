@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'widgets/gradient_background.dart';
 
 class ChangeEmailPage extends StatefulWidget {
   const ChangeEmailPage({super.key});
@@ -113,20 +114,13 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
     final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
     final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
 
-    return Scaffold(
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          // 1. Background Gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
-          ),
+    return GradientBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        extendBodyBehindAppBar: true,
+        body: Stack(
+          children: [
+            // 1. Background Gradient removed
 
           // 2. Ambient Glow
            Positioned(
@@ -290,6 +284,7 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
             ),
           ),
         ],
+      ),
       ),
     );
   }
