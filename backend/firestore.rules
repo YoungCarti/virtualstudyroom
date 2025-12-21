@@ -29,6 +29,10 @@ service cloud.firestore {
         match /messages/{messageId} {
           allow read: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/classes/$(classCode)/groups/$(groupId)).data.members;
           allow create: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/classes/$(classCode)/groups/$(groupId)).data.members;
+          // Allow update (for "delete for me")
+          allow update: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/classes/$(classCode)/groups/$(groupId)).data.members;
+          // Allow delete (for "delete for everyone" - only sender)
+          allow delete: if request.auth != null && resource.data.senderId == request.auth.uid;
         }
       }
 
