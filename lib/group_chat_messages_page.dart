@@ -37,12 +37,84 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   String? _selectedFileType; // 'image' or 'file'
   String? _selectedFileName;
   bool _isUploading = false;
+  
+  // Mention system variables
+  bool _showMentionSuggestions = false;
+  final List<String> _mentionsList = ['gemini'];
+  String _currentMentionQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _msgController.addListener(_onTextChanged);
+  }
 
   @override
   void dispose() {
+    _msgController.removeListener(_onTextChanged);
     _msgController.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+  
+  void _onTextChanged() {
+    final text = _msgController.text;
+    final cursorPosition = _msgController.selection.baseOffset;
+    
+    // Find the word at cursor position
+    if (cursorPosition < 0) return;
+    
+    // Look for @ symbol before cursor
+    int atIndex = -1;
+    for (int i = cursorPosition - 1; i >= 0; i--) {
+      if (text[i] == '@') {
+        atIndex = i;
+        break;
+      }
+      if (text[i] == ' ') break;
+    }
+    
+    if (atIndex >= 0) {
+      // Extract text after @
+      final mentionQuery = text.substring(atIndex + 1, cursorPosition).toLowerCase();
+      
+      // Show suggestions if @ was just typed or there's a partial match
+      final hasMatch = _mentionsList.any((m) => m.startsWith(mentionQuery));
+      
+      setState(() {
+        _showMentionSuggestions = hasMatch;
+        _currentMentionQuery = mentionQuery;
+      });
+    } else {
+      if (_showMentionSuggestions) {
+        setState(() => _showMentionSuggestions = false);
+      }
+    }
+  }
+  
+  void _insertMention(String mention) {
+    final text = _msgController.text;
+    final cursorPosition = _msgController.selection.baseOffset;
+    
+    // Find @ position
+    int atIndex = -1;
+    for (int i = cursorPosition - 1; i >= 0; i--) {
+      if (text[i] == '@') {
+        atIndex = i;
+        break;
+      }
+      if (text[i] == ' ') break;
+    }
+    
+    if (atIndex >= 0) {
+      final newText = text.substring(0, atIndex) + '@$mention ' + text.substring(cursorPosition);
+      _msgController.text = newText;
+      _msgController.selection = TextSelection.fromPosition(
+        TextPosition(offset: atIndex + mention.length + 2),
+      );
+    }
+    
+    setState(() => _showMentionSuggestions = false);
   }
 
   Future<void> _sendMessage() async {
@@ -374,8 +446,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
             top: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-              child: Column(
+              child: Stack(
+                clipBehavior: Clip.none,
                 children: [
+                  Column(
+                    children: [
                   if (_selectedFile != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 8),
@@ -450,7 +525,62 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                         ],
                       ),
                     ),
-                  Row(
+                   // Mention suggestions overlay
+                   if (_showMentionSuggestions)
+                     Positioned(
+                       bottom: 60,
+                       left: 60,
+                       right: 60,
+                       child: Container(
+                         decoration: BoxDecoration(
+                           color: isDark ? const Color(0xFF2A2A3E) : Colors.white,
+                           borderRadius: BorderRadius.circular(12),
+                           boxShadow: [
+                             BoxShadow(
+                               color: Colors.black.withOpacity(0.2),
+                               blurRadius: 8,
+                               offset: const Offset(0, -2),
+                             ),
+                           ],
+                         ),
+                         child: Column(
+                           mainAxisSize: MainAxisSize.min,
+                           children: _mentionsList
+                               .where((m) => m.startsWith(_currentMentionQuery))
+                               .map((mention) => ListTile(
+                                     leading: Container(
+                                       padding: const EdgeInsets.all(8),
+                                       decoration: BoxDecoration(
+                                         color: const Color(0xFF6C63FF).withOpacity(0.1),
+                                         borderRadius: BorderRadius.circular(8),
+                                       ),
+                                       child: const Icon(
+                                         Icons.auto_awesome,
+                                         color: Color(0xFF6C63FF),
+                                         size: 20,
+                                       ),
+                                     ),
+                                     title: Text(
+                                       '@$mention',
+                                       style: TextStyle(
+                                         color: isDark ? Colors.white : Colors.black87,
+                                         fontWeight: FontWeight.w600,
+                                       ),
+                                     ),
+                                     subtitle: Text(
+                                       'Gemini AI Assistant',
+                                       style: TextStyle(
+                                         color: isDark ? Colors.white54 : Colors.black54,
+                                         fontSize: 12,
+                                       ),
+                                     ),
+                                     onTap: () => _insertMention(mention),
+                                   ))
+                               .toList(),
+                         ),
+                       ),
+                     ),
+                   Row(
                     children: [
                       IconButton(
                         onPressed: _showAttachmentOptions,
@@ -463,7 +593,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                           minLines: 1,
                           maxLines: 5,
                           decoration: InputDecoration(
-                            hintText: 'Message',
+                            hintText: 'Message (type @ to mention)',
                             filled: true,
                             fillColor: isDark ? const Color(0xFF2A2A3E) : Colors.grey[100],
                             border: OutlineInputBorder(
@@ -502,6 +632,8 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                       ),
                     ],
                   ),
+                ],
+              ),
                 ],
               ),
             ),
@@ -677,12 +809,28 @@ class _MessageBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Check if this is an AI message
+    final isAIMessage = senderId == 'gemini_ai';
+    
+    // If AI message, render directly without user lookup
+    if (isAIMessage) {
+      return _buildMessageWidget(context, 'Gemini AI', isAIMessage);
+    }
+    
+    // For regular messages, fetch user data
     return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       future: FirebaseFirestore.instance.collection('users').doc(senderId).get(),
       builder: (context, snap) {
         final userName = snap.data?.data()?['fullName'] ??
             snap.data?.data()?['name'] ??
             'Unknown';
+        
+        return _buildMessageWidget(context, userName, isAIMessage);
+      },
+    );
+  }
+  
+  Widget _buildMessageWidget(BuildContext context, String userName, bool isAIMessage) {
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
@@ -692,13 +840,37 @@ class _MessageBubble extends StatelessWidget {
               if (!isMe)
                 Padding(
                   padding: const EdgeInsets.only(left: 12, bottom: 4),
-                  child: Text(
-                    userName,
-                    style: TextStyle(
-                      color: isDark ? Colors.white70 : Colors.black87,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isAIMessage) ...[
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF6C63FF), Color(0xFF4F46E5)],
+                            ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Icon(
+                            Icons.auto_awesome,
+                            size: 12,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                      ],
+                      Text(
+                        userName,
+                        style: TextStyle(
+                          color: isAIMessage
+                              ? const Color(0xFF6C63FF)
+                              : (isDark ? Colors.white70 : Colors.black87),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               Align(
@@ -708,9 +880,18 @@ class _MessageBubble extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   constraints: const BoxConstraints(maxWidth: 280),
                   decoration: BoxDecoration(
-                    color: isMe
-                        ? const Color(0xFF6C63FF)
-                        : (isDark ? const Color(0xFF2A2A3E) : Colors.grey[200]),
+                    gradient: isAIMessage
+                        ? const LinearGradient(
+                            colors: [Color(0xFF6C63FF), Color(0xFF4F46E5)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        : null,
+                    color: isAIMessage
+                        ? null
+                        : (isMe
+                            ? const Color(0xFF6C63FF)
+                            : (isDark ? const Color(0xFF2A2A3E) : Colors.grey[200])),
                     borderRadius: BorderRadius.circular(14),
                     boxShadow: [
                       BoxShadow(
@@ -836,7 +1017,7 @@ class _MessageBubble extends StatelessWidget {
                 child: Text(
                   createdAt != null ? formatTime(createdAt!) : '',
                   style: TextStyle(
-                    color: isDark ? Colors.white54 : Colors.black54,
+                     color: isDark ? Colors.white54 : Colors.black54,
                     fontSize: 12,
                   ),
                 ),
@@ -844,7 +1025,5 @@ class _MessageBubble extends StatelessWidget {
             ],
           ),
         );
-      },
-    );
   }
 }
