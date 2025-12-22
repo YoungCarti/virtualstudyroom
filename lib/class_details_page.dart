@@ -136,14 +136,20 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                     if (groupName.isEmpty) return;
 
                     try {
-                      final groupRef = FirebaseFirestore.instance
+                      // Search for group by name (case-insensitive)
+                      final groupsSnapshot = await FirebaseFirestore.instance
                           .collection('classes')
                           .doc(widget.classCode)
                           .collection('groups')
-                          .doc(groupName);
+                          .get();
 
-                      final groupDoc = await groupRef.get();
-                      if (!groupDoc.exists) {
+                      // Find group with matching name (case-insensitive)
+                      final matchingGroups = groupsSnapshot.docs.where((doc) {
+                        final docGroupName = doc.data()['groupName'] as String?;
+                        return docGroupName?.toLowerCase() == groupName.toLowerCase();
+                      }).toList();
+
+                      if (matchingGroups.isEmpty) {
                         if (ctx.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Group not found')),
@@ -152,14 +158,29 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                         return;
                       }
 
-                      await groupRef.update({
+                      final groupDoc = matchingGroups.first;
+                      final members = List<String>.from(groupDoc.data()['members'] ?? []);
+
+                      // Check if already a member
+                      if (members.contains(uid)) {
+                        if (ctx.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('You are already in this group')),
+                          );
+                        }
+                        return;
+                      }
+
+                      // Add user to group
+                      await groupDoc.reference.update({
                         'members': FieldValue.arrayUnion([uid]),
                       });
 
                       if (ctx.mounted) Navigator.pop(ctx);
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Joined group "$groupName"')),
+                          SnackBar(content: Text('Joined group "${groupDoc.data()['groupName']}"')),
                         );
                       }
                     } catch (e) {
