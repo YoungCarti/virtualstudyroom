@@ -12,6 +12,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'widgets/gradient_background.dart';
+import 'video_call_page.dart';
+import 'audio_call_page.dart';
+import 'config/agora_config.dart';
 
 class GroupChatMessagesPage extends StatefulWidget {
   const GroupChatMessagesPage({
@@ -260,6 +263,91 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     }
   }
 
+  Future<void> _startAudioCall(BuildContext context) async {
+    // Check if App ID is configured
+    if (AgoraConfig.appId == 'YOUR_AGORA_APP_ID_HERE') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please configure your Agora App ID in lib/config/agora_config.dart'),
+          duration: Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Request microphone permission
+    final micPermission = await Permission.microphone.request();
+    
+    if (!micPermission.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Microphone permission required for calls')),
+        );
+      }
+      return;
+    }
+
+    // Navigate to audio call page
+    if (mounted) {
+      final channelName = AgoraConfig.getChannelName(widget.classCode, widget.groupId);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AudioCallPage(
+            channelName: channelName,
+            classCode: widget.classCode,
+            groupId: widget.groupId,
+            groupName: widget.groupName,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _startVideoCall(BuildContext context) async {
+    // Check if App ID is configured
+    if (AgoraConfig.appId == 'YOUR_AGORA_APP_ID_HERE') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please configure your Agora App ID in lib/config/agora_config.dart'),
+          duration: Duration(seconds: 3),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Request camera and microphone permissions
+    final permissions = await [Permission.camera, Permission.microphone].request();
+    
+    if (!permissions[Permission.camera]!.isGranted || 
+        !permissions[Permission.microphone]!.isGranted) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Camera and microphone permissions required for video calls')),
+        );
+      }
+      return;
+    }
+
+    // Navigate to video call page
+    if (mounted) {
+      final channelName = AgoraConfig.getChannelName(widget.classCode, widget.groupId);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => VideoCallPage(
+            channelName: channelName,
+            classCode: widget.classCode,
+            groupId: widget.groupId,
+            groupName: widget.groupName,
+          ),
+        ),
+      );
+    }
+  }
+
 
   void _showAttachmentOptions() {
     showModalBottomSheet(
@@ -328,6 +416,25 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           centerTitle: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
+          actions: [
+            // Audio call button
+            IconButton(
+              icon: const Icon(Icons.phone),
+              tooltip: 'Audio Call',
+              onPressed: () {
+                _startAudioCall(context);
+              },
+            ),
+            // Video call button
+            IconButton(
+              icon: const Icon(Icons.videocam),
+              tooltip: 'Video Call',
+              onPressed: () {
+                _startVideoCall(context);
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
         ),
       body: Column(
         children: [

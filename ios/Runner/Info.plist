@@ -49,5 +49,9 @@
 	<string>We need permission to save images to your gallery.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We need permission to access your photo library.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>This app needs camera access for video calls with your study group.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>This app needs microphone access for audio and video calls.</string>
 </dict>
 </plist>
