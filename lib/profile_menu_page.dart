@@ -4,6 +4,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'settings_page.dart';
+
 import 'profile_page.dart';
 import 'login_page.dart';
 import 'account_page.dart';
@@ -266,7 +268,11 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                           const Color(0xFFA855F7).withValues(alpha: 0.2),
                           const Color(0xFF8B5CF6).withValues(alpha: 0.2),
                         ],
-                        onTap: () {},
+                        onTap: () {Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                             builder: (_) => const SettingsPage(),
+                          ),
+                       );},
                       ),
                     ],
                   ),

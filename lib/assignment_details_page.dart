@@ -1,7 +1,10 @@
+import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 import 'assignment_service.dart';
 import 'assignment_edit_details_page.dart';
 import 'submit_assignment_page.dart';
@@ -18,427 +21,650 @@ class AssignmentDetailsPage extends StatelessWidget {
   final String assignmentId;
   final bool isLecturer;
 
-
-
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Theme Colors
+    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
+    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
 
-    return FutureBuilder<DocumentSnapshot>(
-      future: FirebaseFirestore.instance
-          .collection('classes')
-          .doc(classCode)
-          .collection('assignments')
-          .doc(assignmentId)
-          .get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Scaffold(
-            appBar: AppBar(),
-            body: const Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (!snapshot.hasData || !snapshot.data!.exists) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: const Center(child: Text('Assignment not found')),
-          );
-        }
-
-        final assignment = Assignment.fromFirestore(snapshot.data!, classCode);
-
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Assignment Details'),
-            centerTitle: true,
-            actions: [
-              if (isLecturer) ...[
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined),
-                  onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => AssignmentEditDetailsPage(
-                          classCode: classCode,
-                          assignmentId: assignmentId,
-                        ),
-                      ),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline, color: Colors.red),
-                  onPressed: () async {
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Delete Assignment'),
-                        content: const Text(
-                            'Are you sure you want to delete this assignment? This action cannot be undone.'),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
-
-                    if (confirm == true) {
-                      try {
-                        await AssignmentService.instance.deleteAssignment(classCode, assignmentId);
-                        if (context.mounted) {
-                          Navigator.pop(context); // Go back to list
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Assignment deleted')),
-                          );
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed to delete: $e')),
-                          );
-                        }
-                      }
-                    }
-                  },
-                ),
-              ],
-            ],
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F1A), // Dark Base
+      body: Stack(
+        children: [
+          // 1. Background Gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [topColor, bottomColor],
+              ),
+            ),
           ),
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Assignment info card
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
-                        blurRadius: 16,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        assignment.title,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        assignment.description,
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 18,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Due: ${DateFormat('MMMM d, yyyy').format(assignment.dueDate)}',
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                  color: isDark ? Colors.white70 : Colors.black87,
-                                ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.info_outline,
-                            size: 18,
-                            color: isDark ? Colors.white70 : Colors.black54,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Created: ${DateFormat('MMM d, yyyy').format(assignment.createdAt)}',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: isDark ? Colors.white60 : Colors.black54,
-                                ),
-                          ),
-                        ],
-                      ),
-                      if (assignment.attachmentUrl != null) ...[
-                        const SizedBox(height: 16),
-                        const Divider(),
-                        const SizedBox(height: 8),
-                        InkWell(
-                          onTap: () {
-                            // TODO: Open URL
-                            // For now, just show a snackbar or print
-                            print('Open URL: ${assignment.attachmentUrl}');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Downloading file...')),
-                            );
-                          },
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.attach_file,
-                                size: 20,
-                                color: Theme.of(context).primaryColor,
-                              ),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  assignment.attachmentName ?? 'Attachment',
-                                  style: TextStyle(
-                                    color: Theme.of(context).primaryColor,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
 
-                // Submissions section
-                Text('Submissions', style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 12),
-                
-                if (isLecturer)
-                  // Lecturer View: Show all submissions
-                  StreamBuilder<List<Submission>>(
-                    stream: AssignmentService.instance.getSubmissions(classCode, assignmentId),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      
-                      final submissions = snapshot.data ?? [];
-                      
-                      if (submissions.isEmpty) {
-                        return const Text('No submissions yet.');
-                      }
-                      
-                      return Column(
-                        children: submissions.map((s) => Container(
-                          margin: const EdgeInsets.only(bottom: 10),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: isDark ? 0.4 : 0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 6),
-                              ),
-                            ],
+          // 2. Ambient Glow Orbs
+          Positioned(
+            top: -100,
+            right: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 100,
+            left: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+
+          // 3. Main Content
+          SafeArea(
+            child: FutureBuilder<DocumentSnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('classes')
+                  .doc(classCode)
+                  .collection('assignments')
+                  .doc(assignmentId)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (!snapshot.hasData || !snapshot.data!.exists) {
+                  return Center(
+                    child: Text(
+                      'Assignment not found',
+                      style: GoogleFonts.inter(color: Colors.white70),
+                    ),
+                  );
+                }
+
+                final assignment = Assignment.fromFirestore(snapshot.data!, classCode);
+
+                return Column(
+                  children: [
+                    // Custom App Bar
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _GlassIconButton(
+                            icon: Icons.chevron_left,
+                            onTap: () => Navigator.pop(context),
                           ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.person_outline),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      s.studentName,
-                                      style: Theme.of(context).textTheme.titleSmall,
-                                    ),
-                                    if (s.attachmentName != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        s.attachmentName!,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                          color: Theme.of(context).primaryColor,
+                          Text(
+                            'Assignment Details',
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (isLecturer)
+                            Row(
+                              children: [
+                                _GlassIconButton(
+                                  icon: Icons.edit_outlined,
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute<void>(
+                                        builder: (_) => AssignmentEditDetailsPage(
+                                          classCode: classCode,
+                                          assignmentId: assignmentId,
                                         ),
                                       ),
-                                    ],
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Submitted: ${s.submittedAt != null ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) : 'Unknown'}',
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                            color: isDark ? Colors.white60 : Colors.black54,
-                                          ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (s.attachmentUrl != null)
-                                IconButton(
-                                  icon: const Icon(Icons.download_rounded),
-                                  onPressed: () {
-                                    // TODO: Download file
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('Downloading submission...')),
                                     );
                                   },
                                 ),
-                            ],
-                          ),
-                        )).toList(),
-                      );
-                    },
-                  )
-                else
-                  // Student View: Show own submission or submit button
-                  FutureBuilder<Map<String, String>?>(
-                    // Fetch group info if needed
-                    future: assignment.submissionType == 'group'
-                        ? AssignmentService.instance.getStudentGroup(
-                            classCode, FirebaseAuth.instance.currentUser?.uid ?? '')
-                        : Future.value(null),
-                    builder: (context, groupSnapshot) {
-                      if (groupSnapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-
-                      final groupInfo = groupSnapshot.data;
-                      final groupId = groupInfo?['groupId'];
-                      final groupName = groupInfo?['groupName'];
-                      final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
-
-                      // If group assignment but no group found
-                      if (assignment.submissionType == 'group' && groupId == null) {
-                        return Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.warning_amber_rounded, color: Colors.orange),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Text(
-                                  'This is a group assignment. You must be in a group to submit.',
-                                  style: TextStyle(color: Colors.orange),
+                                const SizedBox(width: 8),
+                                _GlassIconButton(
+                                  icon: Icons.delete_outline,
+                                  iconColor: const Color(0xFFF43F5E), // Red
+                                  onTap: () => _handleDelete(context),
                                 ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                              ],
+                            )
+                          else
+                            const SizedBox(width: 48), // Placeholder for alignment
+                        ],
+                      ),
+                    ),
 
-                      // Determine submission ID to check (groupId or uid)
-                      final submissionIdToCheck = assignment.submissionType == 'group' ? groupId! : uid;
-
-                      return StreamBuilder<Submission?>(
-                        stream: AssignmentService.instance.getSubmission(
-                          classCode, 
-                          assignmentId, 
-                          submissionIdToCheck,
-                        ),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const Center(child: CircularProgressIndicator());
-                          }
-                          
-                          final mySubmission = snapshot.data;
-                          
-                          if (mySubmission != null) {
-                            // Already submitted
-                            return Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.green.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Info Card
+                            _GlassContainer(
+                              padding: const EdgeInsets.all(20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Icon(Icons.check_circle, color: Colors.green),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          assignment.submissionType == 'group' 
-                                              ? 'Submitted by ${mySubmission.studentName}' 
-                                              : 'Submitted',
-                                          style: const TextStyle(
-                                            color: Colors.green,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'On ${mySubmission.submittedAt != null ? DateFormat('MMM d, h:mm a').format(mySubmission.submittedAt!) : ''}',
-                                          style: TextStyle(
-                                            color: isDark ? Colors.white70 : Colors.black87,
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        if (mySubmission.attachmentName != null)
-                                          Text(
-                                            mySubmission.attachmentName!,
-                                            style: TextStyle(
-                                              color: isDark ? Colors.white70 : Colors.black87,
-                                              fontSize: 12,
-                                              fontStyle: FontStyle.italic,
-                                            ),
-                                          ),
-                                      ],
+                                  Text(
+                                    assignment.title,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                ],
-                              ),
-                            );
-                          } else {
-                            // Not submitted yet
-                            return SizedBox(
-                              width: double.infinity,
-                              child: FilledButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (_) => SubmitAssignmentPage(
-                                        classCode: classCode,
-                                        assignmentId: assignmentId,
-                                        groupId: groupId,
-                                        groupName: groupName,
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    assignment.description,
+                                    style: GoogleFonts.inter(
+                                      color: Colors.white.withValues(alpha: 0.8),
+                                      fontSize: 15,
+                                      height: 1.5,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                  Divider(color: Colors.white.withValues(alpha: 0.1)),
+                                  const SizedBox(height: 16),
+                                  _DetailRow(
+                                    icon: Icons.calendar_today_outlined,
+                                    label: "Due Date",
+                                    value: DateFormat('MMM d, yyyy  h:mm a').format(assignment.dueDate),
+                                    color: const Color(0xFFF59E0B), // Amber
+                                  ),
+                                  const SizedBox(height: 12),
+                                  _DetailRow(
+                                    icon: Icons.access_time,
+                                    label: "Created",
+                                    value: DateFormat('MMM d, yyyy').format(assignment.createdAt),
+                                    color: const Color(0xFF22D3EE), // Cyan
+                                  ),
+                                  if (assignment.attachmentUrl != null) ...[
+                                    const SizedBox(height: 16),
+                                    Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white.withValues(alpha: 0.05),
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                                      ),
+                                      child: InkWell(
+                                        onTap: () {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(content: Text('Downloading file...')),
+                                          );
+                                        },
+                                        child: Row(
+                                          children: [
+                                            const Icon(Icons.attach_file, color: Color(0xFFA855F7)),
+                                            const SizedBox(width: 12),
+                                            Expanded(
+                                              child: Text(
+                                                assignment.attachmentName ?? 'Attached File',
+                                                style: GoogleFonts.inter(
+                                                  color: const Color(0xFFA855F7),
+                                                  fontWeight: FontWeight.w500,
+                                                  decoration: TextDecoration.underline,
+                                                  decorationColor: const Color(0xFFA855F7),
+                                                ),
+                                              ),
+                                            ),
+                                            const Icon(Icons.download_rounded, color: Colors.white54, size: 20),
+                                          ],
+                                        ),
                                       ),
                                     ),
-                                  );
-                                },
-                                icon: const Icon(Icons.upload_file),
-                                label: Text(assignment.submissionType == 'group' 
-                                    ? 'Submit for Group ($groupName)' 
-                                    : 'Submit Assignment'),
+                                  ],
+                                ],
                               ),
-                            );
-                          }
-                        },
-                      );
-                    },
-                  ),
-              ],
+                            ),
+
+                            const SizedBox(height: 32),
+
+                            // Submissions Header
+                            Text(
+                              'Submissions',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+
+                            // Content based on Role
+                            if (isLecturer)
+                              _buildLecturerView(assignment)
+                            else
+                              _buildStudentView(assignment),
+                              
+                            const SizedBox(height: 40),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _handleDelete(BuildContext context) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1E1E2E),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: const Text('Delete Assignment', style: TextStyle(color: Colors.white)),
+        content: const Text(
+          'Are you sure you want to delete this assignment? This action cannot be undone.',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Color(0xFFF43F5E))),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await AssignmentService.instance.deleteAssignment(classCode, assignmentId);
+        if (context.mounted) {
+          Navigator.pop(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Assignment deleted')),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to delete: $e')),
+          );
+        }
+      }
+    }
+  }
+
+  Widget _buildLecturerView(Assignment assignment) {
+    return StreamBuilder<List<Submission>>(
+      stream: AssignmentService.instance.getSubmissions(classCode, assignmentId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final submissions = snapshot.data ?? [];
+
+        if (submissions.isEmpty) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: Text(
+                'No submissions yet.',
+                style: GoogleFonts.inter(color: Colors.white54),
+              ),
+            ),
+          );
+        }
+
+        return Column(
+          children: submissions.map((s) => Container(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: _GlassContainer(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFA855F7).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.person_outline, color: Color(0xFFA855F7)),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          s.studentName,
+                          style: GoogleFonts.inter(
+                            color: Colors.white,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        if (s.attachmentName != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            s.attachmentName!,
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF22D3EE),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Text(
+                          s.submittedAt != null 
+                              ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) 
+                              : 'Unknown',
+                          style: GoogleFonts.inter(
+                            color: Colors.white54,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (s.attachmentUrl != null)
+                    IconButton(
+                      icon: const Icon(Icons.download_rounded, color: Colors.white70),
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Downloading submission...')),
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          )).toList(),
         );
       },
+    );
+  }
+
+  Widget _buildStudentView(Assignment assignment) {
+    return FutureBuilder<Map<String, String>?>(
+      future: assignment.submissionType == 'group'
+          ? AssignmentService.instance.getStudentGroup(
+              classCode, FirebaseAuth.instance.currentUser?.uid ?? '')
+          : Future.value(null),
+      builder: (context, groupSnapshot) {
+        if (groupSnapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final groupInfo = groupSnapshot.data;
+        final groupId = groupInfo?['groupId'];
+        final groupName = groupInfo?['groupName'];
+        final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
+
+        // Warning for group assignment
+        if (assignment.submissionType == 'group' && groupId == null) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF59E0B).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, color: Color(0xFFF59E0B)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'This is a group assignment. You must be in a group to submit.',
+                    style: GoogleFonts.inter(color: const Color(0xFFF59E0B)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final submissionIdToCheck = assignment.submissionType == 'group' ? groupId! : uid;
+
+        return StreamBuilder<Submission?>(
+          stream: AssignmentService.instance.getSubmission(
+            classCode, assignmentId, submissionIdToCheck,
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            
+            final mySubmission = snapshot.data;
+            
+            if (mySubmission != null) {
+              // Submitted View
+              return _GlassContainer(
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 28),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            assignment.submissionType == 'group' 
+                                ? 'Submitted by ${mySubmission.studentName}' 
+                                : 'Submitted',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFF10B981),
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            mySubmission.submittedAt != null 
+                                ? DateFormat('MMM d, h:mm a').format(mySubmission.submittedAt!) 
+                                : '',
+                            style: GoogleFonts.inter(
+                              color: Colors.white70,
+                              fontSize: 13,
+                            ),
+                          ),
+                          if (mySubmission.attachmentName != null) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              mySubmission.attachmentName!,
+                              style: GoogleFonts.inter(
+                                color: Colors.white54,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            } else {
+              // Submit Button
+              return SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => SubmitAssignmentPage(
+                          classCode: classCode,
+                          assignmentId: assignmentId,
+                          groupId: groupId,
+                          groupName: groupName,
+                        ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: Text(
+                    assignment.submissionType == 'group' 
+                        ? 'Submit for Group ($groupName)' 
+                        : 'Submit Assignment',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFA855F7), // Primary Purple
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              );
+            }
+          },
+        );
+      },
+    );
+  }
+}
+
+// --- WIDGET HELPERS ---
+
+class _GlassContainer extends StatelessWidget {
+  final Widget child;
+  final EdgeInsetsGeometry padding;
+
+  const _GlassContainer({required this.child, required this.padding});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(20),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+        child: Container(
+          padding: padding,
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.3), // Dark Tint
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
+            ),
+          ),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+
+class _GlassIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  final Color? iconColor;
+
+  const _GlassIconButton({required this.icon, required this.onTap, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, color: iconColor ?? Colors.white, size: 20),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.15),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: Colors.white54,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }

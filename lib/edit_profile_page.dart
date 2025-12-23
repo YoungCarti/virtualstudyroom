@@ -1,12 +1,9 @@
 import 'dart:ui';
-
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'widgets/gradient_background.dart';
 
 class EditProfilePage extends StatefulWidget {
   final String? userDocId;
@@ -54,7 +51,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _docId = widget.userDocId ?? FirebaseAuth.instance.currentUser?.uid ?? '';
     if (_docId.isNotEmpty) _loadProfile();
     
-    // Listen for changes to set unsaved flag
     _fullNameController.addListener(_onFieldChanged);
     _campusController.addListener(_onFieldChanged);
     _favGroupController.addListener(_onFieldChanged);
@@ -85,16 +81,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
         if (data['interests'] != null) {
           _interests = List<String>.from(data['interests']);
         } else {
-          // Default interests if none exist
-          _interests = [
-            "Machine Learning",
-            "Web Development",
-            "Data Science",
-            "Cybersecurity",
-            "Mobile Apps"
-          ];
+          _interests = ["Machine Learning", "Web Development", "Mobile Apps"];
         }
-        _hasUnsavedChanges = false; // Reset after load
+        _hasUnsavedChanges = false;
       });
     } catch (e) {
       debugPrint('Error loading profile: $e');
@@ -119,14 +108,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
         imageQuality: 85,
       );
       
-      if (image != null) {
-        // In a real app, upload to Firebase Storage here and get URL
-        // For now, we'll just show a snackbar as we don't have storage setup in this snippet
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Photo selected (Upload logic placeholder)')),
-          );
-        }
+      if (image != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Photo selected (Upload placeholder)')),
+        );
       }
     } catch (e) {
       debugPrint('Error picking image: $e');
@@ -145,13 +130,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A3E),
+        backgroundColor: const Color(0xFF2d2140),
         title: const Text('Add Interest', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
           style: const TextStyle(color: Colors.white),
           decoration: const InputDecoration(
-            hintText: 'e.g. AI, Music, Sports',
+            hintText: 'e.g. AI, Music',
             hintStyle: TextStyle(color: Colors.white54),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
             focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF22D3EE))),
@@ -200,7 +185,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     final updateData = <String, dynamic>{
       'fullName': _fullNameController.text.trim(),
-      'name': _fullNameController.text.trim(), // Legacy support
+      'name': _fullNameController.text.trim(),
       'role': _role,
       'program': _program,
       'campus': _campusController.text.trim().isEmpty
@@ -213,8 +198,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
     try {
       await _users.doc(_docId).set(updateData, SetOptions(merge: true));
-
-      // Update Auth Display Name
+      
       final user = FirebaseAuth.instance.currentUser;
       if (user != null && user.displayName != _fullNameController.text.trim()) {
         await user.updateDisplayName(_fullNameController.text.trim());
@@ -242,9 +226,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2A2A3E),
+        backgroundColor: const Color(0xFF2d2140),
         title: const Text('Unsaved Changes', style: TextStyle(color: Colors.white)),
-        content: const Text('You have unsaved changes. Are you sure you want to discard them?', style: TextStyle(color: Colors.white70)),
+        content: const Text('Discard changes?', style: TextStyle(color: Colors.white70)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -262,285 +246,144 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Theme Colors (Matching SettingsPage)
+    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
+    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+
     return PopScope(
       canPop: !_hasUnsavedChanges,
-      onPopInvokedWithResult: (didPop, result) async {
+      onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
         final shouldPop = await _onWillPop();
-        if (shouldPop && context.mounted) {
-          Navigator.of(context).pop();
-        }
+        if (shouldPop && context.mounted) Navigator.of(context).pop();
       },
-      child: GradientBackground(
-        child: Scaffold(
+      child: Scaffold(
+        extendBodyBehindAppBar: true,
+        appBar: AppBar(
           backgroundColor: Colors.transparent,
-          body: Stack(
-            children: [
-              // 1. Background removed
-            // Ambient Glow
-            Positioned(
-              top: -100,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        const Color(0xFF7C3AED).withValues(alpha: 0.3),
-                        Colors.transparent,
-                      ],
-                      radius: 0.8,
-                    ),
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.chevron_left, color: Colors.white),
+            onPressed: () async {
+              if (await _onWillPop()) {
+                if (context.mounted) Navigator.pop(context);
+              }
+            },
+          ),
+          title: const Text(
+            "Edit Profile",
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          centerTitle: true,
+          actions: [
+            if (_loading)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.only(right: 16),
+                  child: SizedBox(
+                    width: 20, height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                    child: Container(color: Colors.transparent),
-                  ),
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.check, color: Color(0xFF22D3EE)),
+                onPressed: _saveProfile,
+              ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            // 1. Background Gradient
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [topColor, bottomColor],
                 ),
               ),
             ),
 
-            // Content
-            SafeArea(
-              child: Column(
-                children: [
-                  // 2. Top Navigation Bar
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _GlassIconButton(
-                          icon: Icons.chevron_left,
-                          onTap: () async {
-                            if (await _onWillPop()) {
-                              if (context.mounted) Navigator.pop(context);
-                            }
-                          },
-                        ),
-                        _GlassIconButton(
-                          icon: Icons.check,
-                          onTap: _loading ? () {} : _saveProfile,
-                          isLoading: _loading,
-                        ),
-                      ],
-                    ),
-                  ),
+            // 2. Ambient Glow Orbs
+            Positioned(
+              top: -50,
+              right: -50,
+              child: Container(
+                width: 250,
+                height: 250,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 100,
+              left: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
+                ),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                  child: Container(color: Colors.transparent),
+                ),
+              ),
+            ),
 
-                  Expanded(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 40),
-                      child: Form(
-                        key: _formKey,
+            // 3. Content
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(20),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    children: [
+                      // Profile Photo
+                      Center(
                         child: Column(
                           children: [
-                            const SizedBox(height: 20),
-                            
-                            // 3. Profile Photo Section
-                            Center(
-                              child: Column(
-                                children: [
-                                  Container(
-                                    width: 120,
-                                    height: 120,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.15),
-                                        width: 3,
-                                      ),
-                                      image: const DecorationImage(
-                                        image: NetworkImage('https://i.pravatar.cc/150?img=11'),
-                                        fit: BoxFit.cover,
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 12),
-                                  GestureDetector(
-                                    onTap: _updatePhoto,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF22D3EE).withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(20),
-                                        border: Border.all(
-                                          color: const Color(0xFF22D3EE).withValues(alpha: 0.3),
-                                          width: 1,
-                                        ),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(Icons.camera_alt, color: Color(0xFF22D3EE), size: 16),
-                                          const SizedBox(width: 6),
-                                          Text(
-                                            "Update Photo",
-                                            style: GoogleFonts.inter(
-                                              color: const Color(0xFF22D3EE),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                            Container(
+                              width: 100,
+                              height: 100,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.15),
+                                  width: 2,
+                                ),
+                                image: const DecorationImage(
+                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                                  fit: BoxFit.cover,
+                                ),
                               ),
                             ),
-
-                            const SizedBox(height: 32),
-
-                            // 4. Form Fields
-                            _buildTextField(
-                              controller: _fullNameController,
-                              label: "Full name",
-                              icon: Icons.person_outline,
-                              iconColor: const Color(0xFF22D3EE),
-                              validator: (v) => (v == null || v.length < 2) ? 'Min 2 characters required' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Role toggle
-                            _buildLabel("Role"),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _toggleButton(
-                                    label: 'Student',
-                                    selected: _role == 'student',
-                                    onTap: () {
-                                      setState(() {
-                                        _role = 'student';
-                                        _hasUnsavedChanges = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _toggleButton(
-                                    label: 'Lecturer',
-                                    selected: _role == 'lecturer',
-                                    onTap: () {
-                                      setState(() {
-                                        _role = 'lecturer';
-                                        _hasUnsavedChanges = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            // Program toggle
-                            _buildLabel("Program"),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _toggleButton(
-                                    label: 'BCS',
-                                    selected: _program == 'BCS',
-                                    onTap: () {
-                                      setState(() {
-                                        _program = 'BCS';
-                                        _hasUnsavedChanges = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: _toggleButton(
-                                    label: 'BSE',
-                                    selected: _program == 'BSE',
-                                    onTap: () {
-                                      setState(() {
-                                        _program = 'BSE';
-                                        _hasUnsavedChanges = true;
-                                      });
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            _buildTextField(
-                              controller: _campusController,
-                              label: "Campus",
-                              icon: Icons.location_city_outlined,
-                              iconColor: const Color(0xFF0D9488),
-                              validator: (v) => (v == null || v.isEmpty) ? 'Campus is required' : null,
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            _buildTextField(
-                              controller: _favGroupController,
-                              label: "Fav Group",
-                              icon: Icons.groups_outlined,
-                              iconColor: const Color(0xFF14B8A6),
-                            ),
-                            const SizedBox(height: 16),
-                            
-                            _buildTextField(
-                              controller: _bioController,
-                              label: "Bio",
-                              icon: Icons.person_outline,
-                              iconColor: const Color(0xFF22D3EE),
-                              maxLines: 4,
-                              maxLength: 250,
-                              alignTop: true,
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // 5. Interests Section
-                            _buildLabel("Interests"),
-                            const SizedBox(height: 8),
-                            _GlassContainer(
-                              padding: const EdgeInsets.all(12),
-                              child: Container(
-                                constraints: const BoxConstraints(minHeight: 60),
-                                width: double.infinity,
-                                child: Wrap(
-                                  spacing: 8,
-                                  runSpacing: 8,
+                            const SizedBox(height: 12),
+                            GestureDetector(
+                              onTap: _updatePhoto,
+                              child: _GlassContainer(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    ..._interests.asMap().entries.map((entry) {
-                                      final index = entry.key;
-                                      final interest = entry.value;
-                                      final color = _tagColors[index % _tagColors.length];
-                                      return _InterestTag(
-                                        label: interest,
-                                        color: color,
-                                        onRemove: () => _removeInterest(interest),
-                                      );
-                                    }),
-                                    // Add Button
-                                    GestureDetector(
-                                      onTap: _addInterest,
-                                      child: Container(
-                                        width: 40,
-                                        height: 40,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white.withValues(alpha: 0.08),
-                                          borderRadius: BorderRadius.circular(10),
-                                          border: Border.all(
-                                            color: Colors.white.withValues(alpha: 0.3),
-                                            style: BorderStyle.solid,
-                                            width: 1.5,
-                                          ),
-                                        ),
-                                        child: const Icon(Icons.add, color: Color(0xFF22D3EE), size: 20),
-                                      ),
+                                    Icon(Icons.camera_alt, color: Color(0xFF22D3EE), size: 16),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      "Change Photo",
+                                      style: TextStyle(color: Color(0xFF22D3EE), fontSize: 13, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
@@ -549,14 +392,174 @@ class _EditProfilePageState extends State<EditProfilePage> {
                           ],
                         ),
                       ),
-                    ),
+
+                      const SizedBox(height: 32),
+
+                      // Basic Info Section
+                      _buildSectionHeader("Personal Info"),
+                      _GlassContainer(
+                        child: Column(
+                          children: [
+                            _buildTextField(
+                              controller: _fullNameController,
+                              label: "Full Name",
+                              icon: Icons.person_outline,
+                              validator: (v) => (v == null || v.length < 2) ? 'Min 2 chars' : null,
+                            ),
+                            _buildDivider(),
+                            _buildTextField(
+                              controller: _campusController,
+                              label: "Campus",
+                              icon: Icons.location_city_outlined,
+                              validator: (v) => (v == null || v.isEmpty) ? 'Required' : null,
+                            ),
+                            _buildDivider(),
+                            _buildTextField(
+                              controller: _favGroupController,
+                              label: "Fav Group",
+                              icon: Icons.groups_outlined,
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Academic Info
+                      _buildSectionHeader("Academic"),
+                      _GlassContainer(
+                        child: Column(
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildToggleButton(
+                                      label: 'Student',
+                                      selected: _role == 'student',
+                                      onTap: () => setState(() { _role = 'student'; _hasUnsavedChanges = true; }),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildToggleButton(
+                                      label: 'Lecturer',
+                                      selected: _role == 'lecturer',
+                                      onTap: () => setState(() { _role = 'lecturer'; _hasUnsavedChanges = true; }),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildDivider(),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: _buildToggleButton(
+                                      label: 'BCS',
+                                      selected: _program == 'BCS',
+                                      onTap: () => setState(() { _program = 'BCS'; _hasUnsavedChanges = true; }),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: _buildToggleButton(
+                                      label: 'BSE',
+                                      selected: _program == 'BSE',
+                                      onTap: () => setState(() { _program = 'BSE'; _hasUnsavedChanges = true; }),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Bio
+                      _buildSectionHeader("About Me"),
+                      _GlassContainer(
+                        child: _buildTextField(
+                          controller: _bioController,
+                          label: "Bio",
+                          icon: Icons.edit_outlined,
+                          maxLines: 4,
+                          maxLength: 250,
+                          alignTop: true,
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Interests
+                      _buildSectionHeader("Interests"),
+                      _GlassContainer(
+                        padding: const EdgeInsets.all(16),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              ..._interests.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final color = _tagColors[index % _tagColors.length];
+                                return _InterestTag(
+                                  label: entry.value,
+                                  color: color,
+                                  onRemove: () => _removeInterest(entry.value),
+                                );
+                              }),
+                              GestureDetector(
+                                onTap: _addInterest,
+                                child: Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                  ),
+                                  child: const Icon(Icons.add, color: Color(0xFF22D3EE), size: 20),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  // --- WIDGET HELPERS (Matching Settings Page Style) ---
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 8),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          title.toUpperCase(),
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.6),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            letterSpacing: 1.2,
+          ),
+        ),
       ),
     );
   }
@@ -565,72 +568,55 @@ class _EditProfilePageState extends State<EditProfilePage> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
-    required Color iconColor,
     String? Function(String?)? validator,
     int maxLines = 1,
     int? maxLength,
     bool alignTop = false,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: GoogleFonts.inter(
-            color: Colors.white.withValues(alpha: 0.4),
-            fontSize: 12,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        crossAxisAlignment: alignTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: EdgeInsets.only(top: alignTop ? 4 : 0),
+            child: Icon(icon, color: Colors.white70, size: 22),
           ),
-        ),
-        const SizedBox(height: 4),
-        _GlassContainer(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          child: Row(
-            crossAxisAlignment: alignTop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-            children: [
-              Padding(
-                padding: EdgeInsets.only(top: alignTop ? 4 : 0),
-                child: Icon(icon, color: iconColor, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: TextFormField(
-                  controller: controller,
-                  style: GoogleFonts.inter(
-                    color: Colors.white,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (controller.text.isNotEmpty)
+                  Text(
+                    label,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11),
                   ),
+                TextFormField(
+                  controller: controller,
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
                   maxLines: maxLines,
                   maxLength: maxLength,
                   cursorColor: const Color(0xFF22D3EE),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
+                    hintText: label,
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
                     isDense: true,
                     contentPadding: EdgeInsets.zero,
                     border: InputBorder.none,
-                    counterText: "", // Hide counter
+                    counterText: "",
                   ),
                   validator: validator,
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildLabel(String text) => Align(
-        alignment: Alignment.centerLeft,
-        child: Text(
-          text,
-          style: GoogleFonts.inter(
-            color: Colors.white.withValues(alpha: 0.4),
-            fontSize: 12,
-          ),
-        ),
-      );
-
-  Widget _toggleButton({
+  Widget _buildToggleButton({
     required String label,
     required bool selected,
     required VoidCallback onTap,
@@ -638,34 +624,38 @@ class _EditProfilePageState extends State<EditProfilePage> {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
+        padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF22D3EE).withOpacity(0.12) : Colors.white.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(12),
+          color: selected ? const Color(0xFF22D3EE).withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? const Color(0xFF22D3EE) : Colors.white.withValues(alpha: 0.12),
-            width: 1.5,
+            color: selected ? const Color(0xFF22D3EE) : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
-          style: GoogleFonts.inter(
-            color: selected ? const Color(0xFF22D3EE) : Colors.white,
-            fontSize: 15,
+          style: TextStyle(
+            color: selected ? const Color(0xFF22D3EE) : Colors.white70,
+            fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
         ),
       ),
     );
   }
+
+  Widget _buildDivider() {
+    return Divider(height: 1, color: Colors.white.withValues(alpha: 0.1), indent: 16, endIndent: 16);
+  }
 }
 
+// Reusable Glass Container (Same as SettingsPage)
 class _GlassContainer extends StatelessWidget {
   final Widget child;
-  final EdgeInsetsGeometry padding;
+  final EdgeInsetsGeometry? padding;
 
-  const _GlassContainer({required this.child, required this.padding});
+  const _GlassContainer({required this.child, this.padding});
 
   @override
   Widget build(BuildContext context) {
@@ -676,7 +666,7 @@ class _GlassContainer extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
+            color: Colors.black.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
               color: Colors.white.withValues(alpha: 0.1),
@@ -690,83 +680,29 @@ class _GlassContainer extends StatelessWidget {
   }
 }
 
-class _GlassIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final bool isLoading;
-
-  const _GlassIconButton({
-    required this.icon,
-    required this.onTap,
-    this.isLoading = false,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
-              ),
-            ),
-            child: isLoading
-                ? const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                  )
-                : Icon(icon, color: Colors.white, size: 20),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _InterestTag extends StatelessWidget {
   final String label;
   final Color color;
   final VoidCallback onRemove;
 
-  const _InterestTag({
-    required this.label,
-    required this.color,
-    required this.onRemove,
-  });
+  const _InterestTag({required this.label, required this.color, required this.onRemove});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(10),
+        color: color.withValues(alpha: 0.8),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            label,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(width: 6),
           GestureDetector(
             onTap: onRemove,
-            child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.7), size: 14),
+            child: const Icon(Icons.close, color: Colors.white70, size: 14),
           ),
         ],
       ),

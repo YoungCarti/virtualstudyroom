@@ -1,39 +1,77 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
 import 'change_password_page.dart';
 import 'change_email_page.dart';
-import 'widgets/gradient_background.dart';
 
 class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Background Colors
     final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
     final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
 
-    return GradientBackground(
-      child: Scaffold(
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
         backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // 1. Background Gradient removed
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.chevron_left, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          "Account",
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // 1. Background Gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [topColor, bottomColor],
+              ),
+            ),
+          ),
 
-          // 2. Ambient Glow (Subtle)
+          // 2. Ambient Glow Orbs (Consistent with SettingsPage)
           Positioned(
-            top: -100,
-            left: -50,
+            top: -50,
+            right: -50,
             child: Container(
-              width: 300,
-              height: 300,
+              width: 250,
+              height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet glow
               ),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 100, sigmaY: 100),
+                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 100,
+            left: -50,
+            child: Container(
+              width: 200,
+              height: 200,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan glow
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
                 child: Container(color: Colors.transparent),
               ),
             ),
@@ -41,35 +79,19 @@ class AccountPage extends StatelessWidget {
 
           // 3. Main Content
           SafeArea(
-            child: Column(
+            child: ListView(
+              padding: const EdgeInsets.all(20),
               children: [
-                const SizedBox(height: 20),
-                
-                // Back Button Header
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    children: [
-                      _GlassBackButton(onTap: () => Navigator.of(context).pop()),
-                    ],
-                  ),
-                ),
-
-                const SizedBox(height: 40), // Start 80dp from top (approx with safe area)
-
-                // Settings Cards
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                // --- SECTION: SECURITY ---
+                _buildSectionHeader("Security"),
+                _GlassContainer(
                   child: Column(
                     children: [
-                      // Card 1: Change Password
-                      _SettingsCard(
+                      _buildActionTile(
                         title: "Change Password",
-                        icon: LucideIcons.lock,
-                        gradientColors: const [
-                          Color(0xFF4F46E5), // Indigo
-                          Color(0xFF6366F1), // Blue
-                        ],
+                        subtitle: "Update your account password",
+                        icon: Icons.lock_outline, // Changed to standard icon
+                        iconColor: const Color(0xFF6366F1), // Indigo/Blue
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -78,17 +100,12 @@ class AccountPage extends StatelessWidget {
                           );
                         },
                       ),
-
-                      const SizedBox(height: 16),
-
-                      // Card 2: Change Email Address
-                      _SettingsCard(
+                      _buildDivider(),
+                      _buildActionTile(
                         title: "Change Email Address",
-                        icon: LucideIcons.atSign,
-                        gradientColors: const [
-                          Color(0xFFEC4899), // Pink
-                          Color(0xFFD946EF), // Fuchsia
-                        ],
+                        subtitle: "Update your registered email",
+                        icon: Icons.alternate_email, // Changed to standard icon
+                        iconColor: const Color(0xFFD946EF), // Fuchsia/Pink
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -100,174 +117,113 @@ class AccountPage extends StatelessWidget {
                     ],
                   ),
                 ),
+                
+                const SizedBox(height: 40), // Bottom padding
               ],
             ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 8, bottom: 8),
+      child: Text(
+        title.toUpperCase(),
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.6),
+          fontSize: 12,
+          fontWeight: FontWeight.bold,
+          letterSpacing: 1.2,
+        ),
       ),
+    );
+  }
+
+  Widget _buildActionTile({
+    required String title,
+    String? subtitle,
+    required IconData icon,
+    Color? iconColor,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        child: Row(
+          children: [
+            Icon(icon, color: iconColor ?? Colors.white70, size: 24),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  if (subtitle != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        subtitle,
+                        style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.5),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right,
+              color: Colors.white.withValues(alpha: 0.3),
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Divider(
+      height: 1,
+      color: Colors.white.withValues(alpha: 0.1),
+      indent: 56, // Match icon padding + size
     );
   }
 }
 
-class _GlassBackButton extends StatelessWidget {
-  final VoidCallback onTap;
+class _GlassContainer extends StatelessWidget {
+  final Widget child;
 
-  const _GlassBackButton({required this.onTap});
+  const _GlassContainer({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(16),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              LucideIcons.chevronLeft,
-              color: Colors.white,
-              size: 20,
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _SettingsCard extends StatefulWidget {
-  final String title;
-  final IconData icon;
-  final List<Color> gradientColors;
-  final VoidCallback onTap;
-
-  const _SettingsCard({
-    required this.title,
-    required this.icon,
-    required this.gradientColors,
-    required this.onTap,
-  });
-
-  @override
-  State<_SettingsCard> createState() => _SettingsCardState();
-}
-
-class _SettingsCardState extends State<_SettingsCard> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 100),
-    );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
-      onTapUp: (_) {
-        _controller.reverse();
-        widget.onTap();
-      },
-      onTapCancel: () => _controller.reverse(),
-      child: AnimatedBuilder(
-        animation: _scaleAnimation,
-        builder: (context, child) => Transform.scale(
-          scale: _scaleAnimation.value,
           child: child,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(20),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-            child: Container(
-              height: 72,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.06),
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Icon Container
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: widget.gradientColors,
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: widget.gradientColors.first.withValues(alpha: 0.3),
-                          blurRadius: 8,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Icon(
-                      widget.icon,
-                      color: Colors.white,
-                      size: 22,
-                    ),
-                  ),
-                  
-                  const SizedBox(width: 12),
-                  
-                  // Title
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        fontFamily: 'Inter', // Assuming Inter is available or default sans
-                      ),
-                    ),
-                  ),
-
-                  // Arrow
-                  Icon(
-                    LucideIcons.chevronRight,
-                    color: Colors.white.withValues(alpha: 0.4),
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
         ),
       ),
     );

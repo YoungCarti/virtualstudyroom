@@ -1,5 +1,4 @@
 import 'dart:ui';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -7,7 +6,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 
 import 'edit_profile_page.dart';
-import 'widgets/gradient_background.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -20,6 +18,20 @@ class _ProfilePageState extends State<ProfilePage> {
   final _uid = FirebaseAuth.instance.currentUser?.uid;
   final PageController _pageController = PageController();
 
+  // Interest Colors Palette
+  final List<Color> _tagColors = [
+    const Color(0xFF7C3AED), // Purple
+    const Color(0xFF0D9488), // Teal
+    const Color(0xFF3B82F6), // Blue
+    const Color(0xFFDC2626), // Red
+    const Color(0xFFEA580C), // Orange
+    const Color(0xFFEC4899), // Pink
+    const Color(0xFF10B981), // Green
+    const Color(0xFF6366F1), // Indigo
+    const Color(0xFFF59E0B), // Amber
+    const Color(0xFF06B6D4), // Cyan
+  ];
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -28,44 +40,60 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. Background
-    // Base Color: Deep dark purple (#1A1625 to #231B2E gradient)
-    return GradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        body: Stack(
-          children: [
-            // Background Gradient removed
+    // Theme Colors
+    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
+    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
 
-          // Ambient Glow: Radial gradient with violet/purple glow emanating from top-center
-          Positioned(
-            top: -100,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: RadialGradient(
-                    colors: [
-                      const Color(0xFF7C3AED).withValues(alpha: 0.3), // Violet
-                      Colors.transparent,
-                    ],
-                    radius: 0.8,
-                  ),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                  child: Container(color: Colors.transparent),
-                ),
+    return Scaffold(
+      backgroundColor: const Color(0xFF0F0F1A), // Dark Base
+      body: Stack(
+        children: [
+          // 1. Background Gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [topColor, bottomColor],
               ),
             ),
           ),
-          // Subtle noise/grain texture (Optional - skipped for simplicity/performance or use an image asset if available)
 
-          // Content
+          // 2. Ambient Glow Orbs
+          Positioned(
+            top: -50,
+            left: -50,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+          Positioned(
+            top: 100,
+            right: -80,
+            child: Container(
+              width: 250,
+              height: 250,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
+              ),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
+                child: Container(color: Colors.transparent),
+              ),
+            ),
+          ),
+
+          // 3. Main Content
           SafeArea(
             child: _uid == null
                 ? const Center(child: Text('Not signed in', style: TextStyle(color: Colors.white)))
@@ -77,12 +105,12 @@ class _ProfilePageState extends State<ProfilePage> {
                       }
 
                       final data = snapshot.data?.data() ?? {};
-                      final fullName = (data['fullName'] ?? data['name'] ?? 'Saabiresh Letchumanan') as String;
-                      final program = (data['program'] ?? 'Bachelor of Computer Science (Hons.)') as String;
-                      final campus = (data['campus'] ?? 'Management & Science University (MSU)') as String;
-                      final favGroup = (data['favGroup'] ?? 'Machine Learning Room') as String;
-                      final bio = (data['bio'] ?? 'Passionate computer science student with a love for problem-solving and algorithms. Always eager to learn new technologies and collaborate on exciting projects.🔬') as String;
-                      final interests = List<String>.from(data['interests'] ?? ['Machine Learning', 'Web Development', 'Data Science', 'Cybersecurity', 'Mobile Apps']);
+                      final fullName = (data['fullName'] ?? data['name'] ?? 'Student Name') as String;
+                      final program = (data['program'] ?? 'Bachelor of Computer Science') as String;
+                      final campus = (data['campus'] ?? 'UNIMY') as String;
+                      final favGroup = (data['favGroup'] ?? 'Study Group A') as String;
+                      final bio = (data['bio'] ?? 'Computer science student passionate about coding and algorithms.') as String;
+                      final interests = List<String>.from(data['interests'] ?? ['Coding', 'AI', 'Flutter']);
                       final joinedDate = _formatCreatedAt(data['createdAt']);
 
                       return SingleChildScrollView(
@@ -90,21 +118,21 @@ class _ProfilePageState extends State<ProfilePage> {
                         child: Column(
                           children: [
                             const SizedBox(height: 10),
-                            // 2. Top Navigation Bar
+                            
+                            // Top Navigation Bar
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  _GlassNavButton(
+                                  _GlassIconButton(
                                     icon: Icons.chevron_left,
                                     onTap: () => Navigator.of(context).pop(),
                                   ),
-                                  _GlassNavButton(
-                                    icon: Icons.settings, // Or search
+                                  _GlassIconButton(
+                                    icon: Icons.edit_outlined,
                                     onTap: () {
-                                      // Navigate to Edit Profile or Settings
-                                       Navigator.of(context).push(
+                                      Navigator.of(context).push(
                                         MaterialPageRoute<void>(
                                           builder: (_) => EditProfilePage(userDocId: _uid),
                                         ),
@@ -115,9 +143,9 @@ class _ProfilePageState extends State<ProfilePage> {
                               ),
                             ),
 
-                            const SizedBox(height: 30), // ~60dp from top including nav bar height
+                            const SizedBox(height: 30),
 
-                            // 3. Profile Section (Top)
+                            // Profile Photo & Name
                             Container(
                               width: 120,
                               height: 120,
@@ -128,7 +156,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   width: 3,
                                 ),
                                 image: const DecorationImage(
-                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'), // Placeholder
+                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
@@ -148,7 +176,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF22D3EE).withValues(alpha: 0.12),
+                                color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
                                   color: const Color(0xFF22D3EE).withValues(alpha: 0.3),
@@ -174,7 +202,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             const SizedBox(height: 24),
 
-                            // 4. Stats Row
+                            // Stats Row
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
@@ -188,7 +216,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             const SizedBox(height: 24),
 
-                            // 5. Program Card (Glassmorphism)
+                            // Program Card
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: _GlassContainer(
@@ -203,8 +231,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            Color(0xFFA855F7).withValues(alpha: 0.2),
-                                            Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                                            const Color(0xFFA855F7).withValues(alpha: 0.2),
+                                            const Color(0xFF8B5CF6).withValues(alpha: 0.2),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(14),
@@ -231,6 +259,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                               fontSize: 15,
                                               fontWeight: FontWeight.w500,
                                             ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                           ),
                                         ],
                                       ),
@@ -242,29 +272,24 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             const SizedBox(height: 24),
 
-                            // 6. Campus/Streak Cards (Swipeable PageView)
+                            // Horizontal Cards (PageView)
                             SizedBox(
-                              height: 140, // Height for cards + shadow
+                              height: 140,
                               child: PageView(
                                 controller: _pageController,
                                 physics: const BouncingScrollPhysics(),
                                 children: [
-                                  // Frame 1: Campus Cards
+                                  // Page 1: Campus & Group
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 20),
                                     child: Row(
                                       children: [
                                         Expanded(
                                           child: _InfoCard(
-                                            overlayGradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                const Color(0xFF06B6D4).withValues(alpha: 0.1),
-                                                const Color(0xFF06B6D4).withValues(alpha: 0.1),
-                                                const Color(0xFF3B82F6).withValues(alpha: 0.1),
-                                              ],
-                                            ),
+                                            colors: [
+                                              const Color(0xFF06B6D4).withValues(alpha: 0.1),
+                                              const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                            ],
                                             icon: Icons.location_on_outlined,
                                             iconColor: const Color(0xFF22D3EE),
                                             label: "Campus",
@@ -274,14 +299,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: _InfoCard(
-                                            overlayGradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                const Color(0xFF10B981).withValues(alpha: 0.1),
-                                                const Color(0xFF14B8A6).withValues(alpha: 0.1),
-                                              ],
-                                            ),
+                                            colors: [
+                                              const Color(0xFF10B981).withValues(alpha: 0.1),
+                                              const Color(0xFF14B8A6).withValues(alpha: 0.1),
+                                            ],
                                             icon: Icons.group_outlined,
                                             iconColor: const Color(0xFF22D3EE),
                                             label: "Fav Group",
@@ -291,27 +312,19 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ],
                                     ),
                                   ),
-                                  // Frame 2: Streak Cards
+                                  // Page 2: Streak (Example)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 20),
                                     child: Row(
                                       children: [
                                         Expanded(
                                           child: _InfoCard(
-                                            overlayGradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                const Color(0xFFF97316).withValues(alpha: 0.1),
-                                                const Color(0xFFF97316).withValues(alpha: 0.1),
-                                                const Color(0xFFEF4444).withValues(alpha: 0.1),
-                                              ],
-                                            ),
-                                            iconWidget: Container(
-                                              width: 40, height: 40,
-                                              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.transparent),
-                                              child: const Icon(Icons.local_fire_department, color: Color(0xFFF97316), size: 24),
-                                            ),
+                                            colors: [
+                                              const Color(0xFFF97316).withValues(alpha: 0.1),
+                                              const Color(0xFFEF4444).withValues(alpha: 0.1),
+                                            ],
+                                            icon: Icons.local_fire_department,
+                                            iconColor: const Color(0xFFF97316),
                                             label: "Current Streak",
                                             title: "47 days",
                                             isLargeValue: true,
@@ -320,19 +333,12 @@ class _ProfilePageState extends State<ProfilePage> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: _InfoCard(
-                                            overlayGradient: LinearGradient(
-                                              begin: Alignment.topLeft,
-                                              end: Alignment.bottomRight,
-                                              colors: [
-                                                const Color(0xFFF59E0B).withValues(alpha: 0.1),
-                                                const Color(0xFFEAB308).withValues(alpha: 0.1),
-                                              ],
-                                            ),
-                                            iconWidget: Container(
-                                              width: 40, height: 40,
-                                              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.transparent),
-                                              child: const Icon(Icons.emoji_events, color: Color(0xFFF59E0B), size: 24),
-                                            ),
+                                            colors: [
+                                              const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                                              const Color(0xFFEAB308).withValues(alpha: 0.1),
+                                            ],
+                                            icon: Icons.emoji_events,
+                                            iconColor: const Color(0xFFF59E0B),
                                             label: "Longest Streak",
                                             title: "89 days",
                                             isLargeValue: true,
@@ -347,20 +353,20 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(height: 8),
                             SmoothPageIndicator(
                               controller: _pageController,
-                              count: 2, // 2 pages
+                              count: 2,
                               effect: const ScrollingDotsEffect(
-                                activeDotColor: Colors.white, // 0.8 opacity handled by color or effect
+                                activeDotColor: Colors.white,
                                 dotColor: Colors.white30,
                                 dotHeight: 6,
                                 dotWidth: 6,
-                                activeDotScale: 1.3, // To make active dot ~8px
+                                activeDotScale: 1.3,
                                 spacing: 6,
                               ),
                             ),
 
                             const SizedBox(height: 20),
 
-                            // 7. Bio Section
+                            // Bio Section
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: _GlassContainer(
@@ -398,7 +404,7 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             const SizedBox(height: 16),
 
-                            // 8. Interests Section
+                            // Interests Section
                             Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
                               child: _GlassContainer(
@@ -424,34 +430,21 @@ class _ProfilePageState extends State<ProfilePage> {
                                     Wrap(
                                       spacing: 8,
                                       runSpacing: 8,
-                                      children: [
-                                        ...interests.asMap().entries.map((entry) {
-                                          final index = entry.key;
-                                          final interest = entry.value;
-                                          // Cycle through colors
-                                          final colors = [
-                                            const Color(0xFF7C3AED), // Purple
-                                            const Color(0xFF0D9488), // Teal
-                                            const Color(0xFF3B82F6), // Blue
-                                            const Color(0xFFDC2626), // Red
-                                            const Color(0xFFEA580C), // Orange
-                                            const Color(0xFFEC4899), // Pink
-                                            const Color(0xFF10B981), // Green
-                                            const Color(0xFF6366F1), // Indigo
-                                            const Color(0xFFF59E0B), // Amber
-                                            const Color(0xFF06B6D4), // Cyan
-                                          ];
-                                          return _InterestTag(
-                                            label: interest,
-                                            color: colors[index % colors.length],
-                                          );
-                                        }),
-                                      ],
+                                      children: interests.asMap().entries.map((entry) {
+                                        final index = entry.key;
+                                        final color = _tagColors[index % _tagColors.length];
+                                        return _InterestTag(
+                                          label: entry.value,
+                                          color: color,
+                                        );
+                                      }).toList(),
                                     ),
                                   ],
                                 ),
                               ),
                             ),
+                            
+                            const SizedBox(height: 40),
                           ],
                         ),
                       );
@@ -460,7 +453,6 @@ class _ProfilePageState extends State<ProfilePage> {
           ),
         ],
       ),
-      ),
     );
   }
 
@@ -468,7 +460,7 @@ class _ProfilePageState extends State<ProfilePage> {
     try {
       if (ts is Timestamp) {
         final dt = ts.toDate();
-        return '${dt.year}'; // Just year for "Joined"
+        return '${dt.year}';
       }
       return '2025';
     } catch (_) {
@@ -477,11 +469,13 @@ class _ProfilePageState extends State<ProfilePage> {
   }
 }
 
-class _GlassNavButton extends StatelessWidget {
+// --- WIDGET HELPERS (Unified Style) ---
+
+class _GlassIconButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
 
-  const _GlassNavButton({required this.icon, required this.onTap});
+  const _GlassIconButton({required this.icon, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -490,7 +484,7 @@ class _GlassNavButton extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(12),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
           child: Container(
             width: 44,
             height: 44,
@@ -556,27 +550,12 @@ class _GlassContainer extends StatelessWidget {
         child: Container(
           padding: padding,
           decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.white.withValues(alpha: 0.06),
-                Colors.white.withValues(alpha: 0.03),
-              ],
-            ),
+            color: Colors.black.withValues(alpha: 0.2), // Darker glass
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.12),
+              color: Colors.white.withValues(alpha: 0.1),
               width: 1,
             ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.white.withValues(alpha: 0.1),
-                offset: const Offset(0, 1), // Subtle top glow simulation
-                blurRadius: 0,
-                spreadRadius: 0,
-              )
-            ],
           ),
           child: child,
         ),
@@ -586,19 +565,17 @@ class _GlassContainer extends StatelessWidget {
 }
 
 class _InfoCard extends StatelessWidget {
-  final Gradient overlayGradient;
-  final IconData? icon;
-  final Color? iconColor;
-  final Widget? iconWidget;
+  final List<Color> colors;
+  final IconData icon;
+  final Color iconColor;
   final String label;
   final String title;
   final bool isLargeValue;
 
   const _InfoCard({
-    required this.overlayGradient,
-    this.icon,
-    this.iconColor,
-    this.iconWidget,
+    required this.colors,
+    required this.icon,
+    required this.iconColor,
     required this.label,
     required this.title,
     this.isLargeValue = false,
@@ -611,10 +588,9 @@ class _InfoCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF000000).withValues(alpha: 0.4),
-            offset: const Offset(0, 25),
-            blurRadius: 50,
-            spreadRadius: -12,
+            color: const Color(0xFF000000).withValues(alpha: 0.2),
+            offset: const Offset(0, 10),
+            blurRadius: 20,
           ),
         ],
       ),
@@ -623,57 +599,48 @@ class _InfoCard extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
           child: Container(
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.08),
-                  const Color(0xFFFFFFFF).withValues(alpha: 0.02),
-                ],
+                colors: colors,
               ),
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: const Color(0xFFFFFFFF).withValues(alpha: 0.12),
+                color: Colors.white.withValues(alpha: 0.1),
                 width: 1,
               ),
             ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                gradient: overlayGradient,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  iconWidget ?? Icon(icon, color: iconColor, size: 24),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        label,
-                        style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.6),
-                          fontSize: 11,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon, color: iconColor, size: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      label,
+                      style: GoogleFonts.inter(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 11,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        title,
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: isLargeValue ? 24 : 14,
-                          fontWeight: isLargeValue ? FontWeight.bold : FontWeight.w500,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: isLargeValue ? 24 : 14,
+                        fontWeight: isLargeValue ? FontWeight.bold : FontWeight.w500,
                       ),
-                    ],
-                  ),
-                ],
-              ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
@@ -693,7 +660,7 @@ class _InterestTag extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: color,
+        color: color.withValues(alpha: 0.8), // Vibrant tags
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
