@@ -18,6 +18,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'video_call_page.dart';
 import 'audio_call_page.dart';
 import 'config/agora_config.dart';
+import 'group_info_page.dart';
+import 'package:open_file/open_file.dart';
+
 
 class GroupChatMessagesPage extends StatefulWidget {
   const GroupChatMessagesPage({
@@ -47,6 +50,8 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   bool _showMentionSuggestions = false;
   final List<String> _mentionsList = ['gemini'];
   String _currentMentionQuery = '';
+  
+  bool _hasScrolledToBottom = false;
 
   @override
   void initState() {
@@ -407,7 +412,28 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     return Scaffold(
       backgroundColor: const Color(0xFF0F0F1A),
       appBar: AppBar(
-        title: Text(widget.groupName, style: GoogleFonts.inter(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+        title: GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => GroupInfoPage(
+                  classCode: widget.classCode,
+                  groupId: widget.groupId,
+                  groupName: widget.groupName,
+                ),
+              ),
+            );
+          },
+          child: Text(
+            widget.groupName,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -509,12 +535,23 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                       }
                     }
 
+                    // Scroll to bottom after first frame (only once)
+                    if (!_hasScrolledToBottom) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (_scrollCtrl.hasClients && mounted) {
+                          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+                          setState(() => _hasScrolledToBottom = true);
+                        }
+                      });
+                    }
+
                     return ListView.builder(
+                      reverse: true,
                       controller: _scrollCtrl,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                       itemCount: items.length,
                       itemBuilder: (context, index) {
-                        final item = items[index];
+                        final item = items[items.length - 1 - index];
                         if (item.isDateHeader) {
                           return Padding(
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -588,6 +625,51 @@ class _MessageBubble extends StatelessWidget {
     } catch (e) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'))); }
   }
 
+  Future<void> _downloadAndOpenFile(BuildContext context) async {
+    if (fileUrl == null || fileName == null) return;
+    
+    try {
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+
+      // Download the file
+      final response = await http.get(Uri.parse(fileUrl!));
+      
+      // Get the app's documents directory
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      
+      // Write the file
+      final file = File(filePath);
+      await file.writeAsBytes(response.bodyBytes);
+
+      // Close loading dialog
+      if (context.mounted) Navigator.pop(context);
+
+      // Open the file with external app
+      final result = await OpenFile.open(filePath);
+      
+      if (result.type != ResultType.done && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not open file: ${result.message}')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAI = senderId == 'gemini_ai';
@@ -613,17 +695,76 @@ class _MessageBubble extends StatelessWidget {
         ),
         GestureDetector(
           onLongPress: () => _showOptions(context),
+          onTap: (fileType == 'file' && fileUrl != null) ? () => _downloadAndOpenFile(context) : null,
           child: Container(
             padding: const EdgeInsets.all(12),
             constraints: const BoxConstraints(maxWidth: 260),
             decoration: bubbleDecoration,
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (fileUrl != null) ...[
-                if (fileType == 'image') ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(fileUrl!))
-                else const Icon(Icons.insert_drive_file, color: Colors.white),
-                const SizedBox(height: 8),
+                if (fileType == 'image') 
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => _FullScreenImageViewer(imageUrl: fileUrl!),
+                        ),
+                      );
+                    },
+                    child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.network(fileUrl!)),
+                  )
+                else if (fileType == 'file')
+                  // WhatsApp-style file display
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Icon(Icons.insert_drive_file, color: Color(0xFFF59E0B), size: 24),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                fileName ?? 'Document',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              const SizedBox(height: 2),
+                              const Text(
+                                'Tap to open',
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                if (fileType == 'image' || text.isNotEmpty) const SizedBox(height: 8),
               ],
-              Text(isDeleted ? 'Deleted message' : text, style: TextStyle(color: Colors.white.withValues(alpha: isDeleted ? 0.5 : 1.0), fontSize: 15, fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal)),
+              if (text.isNotEmpty)
+                Text(isDeleted ? 'Deleted message' : text, style: TextStyle(color: Colors.white.withValues(alpha: isDeleted ? 0.5 : 1.0), fontSize: 15, fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal)),
             ]),
           ),
         ),
@@ -785,6 +926,54 @@ class _GlassDialog extends StatelessWidget {
         title: Text(title, style: const TextStyle(color: Colors.white)),
         content: content,
         actions: actions,
+      ),
+    );
+  }
+}
+
+// Full Screen Image Viewer
+class _FullScreenImageViewer extends StatelessWidget {
+  final String imageUrl;
+
+  const _FullScreenImageViewer({required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Image with pinch to zoom
+          Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.white),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) => const Center(
+                  child: Icon(Icons.error, color: Colors.white, size: 48),
+                ),
+              ),
+            ),
+          ),
+          // Close button
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
