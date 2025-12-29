@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class AuthService {
@@ -12,6 +11,17 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
   final FlutterSecureStorage _storage = const FlutterSecureStorage();
+
+  // --- NEW: Reset Password via Email ---
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      await _auth.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
 
   // Sign in and ensure a profile document exists.
   Future<void> signInWithEmail(String email, String password) async {
@@ -89,7 +99,6 @@ class AuthService {
       throw Exception('Google Sign In failed: $e');
     }
   }
-
 
   // Secure Storage for Remember Me
   Future<void> saveCredentials(String email, String password) async {

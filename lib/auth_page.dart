@@ -50,6 +50,92 @@ class _AuthPageState extends State<AuthPage> {
     super.dispose();
   }
 
+  // --- NEW: Reset Password via Email ---
+  void _showPasswordResetBottomSheet() {
+    final resetEmailController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          left: 24,
+          right: 24,
+          top: 32,
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFF121212),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text(
+              'Reset Password',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Enter your email to receive a password reset link.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.white60, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            _DarkField(
+              controller: resetEmailController,
+              hint: 'Email address',
+              icon: Icons.mail_outline_rounded,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF6C63FF),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(26)),
+                ),
+                onPressed: () async {
+                  final email = resetEmailController.text.trim();
+                  if (email.isEmpty) return;
+                  try {
+                    await _auth.sendPasswordResetEmail(email);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text("Reset link sent to your email!")),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                          content:
+                              Text(e.toString().replaceAll('Exception: ', ''))),
+                    );
+                  }
+                },
+                child: const Text(
+                  'Send Reset Link',
+                  style: TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final pass = _passController.text;
@@ -128,14 +214,11 @@ class _AuthPageState extends State<AuthPage> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // TODO: Replace the AssetImage below with your cozy study background.
-          // e.g. AssetImage('assets/images/studystream_bg.jpg')
-          // Ensure the asset is added to pubspec.yaml.
           Container(
             decoration: const BoxDecoration(
               image: DecorationImage(
@@ -190,13 +273,27 @@ class _AuthPageState extends State<AuthPage> {
                         isRegister: _isRegister,
                         obscurePassword: _obscurePassword,
                         obscureConfirm: _obscureConfirm,
-                        onTogglePassword: () => setState(
-                          () => _obscurePassword = !_obscurePassword,
-                        ),
-                        onToggleConfirm: () => setState(
-                          () => _obscureConfirm = !_obscureConfirm,
-                        ),
+                        onTogglePassword: () =>
+                            setState(() => _obscurePassword = !_obscurePassword),
+                        onToggleConfirm: () =>
+                            setState(() => _obscureConfirm = !_obscureConfirm),
                       ),
+
+                      // --- NEW: Forgot Password Button ---
+                      if (!_isRegister)
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: _showPasswordResetBottomSheet,
+                            child: const Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                  color: Color(0xFF8AB7FF),
+                                  fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        ),
+
                       const SizedBox(height: 20),
                       SizedBox(
                         height: 52,
@@ -257,7 +354,6 @@ class _AuthPageState extends State<AuthPage> {
       ),
     );
   }
-
 }
 
 class _LogoHeader extends StatelessWidget {
@@ -400,7 +496,9 @@ class _DarkField extends StatelessWidget {
             : IconButton(
                 onPressed: onToggleVisibility,
                 icon: Icon(
-                  obscureText ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                  obscureText
+                      ? Icons.visibility_off_rounded
+                      : Icons.visibility_rounded,
                   color: Colors.white70,
                 ),
               ),
@@ -412,4 +510,3 @@ class _DarkField extends StatelessWidget {
     );
   }
 }
-

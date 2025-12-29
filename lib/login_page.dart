@@ -51,6 +51,102 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
+  // --- NEW: Reset Password Functionality with Matching UI ---
+  void _showForgotPasswordSheet() {
+    final resetEmailController = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 32,
+          left: 24,
+          right: 24,
+          top: 32,
+        ),
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A), // Dark background matching your theme
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Reset Password',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Enter your email to receive a reset link.',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.inter(color: Colors.white60, fontSize: 14),
+            ),
+            const SizedBox(height: 24),
+            // Reusing your glassmorphism style input for consistency
+            _buildInput(
+              controller: resetEmailController,
+              placeholder: 'Email Address',
+              icon: Icons.email_outlined,
+              keyboardType: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              height: 52,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                onPressed: () async {
+                  final email = resetEmailController.text.trim();
+                  if (email.isEmpty) return;
+                  try {
+                    await _auth.sendPasswordResetEmail(email);
+                    if (mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text("Reset link sent to your email!"),
+                          behavior: SnackBarBehavior.floating,
+                          backgroundColor: Color(0xFF3B82F6),
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(e.toString().replaceAll('Exception: ', '')),
+                        behavior: SnackBarBehavior.floating,
+                        backgroundColor: const Color(0xFFEF4444),
+                      ),
+                    );
+                  }
+                },
+                child: Text(
+                  'Send Reset Link',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _validate() {
     bool isValid = true;
     setState(() {
@@ -120,7 +216,8 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _handleSocialLogin(Future<dynamic> Function() signInMethod) async {
+  Future<void> _handleSocialLogin(
+      Future<dynamic> Function() signInMethod) async {
     setState(() => _isLoading = true);
     try {
       final result = await signInMethod();
@@ -172,7 +269,8 @@ class _LoginPageState extends State<LoginPage> {
             ),
             SafeArea(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -188,7 +286,8 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.school_rounded, color: Colors.white),
+                          child: const Icon(Icons.school_rounded,
+                              color: Colors.white),
                         ),
                         const SizedBox(width: 12),
                         Text(
@@ -202,7 +301,7 @@ class _LoginPageState extends State<LoginPage> {
                       ],
                     ),
                     const SizedBox(height: 60),
-                    
+
                     // Welcome Title
                     Text(
                       'Sign in to your\nAccount',
@@ -215,7 +314,7 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    
+
                     // Sign Up Link
                     GestureDetector(
                       onTap: () {
@@ -259,7 +358,7 @@ class _LoginPageState extends State<LoginPage> {
                       errorText: _emailError,
                     ),
                     const SizedBox(height: 20),
-                    
+
                     _buildLabel('Password'),
                     const SizedBox(height: 8),
                     _buildInput(
@@ -277,7 +376,8 @@ class _LoginPageState extends State<LoginPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         GestureDetector(
-                          onTap: () => setState(() => _rememberMe = !_rememberMe),
+                          onTap: () =>
+                              setState(() => _rememberMe = !_rememberMe),
                           child: Row(
                             children: [
                               AnimatedContainer(
@@ -297,12 +397,16 @@ class _LoginPageState extends State<LoginPage> {
                                         ),
                                   gradient: _rememberMe
                                       ? const LinearGradient(
-                                          colors: [Color(0xFF22D3EE), Color(0xFF8B5CF6)],
+                                          colors: [
+                                            Color(0xFF22D3EE),
+                                            Color(0xFF8B5CF6)
+                                          ],
                                         )
                                       : null,
                                 ),
                                 child: _rememberMe
-                                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                                    ? const Icon(Icons.check,
+                                        size: 14, color: Colors.white)
                                     : null,
                               ),
                               const SizedBox(width: 8),
@@ -317,9 +421,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            // Navigate to Forgot Password
-                          },
+                          onPressed: _showForgotPasswordSheet,
                           child: Text(
                             'Forgot Password ?',
                             style: GoogleFonts.inter(
@@ -379,7 +481,9 @@ class _LoginPageState extends State<LoginPage> {
                     // Social Login Divider
                     Row(
                       children: [
-                        Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+                        Expanded(
+                            child:
+                                Divider(color: Colors.white.withOpacity(0.1))),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
@@ -390,7 +494,9 @@ class _LoginPageState extends State<LoginPage> {
                             ),
                           ),
                         ),
-                        Expanded(child: Divider(color: Colors.white.withOpacity(0.1))),
+                        Expanded(
+                            child:
+                                Divider(color: Colors.white.withOpacity(0.1))),
                       ],
                     ),
                     const SizedBox(height: 16),
@@ -479,19 +585,24 @@ class _LoginPageState extends State<LoginPage> {
                   hintStyle: GoogleFonts.inter(
                     color: Colors.white.withOpacity(0.4),
                   ),
-                  prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5), size: 20),
+                  prefixIcon: Icon(icon,
+                      color: Colors.white.withOpacity(0.5), size: 20),
                   suffixIcon: isPassword
                       ? GestureDetector(
-                          onTap: () => setState(() => _obscurePassword = !_obscurePassword),
+                          onTap: () => setState(
+                              () => _obscurePassword = !_obscurePassword),
                           child: Icon(
-                            _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                            _obscurePassword
+                                ? Icons.visibility_off_outlined
+                                : Icons.visibility_outlined,
                             color: Colors.white.withOpacity(0.5),
                             size: 20,
                           ),
                         )
                       : null,
                   border: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
             ),
