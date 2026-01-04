@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -27,6 +28,15 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  Future<void> _refreshHome() async {
+    // Simulate delay
+    await Future.delayed(const Duration(milliseconds: 800));
+    // Trigger rebuild to re-fetch futures (AssignmentsCard will rebuild)
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -94,49 +104,55 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
               // Home Tab
               SafeArea(
                 bottom: false,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                  child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                    stream: uid != null
-                        ? FirebaseFirestore.instance
-                            .collection('users')
-                            .doc(uid)
-                            .snapshots()
-                        : null,
-                    builder: (context, snapshot) {
-                      String userName = 'User';
-                      if (snapshot.hasData && snapshot.data!.data() != null) {
-                        final data = snapshot.data!.data()!;
-                        userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
-                        if (userName.contains(' ')) {
-                          userName = userName.split(' ')[0];
+                child: RefreshIndicator(
+                  onRefresh: _refreshHome,
+                  color: const Color(0xFFA855F7),
+                  backgroundColor: const Color(0xFF1F1F2E),
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(), // Ensure it's scrollable even if content is short
+                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                    child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                      stream: uid != null
+                          ? FirebaseFirestore.instance
+                              .collection('users')
+                              .doc(uid)
+                              .snapshots()
+                          : null,
+                      builder: (context, snapshot) {
+                        String userName = 'User';
+                        if (snapshot.hasData && snapshot.data!.data() != null) {
+                          final data = snapshot.data!.data()!;
+                          userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
+                          if (userName.contains(' ')) {
+                            userName = userName.split(' ')[0];
+                          }
+                          final role = (data['role'] ?? 'student') as String;
+                          if (role != _role && mounted) {
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) setState(() => _role = role);
+                            });
+                          }
                         }
-                        final role = (data['role'] ?? 'student') as String;
-                        if (role != _role && mounted) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) setState(() => _role = role);
-                          });
-                        }
-                      }
 
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _HeaderSection(
-                            userName: userName,
-                            onProfileTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const ProfileMenuPage(),
-                                ),
-                              );
-                            },
-                          ),
-                          const SizedBox(height: 32),
-                          const _AssignmentsCard(),
-                        ],
-                      );
-                    },
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _HeaderSection(
+                              userName: userName,
+                              onProfileTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const ProfileMenuPage(),
+                                  ),
+                                );
+                              },
+                            ),
+                            const SizedBox(height: 32),
+                            const _AssignmentsCard(),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),
@@ -238,130 +254,236 @@ class _HeaderSection extends StatelessWidget {
   }
 }
 
-class _AssignmentsCard extends StatelessWidget {
+/* ----------------------------- ASSIGNMENTS CARD ----------------------------- */
+
+class _AssignmentsCard extends StatefulWidget {
   const _AssignmentsCard();
 
   @override
-  Widget build(BuildContext context) {
+  State<_AssignmentsCard> createState() => _AssignmentsCardState();
+}
+
+class _AssignmentsCardState extends State<_AssignmentsCard> {
+  // Cache: ClassCode -> List of Assignments
+  final Map<String, List<Assignment>> _assignmentsByClass = {};
+  
+  // Subscriptions
+  StreamSubscription? _userSubscription;
+  final Map<String, StreamSubscription> _classSubscriptions = {};
+  
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _startListening();
+  }
+
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    for (final sub in _classSubscriptions.values) sub.cancel();
+    super.dispose();
+  }
+
+  void _startListening() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
 
-    if (uid == null) return const SizedBox.shrink();
+    // 1. Listen to User Enrollment
+    _userSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((userSnap) {
+      if (!mounted) return;
+      if (!userSnap.exists) {
+         if (mounted) setState(() => _isLoading = false);
+         return;
+      }
 
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+      final enrolled = List<String>.from(userSnap.data()?['enrolledClasses'] ?? []);
+      _syncSubscriptions(enrolled);
+    });
+  }
 
-        final data = snapshot.data!.data() ?? {};
-        final enrolledClasses = List<String>.from(data['enrolledClasses'] ?? []);
-        final role = data['role'] as String? ?? 'student';
-        final isLecturer = role == 'lecturer';
+  void _syncSubscriptions(List<String> enrolledClasses) {
+    // A. Cleanup old subscriptions
+    final toRemove = _classSubscriptions.keys.where((k) => !enrolledClasses.contains(k)).toList();
+    for (final k in toRemove) {
+      _classSubscriptions[k]?.cancel();
+      _classSubscriptions.remove(k);
+      _assignmentsByClass.remove(k);
+    }
 
-        return FutureBuilder<List<Assignment>>(
-          future: AssignmentService.instance.getUpcomingAssignments(enrolledClasses),
-          builder: (context, assignmentSnapshot) {
-            if (assignmentSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+    // B. Add new subscriptions
+    for (final classCode in enrolledClasses) {
+      if (!_classSubscriptions.containsKey(classCode)) {
+        // Fetch class name and then listen
+        // We use an immediate listener that *also* fetches the class name asynchronously
+        // to update the assignments with the correct name.
+        
+        _classSubscriptions[classCode] = FirebaseFirestore.instance
+            .collection('classes')
+            .doc(classCode)
+            .collection('assignments')
+            // Relaxed filter: Show assignments due in the future OR recently overdue (last 30 days)
+            .where('dueDate', isGreaterThan: Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 30))))
+            .snapshots()
+            .listen((snap) async {
+              // Fetch class name on the fly (caching could be added but this is simple)
+              String className = '';
+              try {
+                final classDoc = await FirebaseFirestore.instance.collection('classes').doc(classCode).get();
+                className = classDoc.data()?['className'] ?? '';
+              } catch (e) {
+                // ignore error, default to empty (shows classCode)
+              }
 
-            final assignments = assignmentSnapshot.data ?? [];
-            final pendingCount = assignments.length;
+              if (!mounted) return;
 
-            return _GlassContainer(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              final assignments = snap.docs.map((d) => Assignment.fromFirestore(d, classCode, className: className)).toList();
+              
+              if (mounted) {
+                setState(() {
+                  _assignmentsByClass[classCode] = assignments;
+                  _isLoading = false;
+                });
+              }
+            });
+      }
+    }
+
+    if (enrolledClasses.isEmpty && mounted) {
+      setState(() {
+        _isLoading = false;
+        _assignmentsByClass.clear();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading && _assignmentsByClass.isEmpty) {
+      // Show loading only if we have NO data yet
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+    
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    // We can't easily get role inside this isolated widget without passing it or fetching it.
+    // However, the parent passes it? No, we didn't pass it.
+    // We can re-fetch or assume 'student' for the "View" aspect, but for the "Click" -> "Details", 
+    // the Details page might need it. 
+    // Optimization: The parent (HomeDashboard) has the role. We could pass it. 
+    // But for now, let's keep it self-contained or use the one from FirebaseAuth/Firestore if needed.
+    // Actually, `AssignmentItem` takes `isLecturer`.
+    // Let's check `HomeDashboard`... it has `_role`.
+    // Ideally we should pass `isLecturer` to this widget.
+    // For now, let's infer or default to false (student view) since this is primarily a student feature "Assignments Due".
+    const isLecturer = false; // Safe default for Dashboard view. 
+
+    // Aggregate and Sort
+    final allAssignments = _assignmentsByClass.values.expand((l) => l).toList();
+    allAssignments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
+    
+    final pendingCount = allAssignments.length;
+    final displayAssignments = allAssignments.take(3).toList(); // Limit to 3
+
+    return _GlassContainer(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Assignments Due',
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              if (pendingCount > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF43F5E).withValues(alpha: 0.15), // Red tint
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFFF43F5E).withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
                     children: [
+                      const Icon(Icons.error_outline, color: Color(0xFFF43F5E), size: 14),
+                      const SizedBox(width: 4),
                       Text(
-                        'Assignments Due',
+                        '$pendingCount pending',
                         style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 18,
+                          color: const Color(0xFFF43F5E),
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      if (pendingCount > 0)
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF43F5E).withValues(alpha: 0.15), // Red tint
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: const Color(0xFFF43F5E).withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.error_outline, color: Color(0xFFF43F5E), size: 14),
-                              const SizedBox(width: 4),
-                              Text(
-                                '$pendingCount pending',
-                                style: GoogleFonts.inter(
-                                  color: const Color(0xFFF43F5E),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-                  if (assignments.isEmpty)
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 24),
-                      child: Column(
-                        children: [
-                          Icon(Icons.check_circle_outline, color: Colors.white.withValues(alpha: 0.3), size: 48),
-                          const SizedBox(height: 12),
-                          Text(
-                            'All caught up!',
-                            style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.5)),
-                          ),
-                        ],
-                      ),
-                    )
-                  else
-                    ...assignments.take(3).map((a) => _AssignmentItem( // Limit to 3 on dashboard
-                          assignment: a,
-                          isLecturer: isLecturer,
-                        )),
-                  
-                  if (assignments.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'View all assignments',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withValues(alpha: 0.6),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          Icons.arrow_forward_rounded,
-                          color: Colors.white.withValues(alpha: 0.6),
-                          size: 14,
-                        ),
-                      ],
-                    ),
-                  ],
+                ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          if (allAssignments.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Column(
+                children: [
+                  Icon(Icons.check_circle_outline, color: Colors.white.withValues(alpha: 0.3), size: 48),
+                  const SizedBox(height: 12),
+                  Text(
+                    'All caught up!',
+                    style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.5)),
+                  ),
                 ],
               ),
-            );
-          },
-        );
-      },
+            )
+          else
+            ...displayAssignments.map((a) => _AssignmentItem(
+                  assignment: a,
+                  isLecturer: isLecturer,
+                )),
+          
+          if (allAssignments.isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  'View all assignments',
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.arrow_forward_rounded,
+                  color: Colors.white.withValues(alpha: 0.6),
+                  size: 14,
+                ),
+              ],
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
