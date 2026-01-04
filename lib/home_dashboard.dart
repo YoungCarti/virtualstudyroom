@@ -347,8 +347,8 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
             .collection('classes')
             .doc(classCode)
             .collection('assignments')
-            // Relaxed filter: Show assignments due in the future OR recently overdue (last 30 days)
-            .where('dueDate', isGreaterThan: Timestamp.fromDate(DateTime.now().subtract(const Duration(days: 30))))
+            // Strict filter: Show only assignments due in the future
+            .where('dueDate', isGreaterThan: Timestamp.fromDate(DateTime.now()))
             .snapshots()
             .listen((snap) async {
               // Fetch class name on the fly (caching could be added but this is simple)
@@ -406,7 +406,11 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
     const isLecturer = false; // Safe default for Dashboard view. 
 
     // Aggregate and Sort
-    final allAssignments = _assignmentsByClass.values.expand((l) => l).toList();
+    final now = DateTime.now();
+    final allAssignments = _assignmentsByClass.values
+        .expand((l) => l)
+        .where((a) => a.dueDate.isAfter(now)) // Client-side filter for strict correctness
+        .toList();
     allAssignments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
     
     final pendingCount = allAssignments.length;

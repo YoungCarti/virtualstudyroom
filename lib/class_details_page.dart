@@ -635,7 +635,9 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                               if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(child: CircularProgressIndicator());
                               }
-                              final assignments = snapshot.data ?? [];
+                              final assignments = (snapshot.data ?? [])
+                                  .where((a) => a.id != '_placeholder') // Filter placeholder
+                                  .toList();
                               if (assignments.isEmpty) {
                                 return Text('No assignments yet.', style: GoogleFonts.inter(color: Colors.white54));
                               }
@@ -722,10 +724,17 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                               if (snapshot.connectionState == ConnectionState.waiting) {
                                 return const Center(child: CircularProgressIndicator());
                               }
-                              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                              if (!snapshot.hasData) {
                                 return Text('No groups yet.', style: GoogleFonts.inter(color: Colors.white54));
                               }
-                              final groups = snapshot.data!.docs;
+                              final groups = snapshot.data!.docs
+                                  .where((doc) => doc.id != '_placeholder') // Filter placeholder
+                                  .toList();
+
+                              if (groups.isEmpty) {
+                                return Text('No groups yet.', style: GoogleFonts.inter(color: Colors.white54));
+                              }
+                              // final groups = snapshot.data!.docs; // Removed to avoid re-declaring
                               return ListView.separated(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
@@ -827,10 +836,17 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                             if (snapshot.connectionState == ConnectionState.waiting) {
                               return const Center(child: CircularProgressIndicator());
                             }
-                            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                            if (!snapshot.hasData) {
                               return Text('No materials uploaded yet.', style: GoogleFonts.inter(color: Colors.white54));
                             }
-                            final docs = snapshot.data!.docs;
+                            final docs = snapshot.data!.docs
+                                .where((doc) => doc.id != '_placeholder') // Filter placeholder
+                                .toList();
+
+                            if (docs.isEmpty) {
+                              return Text('No materials uploaded yet.', style: GoogleFonts.inter(color: Colors.white54));
+                            }
+                            // final docs = snapshot.data!.docs; // Removed
                             return Column(
                               children: docs.map((doc) {
                                 final data = doc.data() as Map<String, dynamic>;
