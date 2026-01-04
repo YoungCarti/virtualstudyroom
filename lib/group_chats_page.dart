@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -6,8 +7,26 @@ import 'package:google_fonts/google_fonts.dart';
 
 import 'group_chat_messages_page.dart';
 
-class GroupChatsPage extends StatelessWidget {
+class GroupChatsPage extends StatefulWidget {
   const GroupChatsPage({super.key});
+
+  @override
+  State<GroupChatsPage> createState() => _GroupChatsPageState();
+}
+
+class _GroupChatsPageState extends State<GroupChatsPage> {
+  // Key to force StreamBuilder rebuild
+  int _refreshKey = 0;
+
+  Future<void> _refresh() async {
+    // Simulate a small delay for better UX
+    await Future.delayed(const Duration(milliseconds: 800));
+    if (mounted) {
+      setState(() {
+        _refreshKey++;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -69,40 +88,46 @@ class GroupChatsPage extends StatelessWidget {
           // 3. Content
           SafeArea(
             bottom: false,
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4),
-                    child: Text(
-                      'Group Chats',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
+            child: RefreshIndicator(
+              onRefresh: _refresh,
+              color: const Color(0xFFA855F7),
+              backgroundColor: const Color(0xFF1F1F2E),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4),
+                      child: Text(
+                        'Group Chats',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  Padding(
-                    padding: const EdgeInsets.only(left: 4, bottom: 16),
-                    child: Text(
-                      'Your Groups',
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(height: 24),
+                    
+                    Padding(
+                      padding: const EdgeInsets.only(left: 4, bottom: 16),
+                      child: Text(
+                        'Your Groups',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
 
-                  uid != null
-                      ? _AllGroupsList(uid: uid)
-                      : const _EmptyState(message: 'Sign in to see your groups.'),
-                ],
+                    uid != null
+                        ? _AllGroupsList(uid: uid, key: ValueKey(_refreshKey))
+                        : const _EmptyState(message: 'Sign in to see your groups.'),
+                  ],
+                ),
               ),
             ),
           ),
@@ -114,94 +139,121 @@ class GroupChatsPage extends StatelessWidget {
 
 /* ----------------------------- GROUP LIST ----------------------------- */
 
-class _AllGroupsList extends StatelessWidget {
-  const _AllGroupsList({required this.uid});
+class _AllGroupsList extends StatefulWidget {
+  const _AllGroupsList({super.key, required this.uid});
 
   final String uid;
 
   @override
+  State<_AllGroupsList> createState() => _AllGroupsListState();
+}
+
+class _AllGroupsListState extends State<_AllGroupsList> {
+  // Map of ClassCode -> List of Groups in that class
+  final Map<String, List<_GroupWithClass>> _groupsByClass = {};
+  
+  StreamSubscription? _userSubscription;
+  final Map<String, StreamSubscription> _classSubscriptions = {};
+  
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  @override
+  void dispose() {
+    _userSubscription?.cancel();
+    for (final sub in _classSubscriptions.values) sub.cancel();
+    super.dispose();
+  }
+
+  void _init() {
+    _userSubscription = FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.uid)
+        .snapshots()
+        .listen((userSnap) {
+      if (!mounted) return;
+      
+      final enrolled = List<String>.from(userSnap.data()?['enrolledClasses'] ?? []);
+      _syncSubscriptions(enrolled);
+    });
+  }
+
+  void _syncSubscriptions(List<String> enrolledClasses) {
+    // Remove old
+    final toRemove = _classSubscriptions.keys.where((k) => !enrolledClasses.contains(k)).toList();
+    for (final k in toRemove) {
+      _classSubscriptions[k]?.cancel();
+      _classSubscriptions.remove(k);
+      _groupsByClass.remove(k);
+    }
+
+    // Add new
+    for (final classCode in enrolledClasses) {
+      if (!_classSubscriptions.containsKey(classCode)) {
+        _classSubscriptions[classCode] = FirebaseFirestore.instance
+            .collection('classes')
+            .doc(classCode)
+            .collection('groups')
+            .snapshots()
+            .listen((snap) {
+              final groups = snap.docs
+                  .where((d) => List.from(d.data()['members'] ?? []).contains(widget.uid))
+                  .map((d) => _GroupWithClass(
+                        classCode: classCode,
+                        groupId: d.id,
+                        groupName: d.data()['groupName'] ?? 'Unnamed',
+                        memberCount: List.from(d.data()['members'] ?? []).length,
+                      ))
+                  .toList();
+              
+              if (mounted) {
+                setState(() {
+                  _groupsByClass[classCode] = groups;
+                  _isLoading = false;
+                });
+              }
+            });
+      }
+    }
+    
+    // If no classes, we are done loading
+    if (enrolledClasses.isEmpty && mounted) {
+      setState(() {
+        _isLoading = false;
+        _groupsByClass.clear();
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
-      builder: (context, userSnap) {
-        if (userSnap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        if (!userSnap.hasData || !userSnap.data!.exists) {
-          return const _EmptyState(message: 'User data not found.');
-        }
+    final allGroups = _groupsByClass.values.expand((l) => l).toList();
 
-        final enrolledClasses = List<String>.from(
-          userSnap.data!.data()?['enrolledClasses'] ?? [],
-        );
+    if (allGroups.isEmpty) {
+      return const _EmptyState(message: 'You are not in any groups yet.');
+    }
 
-        if (enrolledClasses.isEmpty) {
-          return const _EmptyState(message: 'You are not enrolled in any classes.');
-        }
-
-        return StreamBuilder<List<_GroupWithClass>>(
-          stream: _loadUserGroups(enrolledClasses, uid),
-          builder: (context, groupSnap) {
-            if (groupSnap.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            final groups = groupSnap.data ?? [];
-
-            if (groups.isEmpty) {
-              return const _EmptyState(message: 'You are not in any groups yet.');
-            }
-
-            return ListView.separated(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              itemCount: groups.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 16),
-              itemBuilder: (_, index) {
-                final group = groups[index];
-                return _GroupCard(group: group);
-              },
-            );
-          },
-        );
+    return ListView.separated(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: allGroups.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      itemBuilder: (_, index) {
+        return _GroupCard(group: allGroups[index]);
       },
     );
   }
-
-  Stream<List<_GroupWithClass>> _loadUserGroups(
-    List<String> classCodes,
-    String uid,
-  ) async* {
-    final result = <_GroupWithClass>[];
-
-    for (final classCode in classCodes) {
-      final snapshot = await FirebaseFirestore.instance
-          .collection('classes')
-          .doc(classCode)
-          .collection('groups')
-          .get();
-
-      for (final doc in snapshot.docs) {
-        final data = doc.data();
-        final members = List<String>.from(data['members'] ?? []);
-
-        if (members.contains(uid)) {
-          result.add(
-            _GroupWithClass(
-              classCode: classCode,
-              groupId: doc.id,
-              groupName: data['groupName'] ?? 'Unnamed Group',
-              memberCount: members.length,
-            ),
-          );
-        }
-      }
-    }
-
-    yield result;
-  }
 }
+
 
 /* ----------------------------- GROUP CARD ----------------------------- */
 
