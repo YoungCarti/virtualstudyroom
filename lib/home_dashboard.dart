@@ -13,6 +13,8 @@ import 'group_chats_page.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
 
+import 'auth_service.dart';
+
 class HomeDashboardPage extends StatefulWidget {
   const HomeDashboardPage({super.key});
 
@@ -23,6 +25,13 @@ class HomeDashboardPage extends StatefulWidget {
 class _HomeDashboardPageState extends State<HomeDashboardPage> {
   int _selectedIndex = 0;
   String _role = 'student'; // track current role
+
+  @override
+  void initState() {
+    super.initState();
+    // Update streak when dashboard loads (app start or login)
+    AuthService.instance.updateUserStreak();
+  }
 
   void _onBottomNavTap(int index) {
     setState(() {

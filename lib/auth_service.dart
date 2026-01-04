@@ -32,6 +32,7 @@ class AuthService {
       );
       final user = userCred.user;
       if (user == null) throw Exception('Sign-in returned no user.');
+      
       await _ensureUserProfile(user);
     } on FirebaseAuthException {
       rethrow;
@@ -70,6 +71,9 @@ class AuthService {
         'role': 'student',
         'enrolledClasses': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
+        'currentStreak': 1,
+        'longestStreak': 1,
+        'lastActiveAt': FieldValue.serverTimestamp(),
       });
     } on FirebaseAuthException {
       rethrow;
@@ -128,7 +132,78 @@ class AuthService {
         'role': 'student',
         'enrolledClasses': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
+        'currentStreak': 1,
+        'longestStreak': 1,
+        'lastActiveAt': FieldValue.serverTimestamp(),
       });
+    } else {
+        // Doc exists, update streak
+        await updateUserStreak(user);
+    }
+  }
+
+  // --- NEW: Streak Logic ---
+  Future<void> updateUserStreak([User? user]) async {
+    final currentUser = user ?? _auth.currentUser;
+    if (currentUser == null) return;
+    
+    final docRef = _firestore.collection('users').doc(currentUser.uid);
+    
+    try {
+      final doc = await docRef.get();
+      if (!doc.exists) return; // Should allow _ensureUserProfile to handle init if needed, but safe check
+      
+      final data = doc.data() ?? {};
+      final lastActiveTs = data['lastActiveAt'] as Timestamp?;
+      int currentStreak = (data['currentStreak'] as num?)?.toInt() ?? 0;
+      int longestStreak = (data['longestStreak'] as num?)?.toInt() ?? 0;
+      
+      final now = DateTime.now();
+      
+      if (lastActiveTs == null) {
+        // First time active or missing data
+        await docRef.update({
+          'lastActiveAt': FieldValue.serverTimestamp(),
+          'currentStreak': 1,
+          'longestStreak': (longestStreak < 1) ? 1 : longestStreak,
+        });
+        return;
+      }
+      
+      final lastActiveDate = lastActiveTs.toDate();
+      
+      // Calculate difference in days (ignoring time)
+      final dateNow = DateTime(now.year, now.month, now.day);
+      final dateLast = DateTime(lastActiveDate.year, lastActiveDate.month, lastActiveDate.day);
+      
+      final difference = dateNow.difference(dateLast).inDays;
+      
+      if (difference == 0) {
+        // Same day, do nothing (or update timestamp if we want precise last active time)
+         await docRef.update({'lastActiveAt': FieldValue.serverTimestamp()});
+         return;
+      }
+      
+      if (difference == 1) {
+        // Consecutive day
+        currentStreak++;
+      } else {
+        // Missed a day (or more)
+        currentStreak = 1;
+      }
+      
+      if (currentStreak > longestStreak) {
+        longestStreak = currentStreak;
+      }
+      
+      await docRef.update({
+        'lastActiveAt': FieldValue.serverTimestamp(),
+        'currentStreak': currentStreak,
+        'longestStreak': longestStreak,
+      });
+      
+    } catch (e) {
+      print('Error updating streak: $e');
     }
   }
 

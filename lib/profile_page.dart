@@ -112,6 +112,9 @@ class _ProfilePageState extends State<ProfilePage> {
                       final bio = (data['bio'] ?? 'Computer science student passionate about coding and algorithms.') as String;
                       final interests = List<String>.from(data['interests'] ?? ['Coding', 'AI', 'Flutter']);
                       final joinedDate = _formatCreatedAt(data['createdAt']);
+                      
+                      final currentStreak = (data['currentStreak'] as num?)?.toInt() ?? 0;
+                      final longestStreak = (data['longestStreak'] as num?)?.toInt() ?? 0;
 
                       return SingleChildScrollView(
                         padding: const EdgeInsets.only(bottom: 40),
@@ -308,7 +311,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                       ],
                                     ),
                                   ),
-                                  // Page 2: Streak (Example)
+                                  // Page 2: Streak (Real Data)
                                   Padding(
                                     padding: const EdgeInsets.symmetric(horizontal: 20),
                                     child: Row(
@@ -322,7 +325,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             icon: Icons.local_fire_department,
                                             iconColor: const Color(0xFFF97316),
                                             label: "Current Streak",
-                                            title: "47 days",
+                                            title: "$currentStreak days",
                                             isLargeValue: true,
                                           ),
                                         ),
@@ -336,7 +339,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                             icon: Icons.emoji_events,
                                             iconColor: const Color(0xFFF59E0B),
                                             label: "Longest Streak",
-                                            title: "89 days",
+                                            title: "$longestStreak days",
                                             isLargeValue: true,
                                           ),
                                         ),
