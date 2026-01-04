@@ -52,11 +52,48 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   String _currentMentionQuery = '';
   
   bool _hasScrolledToBottom = false;
+  String _currentUserName = 'User'; // Store current user name
+  
+  Map<String, String> _senderNameCache = {}; // Cache for sender names
+  final Set<String> _fetchingSenderIds = {}; // Track IDs currently being fetched
 
   @override
   void initState() {
     super.initState();
     _msgController.addListener(_onTextChanged);
+    _fetchUserName();
+  }
+
+  Future<void> _fetchUserName() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      try {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        if (doc.exists && mounted) {
+           setState(() {
+             _currentUserName = doc.data()?['fullName'] ?? doc.data()?['name'] ?? 'User';
+           });
+        }
+      } catch (e) {
+        // ignore
+      }
+    }
+  }
+  
+  void _fetchSenderName(String senderId) {
+    if (_senderNameCache.containsKey(senderId) || _fetchingSenderIds.contains(senderId)) return;
+    
+    _fetchingSenderIds.add(senderId);
+    FirebaseFirestore.instance.collection('users').doc(senderId).get().then((doc) {
+      if (!mounted) return;
+      if (doc.exists) {
+        final name = doc.data()?['fullName'] ?? doc.data()?['name'] ?? 'User';
+        setState(() {
+          _senderNameCache[senderId] = name;
+        });
+      }
+      _fetchingSenderIds.remove(senderId);
+    }).catchError((_) => _fetchingSenderIds.remove(senderId));
   }
 
   @override
@@ -303,6 +340,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           .collection('messages').add({
         'text': text,
         'senderId': uid,
+        'senderName': _currentUserName, // Add sender name
         'createdAt': FieldValue.serverTimestamp(),
         'deletedBy': [],
         if (fileUrl != null) ...{
@@ -562,8 +600,20 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                             ]),
                           );
                         }
+                        
+                        // Resolve Sender Name
+                        String displaySenderName = item.senderName ?? 'User';
+                        if ((displaySenderName == 'User' || displaySenderName.isEmpty) && item.senderId != null) {
+                           if (_senderNameCache.containsKey(item.senderId)) {
+                             displaySenderName = _senderNameCache[item.senderId]!;
+                           } else {
+                             _fetchSenderName(item.senderId!);
+                           }
+                        }
+
                         return _MessageBubble(
                           key: ValueKey(item.messageId), text: item.text!, senderId: item.senderId!,
+                          senderName: displaySenderName, // Use resolved name
                           createdAt: item.createdAt, isMe: uid == item.senderId,
                           formatTime: _formatTime, fileUrl: item.fileUrl, fileType: item.fileType,
                           fileName: item.fileName, messageId: item.messageId!, onDelete: _deleteMessage, isDeleted: item.isDeleted,
@@ -595,14 +645,14 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 // --- HELPERS ---
 
 class _MessageItem {
-  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false;
-  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false;
-  final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted;
+  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false;
+  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false;
+  final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final String? senderName; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted;
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({super.key, required this.text, required this.senderId, required this.createdAt, required this.isMe, required this.formatTime, this.fileUrl, this.fileType, this.fileName, required this.messageId, required this.onDelete, required this.isDeleted});
-  final String text; final String senderId; final DateTime? createdAt; final bool isMe; final String Function(DateTime) formatTime; final String? fileUrl; final String? fileType; final String? fileName; final String messageId; final Function(String, bool) onDelete; final bool isDeleted;
+  const _MessageBubble({super.key, required this.text, required this.senderId, required this.senderName, required this.createdAt, required this.isMe, required this.formatTime, this.fileUrl, this.fileType, this.fileName, required this.messageId, required this.onDelete, required this.isDeleted});
+  final String text; final String senderId; final String senderName; final DateTime? createdAt; final bool isMe; final String Function(DateTime) formatTime; final String? fileUrl; final String? fileType; final String? fileName; final String messageId; final Function(String, bool) onDelete; final bool isDeleted;
 
   void _showOptions(BuildContext context) {
     if (isDeleted) return;
@@ -691,7 +741,7 @@ class _MessageBubble extends StatelessWidget {
       child: Column(crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start, children: [
         if (!isMe) Padding(
           padding: const EdgeInsets.only(left: 12, bottom: 4),
-          child: Text(isAI ? 'Gemini AI' : 'User', style: const TextStyle(color: Colors.white54, fontSize: 11)),
+          child: Text(isAI ? 'Gemini AI' : senderName, style: const TextStyle(color: Colors.white54, fontSize: 11)),
         ),
         GestureDetector(
           onLongPress: () => _showOptions(context),
