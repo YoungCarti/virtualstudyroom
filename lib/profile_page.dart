@@ -206,10 +206,6 @@ class _ProfilePageState extends State<ProfilePage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                _StatItem(number: "1.2K", label: "Followers"),
-                                const SizedBox(width: 40),
-                                _StatItem(number: "623", label: "Following"),
-                                const SizedBox(width: 40),
                                 _StatItem(number: joinedDate, label: "Joined"),
                               ],
                             ),
