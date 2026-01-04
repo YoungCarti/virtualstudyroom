@@ -8,6 +8,12 @@ import 'package:intl/intl.dart';
 import 'assignment_details_page.dart';
 import 'create_assignment_page.dart';
 import 'group_details.dart';
+import 'dart:io';
+import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
+import 'package:open_file/open_file.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'assignment_service.dart';
 
 class ClassDetailsPage extends StatefulWidget {
@@ -27,11 +33,164 @@ class ClassDetailsPage extends StatefulWidget {
 }
 
 class _ClassDetailsPageState extends State<ClassDetailsPage> {
-  // Temporary sample data
-  List<Map<String, String>> get _materials => [
-        {'title': 'Syllabus.pdf', 'note': 'Course overview'},
-        {'title': 'Week1 Slides', 'note': 'Intro lecture'},
-      ];
+  // Material Upload State
+  File? _selectedFile;
+  String? _selectedFileName;
+  bool _isUploading = false;
+  
+  Future<void> _pickFile(StateSetter setModalState) async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx'],
+      );
+      if (result != null && result.files.single.path != null) {
+        setModalState(() {
+          _selectedFile = File(result.files.single.path!);
+          _selectedFileName = result.files.single.name;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error picking file: $e");
+    }
+  }
+
+  Future<void> _uploadMaterial(String title, String note) async {
+    if (_selectedFile == null) return;
+    
+    setState(() => _isUploading = true);
+    
+    try {
+      final fileName = _selectedFileName ?? 'file';
+      final ref = FirebaseStorage.instance
+          .ref().child('class_materials').child(widget.classCode)
+          .child('${DateTime.now().millisecondsSinceEpoch}_$fileName');
+      
+      await ref.putFile(_selectedFile!);
+      final fileUrl = await ref.getDownloadURL();
+      
+      await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('materials').add({
+        'title': title,
+        'note': note,
+        'fileUrl': fileUrl,
+        'fileName': fileName,
+        'uploadedAt': FieldValue.serverTimestamp(),
+        'uploadedBy': FirebaseAuth.instance.currentUser?.uid,
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Material uploaded successfully')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Upload failed: $e')));
+      }
+    } finally {
+      if (mounted) setState(() {
+        _isUploading = false;
+        _selectedFile = null;
+        _selectedFileName = null;
+      });
+    }
+  }
+
+  Future<void> _showAddMaterialDialog() async {
+    final titleCtrl = TextEditingController();
+    final noteCtrl = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) => _GlassDialog(
+          title: 'Add Material',
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _GlassTextField(controller: titleCtrl, hintText: 'Title (e.g., Week 1 Slides)'),
+              const SizedBox(height: 12),
+              _GlassTextField(controller: noteCtrl, hintText: 'Note (Optional)'),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => _pickFile(setModalState),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.attach_file, color: _selectedFile != null ? const Color(0xFF10B981) : Colors.white54),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _selectedFileName ?? 'Attach PDF or Word',
+                          style: TextStyle(color: _selectedFile != null ? Colors.white : Colors.white54),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_isUploading) ...[
+                const SizedBox(height: 16),
+                const LinearProgressIndicator(color: Color(0xFFA855F7)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: _isUploading ? null : () => Navigator.pop(context),
+              child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: const Color(0xFFA855F7)),
+              onPressed: _isUploading 
+                  ? null 
+                  : () async {
+                      if (titleCtrl.text.isEmpty || _selectedFile == null) return;
+                      await _uploadMaterial(titleCtrl.text.trim(), noteCtrl.text.trim());
+                      if (context.mounted) Navigator.pop(context);
+                    },
+              child: const Text('Upload'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _downloadAndOpenMaterial(BuildContext context, String fileUrl, String fileName) async {
+    try {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+
+      final response = await http.get(Uri.parse(fileUrl));
+      final directory = await getApplicationDocumentsDirectory();
+      final filePath = '${directory.path}/$fileName';
+      final file = File(filePath);
+      await file.writeAsBytes(response.bodyBytes);
+
+      if (context.mounted) Navigator.pop(context); // Close loader
+
+      final result = await OpenFile.open(filePath);
+      if (result.type != ResultType.done && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open file: ${result.message}')));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
+      }
+    }
+  }
 
   // Logic to Leave Class (Student)
   Future<void> _leaveClass() async {
@@ -596,17 +755,49 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                         const SizedBox(height: 32),
 
                         // Materials Section
-                        Text('Materials', style: GoogleFonts.inter(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('Materials', style: GoogleFonts.inter(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                            if (widget.isLecturer)
+                              _GlassSmallButton(
+                                label: 'Upload',
+                                icon: Icons.upload_file,
+                                onTap: _showAddMaterialDialog,
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 16),
-                        if (_materials.isEmpty)
-                          Text('No materials yet.', style: GoogleFonts.inter(color: Colors.white54))
-                        else
-                          ..._materials.map((m) => _CardTile(
-                                title: m['title'] ?? '',
-                                subtitle: m['note'] ?? '',
-                                icon: Icons.description_outlined,
-                                iconColor: const Color(0xFFF59E0B), // Amber
-                              )),
+                        StreamBuilder<QuerySnapshot>(
+                          stream: FirebaseFirestore.instance
+                              .collection('classes').doc(widget.classCode)
+                              .collection('materials')
+                              .orderBy('uploadedAt', descending: true)
+                              .snapshots(),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState == ConnectionState.waiting) {
+                              return const Center(child: CircularProgressIndicator());
+                            }
+                            if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                              return Text('No materials uploaded yet.', style: GoogleFonts.inter(color: Colors.white54));
+                            }
+                            final docs = snapshot.data!.docs;
+                            return Column(
+                              children: docs.map((doc) {
+                                final data = doc.data() as Map<String, dynamic>;
+                                return InkWell(
+                                  onTap: () => _downloadAndOpenMaterial(context, data['fileUrl'], data['fileName'] ?? 'document'),
+                                  child: _CardTile(
+                                    title: data['title'] ?? 'Untitled',
+                                    subtitle: data['note'] ?? '',
+                                    icon: Icons.description_outlined,
+                                    iconColor: const Color(0xFFF59E0B),
+                                  ),
+                                );
+                              }).toList(),
+                            );
+                          },
+                        ),
                       ],
                     ),
                   ),
