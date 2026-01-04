@@ -25,6 +25,11 @@ service firebase.storage {
       allow read, write: if request.auth != null;
     }
 
+    // Rule 5: Allow authenticated users to read and write class materials
+    match /class_materials/{classCode}/{fileName} {
+      allow read, write: if request.auth != null;
+    }
+
     // Default rule: Deny access to all other paths
     match /{allPaths=**} {
       allow read, write: if false;

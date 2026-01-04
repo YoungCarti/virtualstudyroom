@@ -96,6 +96,55 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
     }
   }
 
+  Future<void> _deleteMaterial(String docId, String fileUrl) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => _GlassDialog(
+        title: 'Delete Material?',
+        content: Text(
+          'This will permanently delete the file.',
+          style: GoogleFonts.inter(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel', style: TextStyle(color: Colors.white54)),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFF43F5E)),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      // 1. Delete from Storage
+      try {
+        await FirebaseStorage.instance.refFromURL(fileUrl).delete();
+      } catch (e) {
+        debugPrint("Storage delete failed (might be missing): $e");
+      }
+
+      // 2. Delete from Firestore
+      await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('materials').doc(docId)
+          .delete();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Material deleted')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
+      }
+    }
+  }
+
   Future<void> _showAddMaterialDialog() async {
     final titleCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
@@ -792,6 +841,15 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                                     subtitle: data['note'] ?? '',
                                     icon: Icons.description_outlined,
                                     iconColor: const Color(0xFFF59E0B),
+                                    trailing: widget.isLecturer
+                                        ? GestureDetector(
+                                            onTap: () => _deleteMaterial(doc.id, data['fileUrl']),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(8),
+                                              child: const Icon(Icons.delete_outline, color: Color(0xFFF43F5E), size: 20),
+                                            ),
+                                          )
+                                        : null,
                                   ),
                                 );
                               }).toList(),
@@ -844,12 +902,14 @@ class _CardTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final Color iconColor;
+  final Widget? trailing;
 
   const _CardTile({
     required this.title,
     required this.subtitle,
     required this.icon,
     required this.iconColor,
+    this.trailing,
   });
 
   @override
@@ -892,7 +952,7 @@ class _CardTile extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.3), size: 20),
+            trailing ?? Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.3), size: 20),
           ],
         ),
       ),
