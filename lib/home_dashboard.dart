@@ -12,6 +12,7 @@ import 'classes_page.dart';
 import 'group_chats_page.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
+import 'all_assignments_page.dart';
 
 import 'auth_service.dart';
 
@@ -431,34 +432,40 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              if (pendingCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF43F5E).withValues(alpha: 0.15), // Red tint
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: const Color(0xFFF43F5E).withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Color(0xFFF43F5E), size: 14),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$pendingCount pending',
-                        style: GoogleFonts.inter(
-                          color: const Color(0xFFF43F5E),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (pendingCount > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF43F5E).withValues(alpha: 0.15), // Red tint
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: const Color(0xFFF43F5E).withValues(alpha: 0.3),
                         ),
                       ),
-                    ],
-                  ),
-                ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Color(0xFFF43F5E), size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            '$pendingCount pending',
+                            style: GoogleFonts.inter(
+                              color: const Color(0xFFF43F5E),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                ],
+              ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           if (allAssignments.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
@@ -483,24 +490,33 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
             const SizedBox(height: 16),
             Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  'View all assignments',
-                  style: GoogleFonts.inter(
-                    color: Colors.white.withValues(alpha: 0.6),
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+            GestureDetector(
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const AllAssignmentsPage(),
                   ),
-                ),
-                const SizedBox(width: 4),
-                Icon(
-                  Icons.arrow_forward_rounded,
-                  color: Colors.white.withValues(alpha: 0.6),
-                  size: 14,
-                ),
-              ],
+                );
+              },
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'View all assignments',
+                    style: GoogleFonts.inter(
+                      color: Colors.white.withValues(alpha: 0.6),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.arrow_forward_rounded,
+                    color: Colors.white.withValues(alpha: 0.6),
+                    size: 14,
+                  ),
+                ],
+              ),
             ),
           ],
         ],
