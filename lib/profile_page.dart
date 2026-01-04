@@ -115,6 +115,7 @@ class _ProfilePageState extends State<ProfilePage> {
                       
                       final currentStreak = (data['currentStreak'] as num?)?.toInt() ?? 0;
                       final longestStreak = (data['longestStreak'] as num?)?.toInt() ?? 0;
+                      final photoUrl = data['photoUrl'] as String?;
 
                       return SingleChildScrollView(
                         padding: const EdgeInsets.only(bottom: 40),
@@ -158,8 +159,10 @@ class _ProfilePageState extends State<ProfilePage> {
                                   color: Colors.white.withValues(alpha: 0.15),
                                   width: 3,
                                 ),
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                                image: DecorationImage(
+                                  image: photoUrl != null
+                                      ? NetworkImage(photoUrl)
+                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
                                   fit: BoxFit.cover,
                                 ),
                               ),

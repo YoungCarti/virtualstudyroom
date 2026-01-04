@@ -58,6 +58,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
         // Default data if profile not found or empty
         final data = snap.data?.data() ?? {};
         final fullName = (data['fullName'] ?? data['name'] ?? 'User Name') as String;
+        final photoUrl = data['photoUrl'] as String?;
         
         return Scaffold(
           body: Stack(
@@ -165,8 +166,10 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                                   width: 1,
                                 ),
                                 // Use a network image or fallback to initials
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'), // Consistent with home
+                                image: DecorationImage(
+                                  image: photoUrl != null
+                                      ? NetworkImage(photoUrl)
+                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'), // Consistent with home
                                   fit: BoxFit.cover,
                                 ),
                               ),

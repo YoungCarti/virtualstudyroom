@@ -129,12 +129,15 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                           : null,
                       builder: (context, snapshot) {
                         String userName = 'User';
+                        String? photoUrl;
                         if (snapshot.hasData && snapshot.data!.data() != null) {
                           final data = snapshot.data!.data()!;
                           userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
+                          photoUrl = data['photoUrl'] as String?; // Fetch photoUrl
                           if (userName.contains(' ')) {
                             userName = userName.split(' ')[0];
                           }
+                          // ... existing role logic ...
                           final role = (data['role'] ?? 'student') as String;
                           if (role != _role && mounted) {
                             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -148,6 +151,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                           children: [
                             _HeaderSection(
                               userName: userName,
+                              photoUrl: photoUrl, // Pass it here
                               onProfileTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -194,10 +198,12 @@ class _HeaderSection extends StatelessWidget {
   const _HeaderSection({
     required this.onProfileTap,
     required this.userName,
+    this.photoUrl,
   });
 
   final VoidCallback onProfileTap;
   final String userName;
+  final String? photoUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -217,8 +223,10 @@ class _HeaderSection extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.15),
                     width: 2,
                   ),
-                  image: const DecorationImage(
-                    image: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                  image: DecorationImage(
+                    image: photoUrl != null
+                        ? NetworkImage(photoUrl!)
+                        : const NetworkImage('https://i.pravatar.cc/150?img=11'),
                     fit: BoxFit.cover,
                   ),
                 ),

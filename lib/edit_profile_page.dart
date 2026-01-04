@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +32,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   bool _hasUnsavedChanges = false;
   String _role = 'student';      // student | lecturer
   String _program = 'BCS';       // BCS | BSE
+  String? _photoUrl;             // Profile photo URL
 
   // Interest Colors Palette
   final List<Color> _tagColors = [
@@ -77,6 +80,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             : data['campus'];
         _favGroupController.text = data['favGroup'] ?? '';
         _bioController.text = data['bio'] ?? '';
+        _photoUrl = data['photoUrl'];
         
         if (data['interests'] != null) {
           _interests = List<String>.from(data['interests']);
@@ -108,13 +112,39 @@ class _EditProfilePageState extends State<EditProfilePage> {
         imageQuality: 85,
       );
       
-      if (image != null && mounted) {
+      if (image == null) return;
+
+      setState(() => _loading = true);
+
+      // Upload to Firebase Storage
+      final storageRef = FirebaseStorage.instance
+          .ref()
+          .child('profile_photos')
+          .child('$_docId.jpg');
+      
+      await storageRef.putFile(File(image.path));
+      final downloadUrl = await storageRef.getDownloadURL();
+
+      // Update Firestore
+      await _users.doc(_docId).update({'photoUrl': downloadUrl});
+
+      if (mounted) {
+        setState(() {
+          _photoUrl = downloadUrl;
+          _loading = false;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Photo selected (Upload placeholder)')),
+          const SnackBar(content: Text('Profile photo updated!')),
         );
       }
     } catch (e) {
-      debugPrint('Error picking image: $e');
+      debugPrint('Error uploading image: $e');
+      if (mounted) {
+        setState(() => _loading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to upload photo: $e')),
+        );
+      }
     }
   }
 
@@ -365,25 +395,37 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   color: Colors.white.withValues(alpha: 0.15),
                                   width: 2,
                                 ),
-                                image: const DecorationImage(
-                                  image: NetworkImage('https://i.pravatar.cc/150?img=11'),
+                                image: DecorationImage(
+                                  image: _photoUrl != null
+                                      ? NetworkImage(_photoUrl!)
+                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
                             ),
                             const SizedBox(height: 12),
                             GestureDetector(
-                              onTap: _updatePhoto,
+                              onTap: _loading ? null : _updatePhoto,
                               child: _GlassContainer(
                                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.camera_alt, color: Color(0xFF22D3EE), size: 16),
-                                    SizedBox(width: 6),
+                                    if (_loading)
+                                      const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Color(0xFF22D3EE),
+                                        ),
+                                      )
+                                    else
+                                      const Icon(Icons.camera_alt, color: Color(0xFF22D3EE), size: 16),
+                                    const SizedBox(width: 6),
                                     Text(
-                                      "Change Photo",
-                                      style: TextStyle(color: Color(0xFF22D3EE), fontSize: 13, fontWeight: FontWeight.w500),
+                                      _loading ? "Uploading..." : "Change Photo",
+                                      style: const TextStyle(color: Color(0xFF22D3EE), fontSize: 13, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
