@@ -61,6 +61,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   void initState() {
     super.initState();
     _msgController.addListener(_onTextChanged);
+    _cleanupStaleMeetingParticipation();
     _fetchUserName();
   }
 
@@ -111,6 +112,80 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
         length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
     return '${getRandomString(3)}-${getRandomString(3)}-${getRandomString(3)}';
+    return '${getRandomString(3)}-${getRandomString(3)}-${getRandomString(3)}';
+  }
+
+  Future<void> _cleanupStaleMeetingParticipation() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .collection('messages')
+          .where('type', isEqualTo: 'meeting')
+          .where('participants', arrayContains: uid)
+          .get();
+
+      for (var doc in querySnapshot.docs) {
+        // Run cleanup for each document found
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final snapshot = await transaction.get(doc.reference);
+            if (!snapshot.exists) return;
+            
+            List<String> participants = List<String>.from(snapshot.data()?['participants'] ?? []);
+            if (participants.contains(uid)) {
+              participants.remove(uid);
+              if (participants.isEmpty) {
+                 transaction.update(doc.reference, {'participants': participants, 'status': 'ended'});
+              } else {
+                 transaction.update(doc.reference, {'participants': participants});
+              }
+            }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error cleaning up stale meetings: $e");
+    }
+
+    _garbageCollectAbandonedMeetings();
+  }
+
+  Future<void> _garbageCollectAbandonedMeetings() async {
+    try {
+      final now = DateTime.now();
+      final twoMinutesAgo = now.subtract(const Duration(minutes: 2));
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .collection('messages')
+          .where('type', isEqualTo: 'meeting')
+          .get(); // Fetch all meetings to client-side filter (avoid composite index issues for now)
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final status = data['status'] as String? ?? 'active';
+        final participants = List<String>.from(data['participants'] ?? []);
+        final createdAtRaw = data['createdAt'];
+        DateTime? createdAt;
+
+        if (createdAtRaw is Timestamp) {
+          createdAt = createdAtRaw.toDate();
+        }
+
+        // Check if abandoned: Active, Empty, and Old (> 2 mins)
+        if (status != 'ended' && participants.isEmpty) {
+          if (createdAt != null && createdAt.isBefore(twoMinutesAgo)) {
+             debugPrint("🗑️ Garbage collecting abandoned meeting: ${doc.id}");
+             await doc.reference.update({'status': 'ended'});
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error garbage collecting meetings: $e");
+    }
   }
 
   void _showMeetingOptions() {
@@ -204,9 +279,35 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF22D3EE), foregroundColor: Colors.black),
             icon: const Icon(Icons.login),
             label: const Text("Join Now"),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              _joinMeetingWithCode(code);
+              
+              // Auto-send meeting code to chat
+              String? messageId;
+              final uid = FirebaseAuth.instance.currentUser?.uid;
+              if (uid != null) {
+                try {
+                  final docRef = await FirebaseFirestore.instance
+                      .collection('classes').doc(widget.classCode)
+                      .collection('groups').doc(widget.groupId)
+                      .collection('messages').add({
+                    'text': "Join my meeting! Code: $code",
+                    'senderId': uid,
+                    'senderName': _currentUserName,
+                    'createdAt': FieldValue.serverTimestamp(),
+                    'deletedBy': [],
+                    'type': 'meeting',
+                    'meetingCode': code,
+                    'participants': [],
+                    'status': 'active', // Initialize status
+                  });
+                  messageId = docRef.id;
+                } catch (e) {
+                  debugPrint("Error sending meeting code: $e");
+                }
+              }
+
+              _joinMeetingWithCode(code, messageId: messageId);
             },
           ),
         ],
@@ -246,7 +347,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     );
   }
 
-  Future<void> _joinMeetingWithCode(String meetingCode) async {
+  Future<void> _joinMeetingWithCode(String meetingCode, {String? messageId}) async {
     if (AgoraConfig.appId == 'YOUR_AGORA_APP_ID_HERE') {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Configure Agora App ID'), backgroundColor: Colors.orange));
       return;
@@ -265,6 +366,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
             classCode: widget.classCode,
             groupId: widget.groupId,
             groupName: "Meeting: $meetingCode",
+            messageId: messageId,
           ),
         ),
       );
@@ -617,6 +719,9 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                           createdAt: item.createdAt, isMe: uid == item.senderId,
                           formatTime: _formatTime, fileUrl: item.fileUrl, fileType: item.fileType,
                           fileName: item.fileName, messageId: item.messageId!, onDelete: _deleteMessage, isDeleted: item.isDeleted,
+                          type: item.type, meetingCode: item.meetingCode, participants: item.participants,
+                          onJoinMeeting: (code, msgId) => _joinMeetingWithCode(code, messageId: msgId),
+                          status: item.status,
                         );
                       },
                     );
@@ -645,14 +750,26 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 // --- HELPERS ---
 
 class _MessageItem {
-  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false;
-  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false;
-  final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final String? senderName; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted;
+  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false, type = null, meetingCode = null, participants = const [], status = 'active';
+  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false, type = data['type'] as String?, meetingCode = data['meetingCode'] as String?, participants = List<String>.from(data['participants'] ?? []), status = data['status'] as String? ?? 'active';
+  final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final String? senderName; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted; final String? type; final String? meetingCode; final List<String> participants; final String status;
 }
 
 class _MessageBubble extends StatelessWidget {
-  const _MessageBubble({super.key, required this.text, required this.senderId, required this.senderName, required this.createdAt, required this.isMe, required this.formatTime, this.fileUrl, this.fileType, this.fileName, required this.messageId, required this.onDelete, required this.isDeleted});
-  final String text; final String senderId; final String senderName; final DateTime? createdAt; final bool isMe; final String Function(DateTime) formatTime; final String? fileUrl; final String? fileType; final String? fileName; final String messageId; final Function(String, bool) onDelete; final bool isDeleted;
+  const _MessageBubble({
+    super.key, required this.text, required this.senderId, required this.senderName,
+    required this.createdAt, required this.isMe, required this.formatTime,
+    this.fileUrl, this.fileType, this.fileName, required this.messageId,
+    required this.onDelete, required this.isDeleted,
+    this.type, this.meetingCode, this.participants = const [], this.onJoinMeeting, this.status = 'active',
+  });
+
+  final String text; final String senderId; final String senderName; final DateTime? createdAt;
+  final bool isMe; final String Function(DateTime) formatTime; final String? fileUrl;
+  final String? fileType; final String? fileName; final String messageId;
+  final Function(String, bool) onDelete; final bool isDeleted;
+  final String? type; final String? meetingCode; final List<String> participants;
+  final Function(String, String)? onJoinMeeting; final String status;
 
   void _showOptions(BuildContext context) {
     if (isDeleted) return;
@@ -748,9 +865,17 @@ class _MessageBubble extends StatelessWidget {
           onTap: (fileType == 'file' && fileUrl != null) ? () => _downloadAndOpenFile(context) : null,
           child: Container(
             padding: const EdgeInsets.all(12),
-            constraints: const BoxConstraints(maxWidth: 260),
-            decoration: bubbleDecoration,
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            constraints: const BoxConstraints(maxWidth: 280),
+            decoration: type == 'meeting' ? null : bubbleDecoration,
+            child: type == 'meeting' 
+                ? _MeetingCard(
+                    meetingCode: meetingCode ?? '',
+                    participantCount: participants.length,
+                    onJoin: () => onJoinMeeting?.call(meetingCode ?? '', messageId),
+                    isMe: isMe,
+                    status: status ?? 'active',
+                  )
+                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (fileUrl != null) ...[
                 if (fileType == 'image') 
                   GestureDetector(
@@ -1023,6 +1148,83 @@ class _FullScreenImageViewer extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MeetingCard extends StatelessWidget {
+  const _MeetingCard({
+    required this.meetingCode,
+    required this.participantCount,
+    required this.onJoin,
+    required this.isMe,
+    required this.status,
+  });
+
+  final String meetingCode;
+  final int participantCount;
+  final VoidCallback onJoin;
+  final bool isMe;
+  final String status;
+
+  @override
+  Widget build(BuildContext context) {
+    final bool isEnded = status == 'ended';
+    final Color baseColor = isEnded ? Colors.grey : (isMe ? const Color(0xFF7C3AED) : Colors.white);
+    
+    return Container(
+      width: 250,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isEnded ? Colors.white.withValues(alpha: 0.05) : (isMe ? const Color(0xFF7C3AED).withValues(alpha: 0.8) : Colors.white.withValues(alpha: 0.1)),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.videocam_rounded, color: isEnded ? Colors.white54 : Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(isEnded ? 'Meeting Ended' : 'Video Meeting', style: TextStyle(color: isEnded ? Colors.white54 : Colors.white, fontWeight: FontWeight.bold)),
+                  if (!isEnded) Text(meetingCode, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            isEnded ? 'This meeting has ended' : '$participantCount active participant${participantCount == 1 ? '' : 's'}',
+            style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+          ),
+          if (!isEnded) ...[
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF7C3AED),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: onJoin,
+                child: const Text('Join'),
+              ),
+            ),
+          ],
         ],
       ),
     );

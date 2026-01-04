@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -9,6 +11,7 @@ class VideoCallPage extends StatefulWidget {
   final String classCode;
   final String groupId;
   final String groupName;
+  final String? messageId; // Optional message ID for tracking participants
 
   const VideoCallPage({
     Key? key,
@@ -16,13 +19,14 @@ class VideoCallPage extends StatefulWidget {
     required this.classCode,
     required this.groupId,
     required this.groupName,
+    this.messageId,
   }) : super(key: key);
 
   @override
   State<VideoCallPage> createState() => _VideoCallPageState();
 }
 
-class _VideoCallPageState extends State<VideoCallPage> {
+class _VideoCallPageState extends State<VideoCallPage> with WidgetsBindingObserver {
   late RtcEngine _engine;
   final List<int> _remoteUids = [];
   bool _localUserJoined = false;
@@ -35,6 +39,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initializeAgora();
   }
 
@@ -58,6 +63,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
             _localUserJoined = true;
           });
           _startCallTimer();
+          _updateParticipantStatus(true); // Join
         },
         onUserJoined: (RtcConnection connection, int remoteUid, int elapsed) {
           debugPrint('✅ Remote user joined: $remoteUid');
@@ -114,6 +120,46 @@ class _VideoCallPageState extends State<VideoCallPage> {
     return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
   }
 
+  Future<void> _updateParticipantStatus(bool isJoining) async {
+    if (widget.messageId == null) return;
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    final docRef = FirebaseFirestore.instance
+        .collection('classes').doc(widget.classCode)
+        .collection('groups').doc(widget.groupId)
+        .collection('messages').doc(widget.messageId);
+
+    try {
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (!snapshot.exists) return;
+
+        List<String> participants = List<String>.from(snapshot.data()?['participants'] ?? []);
+
+        if (isJoining) {
+          if (!participants.contains(uid)) {
+            participants.add(uid);
+            transaction.update(docRef, {'participants': participants});
+          }
+        } else {
+          participants.remove(uid);
+          // If no participants left, mark as ended
+          if (participants.isEmpty) {
+            transaction.update(docRef, {
+              'participants': participants,
+              'status': 'ended'
+            });
+          } else {
+            transaction.update(docRef, {'participants': participants});
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint("Error updating participant status: $e");
+    }
+  }
+
   Future<void> _toggleMute() async {
     setState(() {
       _isMuted = !_isMuted;
@@ -136,6 +182,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
   }
 
   Future<void> _leaveCall() async {
+    await _updateParticipantStatus(false); // Leave
     await _engine.leaveChannel();
     await _engine.release();
     _callTimer?.cancel();
@@ -146,10 +193,18 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _callTimer?.cancel();
     _engine.leaveChannel();
     _engine.release();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.detached || state == AppLifecycleState.paused) {
+      _updateParticipantStatus(false);
+    }
   }
 
   @override
