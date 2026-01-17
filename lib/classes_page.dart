@@ -118,6 +118,82 @@ class _ClassesPageState extends State<ClassesPage> {
     }
   }
 
+  Future<void> _showEnrollDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Enroll in a Class', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter the class code provided by your instructor.', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            const SizedBox(height: 16),
+            _GlassTextField(controller: _enrollCodeCtrl, hintText: 'Class Code'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _enroll();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF22D3EE),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Enroll'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showCreateClassDialog(BuildContext context) async {
+    return showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF1C1C2E),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Create a Class', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Enter details to create a new class.', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            const SizedBox(height: 16),
+            _GlassTextField(controller: _createNameCtrl, hintText: 'Class Name'),
+            const SizedBox(height: 12),
+            _GlassTextField(controller: _createCodeCtrl, hintText: 'Unique Class Code'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _createClass();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF22D3EE),
+              foregroundColor: Colors.black,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isLecturer = widget.role == 'lecturer';
@@ -168,13 +244,29 @@ class _ClassesPageState extends State<ClassesPage> {
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'Enrolled Classes',
-                              style: GoogleFonts.inter(
-                                color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Enrolled Classes',
+                                  style: GoogleFonts.inter(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                Container(
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.add, color: Color(0xFF22D3EE)),
+                                    tooltip: isLecturer ? 'Create a class' : 'Enroll in a class',
+                                    onPressed: () => isLecturer ? _showCreateClassDialog(context) : _showEnrollDialog(context),
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 16),
                             if (enrolledClasses.isEmpty)
@@ -198,16 +290,11 @@ class _ClassesPageState extends State<ClassesPage> {
                                 ),
                               )
                             else
-                              GridView.builder(
+                              ListView.separated(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 3,
-                                  mainAxisSpacing: 16,
-                                  crossAxisSpacing: 16,
-                                  childAspectRatio: 0.85,
-                                ),
                                 itemCount: enrolledClasses.length,
+                                separatorBuilder: (context, index) => const SizedBox(height: 20),
                                 itemBuilder: (_, i) {
                                   final classCode = enrolledClasses[i];
                                   return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
@@ -218,10 +305,11 @@ class _ClassesPageState extends State<ClassesPage> {
                                       }
                                       final classData = classSnap.data?.data() ?? {};
                                       final className = classData['className'] ?? classCode;
-
-                                      return _ClassGridCard(
+                
+                                      return _ClassCard(
                                         classCode: classCode,
                                         className: className,
+                                        lecturerId: classData['lecturerId'],
                                         isLecturer: isLecturer,
                                         index: i,
                                       );
@@ -235,86 +323,8 @@ class _ClassesPageState extends State<ClassesPage> {
                     ),
 
                   const SizedBox(height: 24),
-
-                  // --- ENROLL SECTION ---
-                  _GlassContainer(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Enroll in a class',
-                          style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _GlassTextField(
-                                controller: _enrollCodeCtrl,
-                                hintText: 'Enter class code',
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            _ActionButton(
-                              label: 'Enroll',
-                              isLoading: _savingEnroll,
-                              onTap: _savingEnroll ? null : _enroll,
-                              color: const Color(0xFF22D3EE), // Cyan Accent
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // --- CREATE SECTION (Lecturer Only) ---
-                  if (isLecturer) ...[
-                    const SizedBox(height: 24),
-                    _GlassContainer(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Create a class',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          _GlassTextField(
-                            controller: _createNameCtrl,
-                            hintText: 'Class name (e.g. CS101 Lecture)',
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _GlassTextField(
-                                  controller: _createCodeCtrl,
-                                  hintText: 'Unique Code',
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              _ActionButton(
-                                label: 'Create',
-                                isLoading: _savingCreate,
-                                onTap: _savingCreate ? null : _createClass,
-                                color: const Color(0xFF22D3EE), // Cyan Accent
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  
+                  // Bottom section removed - moved to dialog
                 ],
               ),
             ),
@@ -351,83 +361,7 @@ class _GlassContainer extends StatelessWidget {
   }
 }
 
-class _ClassListTile extends StatelessWidget {
-  final String classCode;
-  final String className;
-  final bool isLecturer;
-
-  const _ClassListTile({
-    required this.classCode,
-    required this.className,
-    required this.isLecturer,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => ClassDetailsPage(
-                classCode: classCode,
-                className: className,
-                isLecturer: isLecturer,
-              ),
-            ),
-          );
-        },
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.class_outlined, color: Color(0xFF22D3EE), size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      className,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      classCode,
-                      style: GoogleFonts.inter(
-                        color: Colors.white.withValues(alpha: 0.6),
-                        fontSize: 13,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: Colors.white.withValues(alpha: 0.3)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
+// Removed _ClassListTile as it's no longer used
 
 class _GlassTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -495,52 +429,37 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _ClassGridCard extends StatelessWidget {
+class _ClassCard extends StatelessWidget {
   final String classCode;
   final String className;
+  final String? lecturerId;
   final bool isLecturer;
   final int index;
 
-  const _ClassGridCard({
+  const _ClassCard({
     required this.classCode,
     required this.className,
+    this.lecturerId,
     required this.isLecturer,
     required this.index,
   });
 
-  // Color palette for class cards
-  static const List<Color> _backgroundColors = [
-    Color(0xFFFEE2E2), // Pink/Red
-    Color(0xFFE0E7FF), // Indigo
-    Color(0xFFD1FAE5), // Green
-    Color(0xFFFEF3C7), // Amber
-    Color(0xFFDBEAFE), // Blue
-    Color(0xFFCFFAFE), // Cyan
-    Color(0xFFF3E8FF), // Purple
-    Color(0xFFFFE4E6), // Rose
-  ];
-
-  static const List<Color> _iconColors = [
-    Color(0xFFDC2626), // Red
-    Color(0xFF4F46E5), // Indigo
-    Color(0xFF059669), // Green
-    Color(0xFFD97706), // Amber
-    Color(0xFF2563EB), // Blue
-    Color(0xFF0891B2), // Cyan
-    Color(0xFF9333EA), // Purple
-    Color(0xFFE11D48), // Rose
+  // Gradients for cover
+  static const List<LinearGradient> _gradients = [
+     LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFFECACA)], begin: Alignment.topLeft, end: Alignment.bottomRight), // Red
+     LinearGradient(colors: [Color(0xFF6366F1), Color(0xFFA5B4FC)], begin: Alignment.topLeft, end: Alignment.bottomRight), // Indigo
+     LinearGradient(colors: [Color(0xFF10B981), Color(0xFF6EE7B7)], begin: Alignment.topLeft, end: Alignment.bottomRight), // Emerald
+     LinearGradient(colors: [Color(0xFFF59E0B), Color(0xFFFCD34D)], begin: Alignment.topLeft, end: Alignment.bottomRight), // Amber
   ];
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = _backgroundColors[index % _backgroundColors.length];
-    final iconColor = _iconColors[index % _iconColors.length];
+    final gradient = _gradients[index % _gradients.length];
     
-    // Get initials from class name
-    final initials = className.split(' ')
-        .take(2)
-        .map((word) => word.isNotEmpty ? word[0].toUpperCase() : '')
-        .join();
+    // Simulate progress (deterministic based on code length to keep it consistent but varied)
+    final totalMaterials = 10 + (classCode.hashCode % 10); 
+    final completedMaterials = (classCode.hashCode % totalMaterials);
+    final progressColor = index % 2 == 0 ? const Color(0xFF991B1B) : const Color(0xFF10B981); // Red or Green pill bg
 
     return GestureDetector(
       onTap: () {
@@ -554,41 +473,165 @@ class _ClassGridCard extends StatelessWidget {
           ),
         );
       },
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 64,
-            height: 64,
-            decoration: BoxDecoration(
-              color: bgColor,
-              borderRadius: BorderRadius.circular(16),
+      child: Container(
+        height: 220,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1C1C2E), // Card Dark bg
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 5),
+            )
+          ],
+        ),
+        child: Column(
+          children: [
+            // TOP: Cover Image Area
+            Expanded(
+              flex: 3,
+              child: Stack(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: gradient,
+                      borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    ),
+                  ),
+                  // Abstract patterns or icon
+                  Positioned(
+                    right: -20,
+                    top: -20,
+                    child: Icon(
+                      Icons.school,
+                      size: 150,
+                      color: Colors.white.withValues(alpha: 0.1),
+                    ),
+                  ),
+                  // Instructor Chip (Floating)
+                  Positioned(
+                    bottom: 12,
+                    left: 16,
+                    child: _LecturerChip(lecturerId: lecturerId),
+                  ),
+                ],
+              ),
             ),
-            child: Center(
-              child: Text(
-                initials,
-                style: GoogleFonts.inter(
-                  color: iconColor,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+            
+            // BOTTOM: Info Area
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            className,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '$totalMaterials materials',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[400],
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Progress Pill
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: progressColor.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: progressColor.withValues(alpha: 0.5)),
+                      ),
+                      child: Text(
+                        '$completedMaterials/$totalMaterials',
+                        style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            className,
-            style: GoogleFonts.inter(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _LecturerChip extends StatelessWidget {
+  final String? lecturerId;
+  const _LecturerChip({this.lecturerId});
+
+  @override
+  Widget build(BuildContext context) {
+    if (lecturerId == null) return const SizedBox.shrink();
+
+    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      future: FirebaseFirestore.instance.collection('users').doc(lecturerId).get(),
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data();
+        final name = data?['username'] ?? 'Instructor';
+        // Simple avatar simulation
+        final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+
+        return Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(30),
+            boxShadow: [
+               BoxShadow(
+                 color: Colors.black.withValues(alpha: 0.1),
+                 blurRadius: 4,
+                 offset: const Offset(0, 2),
+               )
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: const Color(0xFF22D3EE),
+                child: Text(initial, style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold)),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                name,
+                style: GoogleFonts.inter(
+                  color: Colors.black87,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+          ),
+        );
+      },
     );
   }
 }

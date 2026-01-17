@@ -545,12 +545,12 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
+    // Ocean Sunset Theme Colors
+    const Color deepNavy = Color(0xFF0A1929);
+    const Color electricBlue = Color(0xFF2196F3);
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: deepNavy,
       appBar: AppBar(
         title: GestureDetector(
           onTap: () {
@@ -575,7 +575,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           ),
         ),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: deepNavy,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.chevron_left, color: Colors.white),
@@ -585,65 +585,18 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
+              color: electricBlue.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IconButton(
-              icon: const Icon(Icons.video_call_rounded, color: Color(0xFF22D3EE)),
+              icon: const Icon(Icons.video_call_rounded, color: electricBlue),
               tooltip: 'Meeting Options',
               onPressed: _showMeetingOptions,
             ),
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // 1. Background Gradient Overlay
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
-          ),
-
-          // 2. Ambient Glow Orbs
-          Positioned(
-            top: -100,
-            left: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100,
-            right: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-
-          // 3. Content
+      body:
           Column(
             children: [
               Expanded(
@@ -741,8 +694,6 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
               ),
             ],
           ),
-        ],
-      ),
     );
   }
 }
@@ -841,14 +792,14 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final isAI = senderId == 'gemini_ai';
     
-    // Bubble Color Logic
+    // Ocean Sunset Theme - Bubble Colors
     final bubbleDecoration = isMe
         ? BoxDecoration(
-            gradient: const LinearGradient(colors: [Color(0xFF7C3AED), Color(0xFF6366F1)]), // Violet to Indigo
+            gradient: const LinearGradient(colors: [Color(0xFF2196F3), Color(0xFF1976D2)]), // Electric Blue
             borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomLeft: Radius.circular(20), bottomRight: Radius.circular(4)),
           )
         : BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.1), // Glass
+            color: const Color(0xFF1A2735), // Darker navy card
             borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20), bottomLeft: Radius.circular(4), bottomRight: Radius.circular(20)),
             border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
           );
@@ -902,10 +853,10 @@ class _MessageBubble extends StatelessWidget {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF59E0B).withValues(alpha: 0.2),
+                            color: const Color(0xFFFFB347).withValues(alpha: 0.2), // Soft Orange
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(Icons.insert_drive_file, color: Color(0xFFF59E0B), size: 24),
+                          child: const Icon(Icons.insert_drive_file, color: Color(0xFFFFB347), size: 24), // Soft Orange
                         ),
                         const SizedBox(width: 12),
                         Expanded(
@@ -980,8 +931,8 @@ class _ChatInput extends StatelessWidget {
       Expanded(child: _GlassTextField(controller: controller, hintText: 'Message...')),
       const SizedBox(width: 8),
       Container(
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF22D3EE)), // Cyan Send Button
-        child: IconButton(icon: const Icon(Icons.send_rounded, color: Colors.black, size: 20), onPressed: isUploading ? null : onSend),
+        decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF2196F3)), // Electric Blue Send Button
+        child: IconButton(icon: const Icon(Icons.send_rounded, color: Colors.white, size: 20), onPressed: isUploading ? null : onSend),
       ),
     ]);
   }
@@ -1075,7 +1026,7 @@ class _GlassBottomSheet extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F0F1A).withValues(alpha: 0.8),
+            color: const Color(0xFF0A1929).withValues(alpha: 0.95), // Deep Navy
             borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
           ),

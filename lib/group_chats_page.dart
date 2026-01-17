@@ -22,7 +22,7 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -115,7 +115,6 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
                     tabs: const [
                       Tab(text: 'All messages'),
                       Tab(text: 'Unread'),
-                      Tab(text: 'Active'),
                     ],
                   ),
                 ),
