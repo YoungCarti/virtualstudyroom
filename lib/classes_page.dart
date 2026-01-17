@@ -593,7 +593,8 @@ class _LecturerChip extends StatelessWidget {
       future: FirebaseFirestore.instance.collection('users').doc(lecturerId).get(),
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
-        final name = data?['username'] ?? 'Instructor';
+        // Check 'name', then 'fullName', default to 'Instructor'
+        final name = data?['name'] ?? data?['fullName'] ?? 'Instructor';
         // Simple avatar simulation
         final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
 
