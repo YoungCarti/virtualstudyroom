@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'app_theme.dart';
+import 'widgets/animated_components.dart';
 import 'class_details_page.dart';
 
 class ClassesPage extends StatefulWidget {
@@ -121,57 +123,13 @@ class _ClassesPageState extends State<ClassesPage> {
     final isLecturer = widget.role == 'lecturer';
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15); // Slightly stronger
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // ★★★ Dark Base Color added here
+      backgroundColor: const Color(0xFF0D1117), // Same as homepage
       body: Stack(
         children: [
-          // 1. Background Gradient Overlay
+          // Clean dark background - no glassmorphism (matching homepage)
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
-          ),
-
-          // 2. Ambient Glow Orbs
-          Positioned(
-            top: -100,
-            left: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100,
-            right: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
+            color: const Color(0xFF0D1117),
           ),
 
           // 3. Content
@@ -195,7 +153,7 @@ class _ClassesPageState extends State<ClassesPage> {
                   ),
                   const SizedBox(height: 24),
 
-                  // --- ENROLLED CLASSES LIST ---
+                  // --- ENROLLED CLASSES GRID ---
                   if (uid != null)
                     StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
                       stream: FirebaseFirestore.instance.collection('users').doc(uid).snapshots(),
@@ -207,59 +165,71 @@ class _ClassesPageState extends State<ClassesPage> {
                         final data = snapshot.data?.data() ?? {};
                         final enrolledClasses = List<String>.from(data['enrolledClasses'] ?? []);
 
-                        return _GlassContainer(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Enrolled Classes',
-                                style: GoogleFonts.inter(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Enrolled Classes',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
                               ),
-                              const SizedBox(height: 16),
-                              if (enrolledClasses.isEmpty)
-                                Center(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(vertical: 20),
-                                    child: Text(
-                                      'No classes yet.',
-                                      style: GoogleFonts.inter(
-                                        color: Colors.white.withValues(alpha: 0.5),
-                                        fontSize: 14,
+                            ),
+                            const SizedBox(height: 16),
+                            if (enrolledClasses.isEmpty)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(vertical: 40),
+                                  child: Column(
+                                    children: [
+                                      Icon(Icons.school_outlined, 
+                                           color: Colors.grey[700], size: 48),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        'No classes enrolled yet',
+                                        style: GoogleFonts.inter(
+                                          color: Colors.grey[500],
+                                          fontSize: 14,
+                                        ),
                                       ),
-                                    ),
+                                    ],
                                   ),
-                                )
-                              else
-                                ListView.separated(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  itemCount: enrolledClasses.length,
-                                  separatorBuilder: (_, __) => const SizedBox(height: 12),
-                                  itemBuilder: (_, i) {
-                                    final classCode = enrolledClasses[i];
-                                    return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-                                      future: FirebaseFirestore.instance.collection('classes').doc(classCode).get(),
-                                      builder: (context, classSnap) {
-                                        if (!classSnap.hasData) return const SizedBox.shrink();
-                                        final classData = classSnap.data?.data() ?? {};
-                                        final className = classData['className'] ?? classCode;
-
-                                        return _ClassListTile(
-                                          classCode: classCode,
-                                          className: className,
-                                          isLecturer: isLecturer,
-                                        );
-                                      },
-                                    );
-                                  },
                                 ),
-                            ],
-                          ),
+                              )
+                            else
+                              GridView.builder(
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: 3,
+                                  mainAxisSpacing: 16,
+                                  crossAxisSpacing: 16,
+                                  childAspectRatio: 0.85,
+                                ),
+                                itemCount: enrolledClasses.length,
+                                itemBuilder: (_, i) {
+                                  final classCode = enrolledClasses[i];
+                                  return FutureBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+                                    future: FirebaseFirestore.instance.collection('classes').doc(classCode).get(),
+                                    builder: (context, classSnap) {
+                                      if (!classSnap.hasData) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      final classData = classSnap.data?.data() ?? {};
+                                      final className = classData['className'] ?? classCode;
+
+                                      return _ClassGridCard(
+                                        classCode: classCode,
+                                        className: className,
+                                        isLecturer: isLecturer,
+                                        index: i,
+                                      );
+                                    },
+                                  );
+                                },
+                              ),
+                          ],
                         );
                       },
                     ),
@@ -294,7 +264,7 @@ class _ClassesPageState extends State<ClassesPage> {
                               label: 'Enroll',
                               isLoading: _savingEnroll,
                               onTap: _savingEnroll ? null : _enroll,
-                              color: const Color(0xFFA855F7), // Purple Accent
+                              color: const Color(0xFF22D3EE), // Cyan Accent
                             ),
                           ],
                         ),
@@ -337,7 +307,7 @@ class _ClassesPageState extends State<ClassesPage> {
                                 label: 'Create',
                                 isLoading: _savingCreate,
                                 onTap: _savingCreate ? null : _createClass,
-                                color: const Color(0xFFEC4899), // Pink Accent
+                                color: const Color(0xFF22D3EE), // Cyan Accent
                               ),
                             ],
                           ),
@@ -365,23 +335,18 @@ class _GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3), // ★ Darker Tint for better contrast
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: child,
+    // Solid dark card style (matching homepage)
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.grey[800]!,
+          width: 1,
         ),
       ),
+      child: child,
     );
   }
 }
@@ -426,10 +391,10 @@ class _ClassListTile extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFA855F7).withValues(alpha: 0.2),
+                  color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(Icons.class_outlined, color: Color(0xFFA855F7), size: 24),
+                child: const Icon(Icons.class_outlined, color: Color(0xFF22D3EE), size: 24),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -525,6 +490,104 @@ class _ActionButton extends StatelessWidget {
                 child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
               )
             : Text(label, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+class _ClassGridCard extends StatelessWidget {
+  final String classCode;
+  final String className;
+  final bool isLecturer;
+  final int index;
+
+  const _ClassGridCard({
+    required this.classCode,
+    required this.className,
+    required this.isLecturer,
+    required this.index,
+  });
+
+  // Color palette for class cards
+  static const List<Color> _backgroundColors = [
+    Color(0xFFFEE2E2), // Pink/Red
+    Color(0xFFE0E7FF), // Indigo
+    Color(0xFFD1FAE5), // Green
+    Color(0xFFFEF3C7), // Amber
+    Color(0xFFDBEAFE), // Blue
+    Color(0xFFCFFAFE), // Cyan
+    Color(0xFFF3E8FF), // Purple
+    Color(0xFFFFE4E6), // Rose
+  ];
+
+  static const List<Color> _iconColors = [
+    Color(0xFFDC2626), // Red
+    Color(0xFF4F46E5), // Indigo
+    Color(0xFF059669), // Green
+    Color(0xFFD97706), // Amber
+    Color(0xFF2563EB), // Blue
+    Color(0xFF0891B2), // Cyan
+    Color(0xFF9333EA), // Purple
+    Color(0xFFE11D48), // Rose
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    final bgColor = _backgroundColors[index % _backgroundColors.length];
+    final iconColor = _iconColors[index % _iconColors.length];
+    
+    // Get initials from class name
+    final initials = className.split(' ')
+        .take(2)
+        .map((word) => word.isNotEmpty ? word[0].toUpperCase() : '')
+        .join();
+
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ClassDetailsPage(
+              classCode: classCode,
+              className: className,
+              isLecturer: isLecturer,
+            ),
+          ),
+        );
+      },
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 64,
+            height: 64,
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Center(
+              child: Text(
+                initials,
+                style: GoogleFonts.inter(
+                  color: iconColor,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            className,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
       ),
     );
   }

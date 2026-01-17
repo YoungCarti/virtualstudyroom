@@ -57,6 +57,7 @@ dependencies:
   gal: ^2.3.0
   agora_rtc_engine: ^6.5.3
   open_file: ^3.5.9
+  flutter_animate: ^4.5.0
 
 dev_dependencies:
   flutter_test:

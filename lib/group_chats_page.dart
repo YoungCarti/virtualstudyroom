@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 
 import 'group_chat_messages_page.dart';
 
@@ -14,9 +14,22 @@ class GroupChatsPage extends StatefulWidget {
   State<GroupChatsPage> createState() => _GroupChatsPageState();
 }
 
-class _GroupChatsPageState extends State<GroupChatsPage> {
+class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProviderStateMixin {
   // Key to force StreamBuilder rebuild
   int _refreshKey = 0;
+  TabController? _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController?.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() async {
     // Simulate a small delay for better UX
@@ -32,106 +45,89 @@ class _GroupChatsPageState extends State<GroupChatsPage> {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // Dark Base
-      body: Stack(
-        children: [
-          // 1. Background Gradient
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
-          ),
-
-          // 2. Ambient Glow Orbs
-          Positioned(
-            top: -100,
-            left: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100,
-            right: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-
-          // 3. Content
-          SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: _refresh,
-              color: const Color(0xFFA855F7),
-              backgroundColor: const Color(0xFF1F1F2E),
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: const Color(0xFF0D1117), // Same as homepage
+      body: SafeArea(
+        bottom: false,
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          color: const Color(0xFF22D3EE),
+          backgroundColor: const Color(0xFF1C1C2E),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header with search icon
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4),
-                      child: Text(
-                        'Group Chats',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 24,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Text(
+                      'Messages',
+                      style: GoogleFonts.inter(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
-                    const SizedBox(height: 24),
-                    
-                    Padding(
-                      padding: const EdgeInsets.only(left: 4, bottom: 16),
-                      child: Text(
-                        'Your Groups',
-                        style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1C1C2E),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.search,
+                        color: Colors.white70,
+                        size: 22,
                       ),
                     ),
-
-                    uid != null
-                        ? _AllGroupsList(uid: uid, key: ValueKey(_refreshKey))
-                        : const _EmptyState(message: 'Sign in to see your groups.'),
                   ],
                 ),
-              ),
+                const SizedBox(height: 20),
+
+                // Filter Tabs
+                if (_tabController != null)
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: Colors.grey[800]!,
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController!,
+                    indicatorColor: const Color(0xFF22D3EE),
+                    indicatorWeight: 2,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.grey[500],
+                    labelStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    unselectedLabelStyle: GoogleFonts.inter(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    tabs: const [
+                      Tab(text: 'All messages'),
+                      Tab(text: 'Unread'),
+                      Tab(text: 'Active'),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                uid != null
+                    ? _AllGroupsList(uid: uid, key: ValueKey(_refreshKey))
+                    : const _EmptyState(message: 'Sign in to see your groups.'),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -200,16 +196,93 @@ class _AllGroupsListState extends State<_AllGroupsList> {
             .doc(classCode)
             .collection('groups')
             .snapshots()
-            .listen((snap) {
-              final groups = snap.docs
+            .listen((snap) async {
+              final groupDocs = snap.docs
                   .where((d) => List.from(d.data()['members'] ?? []).contains(widget.uid))
-                  .map((d) => _GroupWithClass(
-                        classCode: classCode,
-                        groupId: d.id,
-                        groupName: d.data()['groupName'] ?? 'Unnamed',
-                        memberCount: List.from(d.data()['members'] ?? []).length,
-                      ))
                   .toList();
+              
+              // Fetch last message for each group
+              final groups = <_GroupWithClass>[];
+              for (final d in groupDocs) {
+                String? lastMessage;
+                DateTime? lastMessageTime;
+                
+                try {
+                  final messagesSnap = await FirebaseFirestore.instance
+                      .collection('classes')
+                      .doc(classCode)
+                      .collection('groups')
+                      .doc(d.id)
+                      .collection('messages')
+                      .orderBy('createdAt', descending: true)
+                      .limit(1)
+                      .get();
+                  
+                  if (messagesSnap.docs.isNotEmpty) {
+                    final msgData = messagesSnap.docs.first.data();
+                    final msgType = msgData['type'] as String?;
+                    final senderId = msgData['senderId'] as String?;
+                    final senderName = msgData['senderName'] as String? ?? 'Unknown';
+                    final fileType = msgData['fileType'] as String?;
+                    
+                    // Format message content based on type
+                    String messageContent;
+                    if (msgType == 'image' || fileType == 'image') {
+                      messageContent = '📷 Photo';
+                    } else if (msgType == 'file' || fileType == 'file') {
+                      messageContent = '📎 File';
+                    } else if (msgType == 'voice') {
+                      messageContent = '🎤 Voice message';
+                    } else if (msgType == 'meeting') {
+                      messageContent = '📹 Meeting';
+                    } else {
+                      messageContent = msgData['text'] as String? ?? '';
+                    }
+                    
+                    // Format as "You: message" or "Name: message"
+                    if (senderId == widget.uid) {
+                      lastMessage = 'You: $messageContent';
+                    } else {
+                      // Get first name only
+                      final firstName = senderName.split(' ').first;
+                      lastMessage = '$firstName: $messageContent';
+                    }
+                    
+                    final ts = msgData['createdAt'];
+                    if (ts != null) {
+                      lastMessageTime = (ts as Timestamp).toDate();
+                    }
+                  } else {
+                    lastMessage = 'No messages yet';
+                  }
+                } catch (e) {
+                  lastMessage = 'Tap to start chatting';
+                }
+                
+                groups.add(_GroupWithClass(
+                  classCode: classCode,
+                  groupId: d.id,
+                  groupName: d.data()['groupName'] ?? 'Unnamed',
+                  memberCount: List.from(d.data()['members'] ?? []).length,
+                  lastMessage: lastMessage,
+                  lastMessageTime: lastMessageTime,
+                  // Simulate unread count (in production, track per-user last read timestamp)
+                  unreadCount: lastMessageTime != null && 
+                      DateTime.now().difference(lastMessageTime!).inHours < 24 
+                      ? (d.id.hashCode % 5) : 0,
+                  // Simulate active status based on recent message
+                  isActive: lastMessageTime != null && 
+                      DateTime.now().difference(lastMessageTime!).inMinutes < 30,
+                ));
+              }
+              
+              // Sort by last message time (most recent first)
+              groups.sort((a, b) {
+                if (a.lastMessageTime == null && b.lastMessageTime == null) return 0;
+                if (a.lastMessageTime == null) return 1;
+                if (b.lastMessageTime == null) return -1;
+                return b.lastMessageTime!.compareTo(a.lastMessageTime!);
+              });
               
               if (mounted) {
                 setState(() {
@@ -246,128 +319,10 @@ class _AllGroupsListState extends State<_AllGroupsList> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: allGroups.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, index) {
-        return _GroupCard(group: allGroups[index]);
+        return _MessageStyleGroupTile(group: allGroups[index], index: index);
       },
-    );
-  }
-}
-
-
-/* ----------------------------- GROUP CARD ----------------------------- */
-
-class _GroupCard extends StatelessWidget {
-  const _GroupCard({required this.group});
-
-  final _GroupWithClass group;
-
-  @override
-  Widget build(BuildContext context) {
-    return _GlassContainer(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFA855F7).withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.forum_rounded, color: Color(0xFFA855F7), size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      group.groupName,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.people_alt_rounded,
-                          size: 14,
-                          color: Colors.white.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          '${group.memberCount} members',
-                          style: GoogleFonts.inter(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 13,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          // Class Badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
-            ),
-            child: Text(
-              "Class: ${group.classCode}",
-              style: GoogleFonts.inter(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 12,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFA855F7), // Primary Purple
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 0,
-              ),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => GroupChatMessagesPage(
-                      classCode: group.classCode,
-                      groupId: group.groupId,
-                      groupName: group.groupName,
-                    ),
-                  ),
-                );
-              },
-              child: const Text(
-                'Open Chat',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -380,37 +335,209 @@ class _GroupWithClass {
     required this.groupId,
     required this.groupName,
     required this.memberCount,
+    this.lastMessage,
+    this.lastMessageTime,
+    this.unreadCount = 0,
+    this.isActive = false,
   });
 
   final String classCode;
   final String groupId;
   final String groupName;
   final int memberCount;
+  final String? lastMessage;
+  final DateTime? lastMessageTime;
+  final int unreadCount;
+  final bool isActive;
 }
 
-class _GlassContainer extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry padding;
+/// Message-style group tile (similar to the reference image)
+class _MessageStyleGroupTile extends StatelessWidget {
+  final _GroupWithClass group;
+  final int index;
 
-  const _GlassContainer({required this.child, required this.padding});
+  const _MessageStyleGroupTile({required this.group, required this.index});
+
+  // Avatar colors
+  static const List<Color> _avatarColors = [
+    Color(0xFF22D3EE), // Cyan
+    Color(0xFF34D399), // Green
+    Color(0xFFFBBF24), // Amber
+    Color(0xFFF472B6), // Pink
+    Color(0xFF818CF8), // Indigo
+    Color(0xFFFB7185), // Rose
+    Color(0xFF2DD4BF), // Teal
+    Color(0xFFA78BFA), // Purple
+  ];
+
+  String _formatTime(DateTime? time) {
+    if (time == null) return '';
+    final now = DateTime.now();
+    final diff = now.difference(time);
+    
+    if (diff.inDays == 0) {
+      // Today - show time
+      return DateFormat('h:mm a').format(time);
+    } else if (diff.inDays == 1) {
+      return 'Yesterday';
+    } else if (diff.inDays < 7) {
+      // This week - show day name
+      return DateFormat('EEE').format(time);
+    } else {
+      // Older - show date
+      return DateFormat('M/d/yy').format(time);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.3),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
+    final avatarColor = _avatarColors[index % _avatarColors.length];
+    final initials = group.groupName.split(' ')
+        .take(2)
+        .map((w) => w.isNotEmpty ? w[0].toUpperCase() : '')
+        .join();
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GroupChatMessagesPage(
+                classCode: group.classCode,
+                groupId: group.groupId,
+                groupName: group.groupName,
+              ),
             ),
+          );
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Avatar with online indicator
+              Stack(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: avatarColor.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: avatarColor, width: 2),
+                    ),
+                    child: Center(
+                      child: Text(
+                        initials,
+                        style: GoogleFonts.inter(
+                          color: avatarColor,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Green online indicator
+                  if (group.isActive)
+                    Positioned(
+                      bottom: 2,
+                      right: 2,
+                      child: Container(
+                        width: 14,
+                        height: 14,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF22C55E), // Green
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: const Color(0xFF0D1117),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              // Name & Last Message
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Name and Time Row
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: Text(
+                            group.groupName,
+                            style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (group.lastMessageTime != null)
+                          Text(
+                            _formatTime(group.lastMessageTime),
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[500],
+                              fontSize: 12,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Last message
+                    Row(
+                      children: [
+                        if (group.lastMessage != null && group.lastMessageTime != null) ...[
+                          Icon(
+                            Icons.done_all,
+                            size: 16,
+                            color: const Color(0xFF22D3EE),
+                          ),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            group.lastMessage ?? 'Tap to start chatting',
+                            style: GoogleFonts.inter(
+                              color: Colors.grey[500],
+                              fontSize: 13,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        // Unread badge (show for groups with recent messages and random simulation)
+                        if (group.unreadCount > 0)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF22D3EE),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              '${group.unreadCount}',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          child: child,
         ),
       ),
     );
@@ -430,12 +557,12 @@ class _EmptyState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.forum_outlined, color: Colors.white.withValues(alpha: 0.2), size: 48),
+            Icon(Icons.forum_outlined, color: Colors.grey[700], size: 48),
             const SizedBox(height: 16),
             Text(
               message,
               style: GoogleFonts.inter(
-                color: Colors.white.withValues(alpha: 0.5),
+                color: Colors.grey[500],
                 fontSize: 14,
               ),
             ),

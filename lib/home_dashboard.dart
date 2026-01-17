@@ -1,11 +1,14 @@
 import 'dart:async';
 import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import 'app_theme.dart';
+import 'widgets/animated_components.dart';
 import 'assignment_service.dart';
 import 'assignment_details_page.dart';
 import 'classes_page.dart';
@@ -13,6 +16,8 @@ import 'group_chats_page.dart';
 import 'profile_menu_page.dart';
 import 'notifications_page.dart';
 import 'all_assignments_page.dart';
+import 'ai_tools_page.dart';
+import 'study_rooms_page.dart';
 
 import 'auth_service.dart';
 
@@ -53,61 +58,17 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
 
-    // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
-
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // Dark Base
+      backgroundColor: const Color(0xFF0D1117), // Pure dark background
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // 1. Background Gradient
+          // Clean dark background - no glassmorphism
           Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [topColor, bottomColor],
-              ),
-            ),
+            color: const Color(0xFF0D1117),
           ),
 
-          // 2. Ambient Glow Orbs
-          Positioned(
-            top: -100,
-            left: -50,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: 100,
-            right: -80,
-            child: Container(
-              width: 250,
-              height: 250,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-          ),
-
-          // 3. Main Content
+          // Main Content
           IndexedStack(
             index: _selectedIndex,
             children: [
@@ -146,13 +107,17 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                             });
                           }
                         }
+                        // Get additional data for stats
+                        final enrolledClasses = (snapshot.data?.data()?['enrolledClasses'] as List<dynamic>?)?.length ?? 0;
+                        final streak = (snapshot.data?.data()?['streak'] ?? 0) as int;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            _HeaderSection(
+                            // Header with greeting
+                            _CleanHeader(
                               userName: userName,
-                              photoUrl: photoUrl, // Pass it here
+                              photoUrl: photoUrl,
                               onProfileTap: () {
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
@@ -161,8 +126,32 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                                 );
                               },
                             ),
-                            const SizedBox(height: 32),
-                            const _AssignmentsCard(),
+                            const SizedBox(height: 24),
+                            
+                            // Stats Cards Grid (like reference)
+                            _StatsGrid(
+                              streak: streak,
+                              classesCount: enrolledClasses,
+                            ),
+                            const SizedBox(height: 24),
+                            
+                            // Quick Action Icons Row
+                            const _QuickActionsRow(),
+                            const SizedBox(height: 24),
+                            
+                            // Schedule Calendar
+                            Text(
+                              'Schedule',
+                              style: GoogleFonts.inter(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            
+                            // Week Calendar Widget
+                            const _WeekScheduleCalendar(),
                           ],
                         );
                       },
@@ -177,16 +166,14 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
             ],
           ),
 
-          // 4. Floating Bottom Navigation
+          // 4. Bottom Navigation (attached to bottom)
           Positioned(
             left: 0,
             right: 0,
-            bottom: 30,
-            child: Center(
-              child: _FloatingBottomNav(
-                selectedIndex: _selectedIndex,
-                onTap: _onBottomNavTap,
-              ),
+            bottom: 0,
+            child: _BottomNav(
+              selectedIndex: _selectedIndex,
+              onTap: _onBottomNavTap,
             ),
           ),
         ],
@@ -642,42 +629,38 @@ class _AssignmentItem extends StatelessWidget {
   }
 }
 
-class _FloatingBottomNav extends StatelessWidget {
+class _BottomNav extends StatelessWidget {
   final int selectedIndex;
   final Function(int) onTap;
 
-  const _FloatingBottomNav({
+  const _BottomNav({
     required this.selectedIndex,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(35),
+    return ClipRect(
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
         child: Container(
-          height: 70,
-          width: 280,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
+          padding: EdgeInsets.only(
+            top: 12,
+            bottom: MediaQuery.of(context).padding.bottom + 12,
+            left: 24,
+            right: 24,
+          ),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F0F1A).withValues(alpha: 0.7), // Semi-transparent dark
-            borderRadius: BorderRadius.circular(35),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+            color: const Color(0xFF0F0F1A).withValues(alpha: 0.85),
+            border: Border(
+              top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
               ),
-            ],
+            ),
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _NavIcon(
                 icon: Icons.home_rounded,
@@ -796,6 +779,1220 @@ class _GlassIconButton extends StatelessWidget {
             child: Icon(icon, color: Colors.white, size: 22),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ============ NEW WIDGETS ============
+
+/// Welcome card with streak counter and daily progress
+class _WelcomeCard extends StatelessWidget {
+  final String userName;
+  final int streak;
+
+  const _WelcomeCard({
+    required this.userName,
+    required this.streak,
+  });
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  String _getMotivationalQuote() {
+    final quotes = [
+      '"The only way to do great work is to love what you do."',
+      '"Education is the passport to the future."',
+      '"Small progress is still progress."',
+      '"Stay curious, keep learning."',
+      '"Your potential is endless."',
+    ];
+    return quotes[DateTime.now().day % quotes.length];
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.electricBlue.withValues(alpha: 0.2),
+            AppTheme.mint.withValues(alpha: 0.1),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppTheme.electricBlue.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Left side - Greeting & Quote
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _getGreeting(),
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textSecondary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Let's make today count!",
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _getMotivationalQuote(),
+                  style: GoogleFonts.inter(
+                    color: AppTheme.textMuted,
+                    fontSize: 11,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          
+          const SizedBox(width: 16),
+          
+          // Right side - Streak Counter
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: AppTheme.accentGradient,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.coral.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.local_fire_department, color: Colors.white, size: 28),
+                const SizedBox(height: 4),
+                Text(
+                  '$streak',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  'day streak',
+                  style: GoogleFonts.inter(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Quick actions grid with 4 shortcut buttons
+class _QuickActionsGrid extends StatelessWidget {
+  const _QuickActionsGrid();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 12),
+          child: Text(
+            'Quick Actions',
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.assignment_outlined,
+                label: 'Assignments',
+                color: AppTheme.electricBlue,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AllAssignmentsPage()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.class_outlined,
+                label: 'Classes',
+                color: AppTheme.mint,
+                onTap: () {
+                  // Tab to classes (index 1)
+                  final state = context.findAncestorStateOfType<_HomeDashboardPageState>();
+                  state?._onBottomNavTap(1);
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.groups_outlined,
+                label: 'Study Rooms',
+                color: AppTheme.coral,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const StudyRoomsPage()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _QuickActionButton(
+                icon: Icons.auto_awesome,
+                label: 'AI Tools',
+                color: AppTheme.softOrange,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const AiToolsPage()),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScaleButton(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: GoogleFonts.inter(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color.withValues(alpha: 0.6),
+              size: 14,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============ NEW CLEAN DESIGN WIDGETS ============
+
+/// Clean header without glassmorphism
+class _CleanHeader extends StatelessWidget {
+  final String userName;
+  final String? photoUrl;
+  final VoidCallback onProfileTap;
+
+  const _CleanHeader({
+    required this.userName,
+    required this.onProfileTap,
+    this.photoUrl,
+  });
+
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 17) return 'Good Afternoon';
+    return 'Good Evening';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        // Left: Profile avatar + Greeting text
+        Row(
+          children: [
+            // Profile Avatar
+            GestureDetector(
+              onTap: onProfileTap,
+              child: Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: const Color(0xFF22D3EE).withValues(alpha: 0.3),
+                    width: 2,
+                  ),
+                  image: DecorationImage(
+                    image: photoUrl != null && photoUrl!.isNotEmpty
+                        ? NetworkImage(photoUrl!)
+                        : const AssetImage('assets/default_avatar.png') as ImageProvider,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Greeting text
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Hi, $userName',
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Here is your activity today.',
+                  style: GoogleFonts.inter(
+                    color: Colors.grey[500],
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        
+        // Right: Notification bell
+        AnimatedScaleButton(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => NotificationsPage()),
+            );
+          },
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: const Color(0xFF1C1C2E),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.grey[800]!, width: 1),
+            ),
+            child: const Icon(Icons.notifications_outlined, color: Colors.white, size: 22),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Stats grid with 4 cards like reference
+class _StatsGrid extends StatelessWidget {
+  final int streak;
+  final int classesCount;
+
+  const _StatsGrid({
+    required this.streak,
+    required this.classesCount,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<int>(
+      future: _getAssignmentsCount(),
+      builder: (context, assignmentSnap) {
+        final assignmentsCount = assignmentSnap.data ?? 0;
+        
+        return Column(
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    value: '$streak',
+                    label: 'Day Streak',
+                    icon: Icons.local_fire_department,
+                    color: const Color(0xFFFF6B6B), // Coral
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    value: '$classesCount',
+                    label: 'Classes',
+                    icon: Icons.school_outlined,
+                    color: const Color(0xFF4ECDC4), // Mint
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatCard(
+                    value: '$assignmentsCount',
+                    label: 'Assignments',
+                    icon: Icons.assignment_outlined,
+                    color: const Color(0xFF2196F3), // Blue
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatCard(
+                    value: '100%',
+                    label: 'Completeness',
+                    icon: Icons.check_circle_outline,
+                    color: const Color(0xFFFFB347), // Orange
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<int> _getAssignmentsCount() async {
+    try {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return 0;
+      
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      final enrolledClasses = (userDoc.data()?['enrolledClasses'] as List<dynamic>?) ?? [];
+      
+      int total = 0;
+      for (final classCode in enrolledClasses) {
+        final assignmentsSnap = await FirebaseFirestore.instance
+            .collection('classes')
+            .doc(classCode.toString())
+            .collection('assignments')
+            .get();
+        total += assignmentsSnap.docs.length;
+      }
+      return total;
+    } catch (e) {
+      return 0;
+    }
+  }
+}
+
+/// Individual stat card
+class _StatCard extends StatelessWidget {
+  final String value;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _StatCard({
+    required this.value,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScaleButton(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF161B22),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: color.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  value,
+                  style: GoogleFonts.inter(
+                    color: color,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Icon(icon, color: color, size: 24),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: GoogleFonts.inter(
+                color: Colors.grey[500],
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Quick action icons row (like reference)
+class _QuickActionsRow extends StatelessWidget {
+  const _QuickActionsRow();
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        _QuickActionIcon(
+          icon: Icons.menu_book_rounded,
+          label: 'Classes',
+          color: const Color(0xFF2196F3),
+          onTap: () {
+            final state = context.findAncestorStateOfType<_HomeDashboardPageState>();
+            state?._onBottomNavTap(1);
+          },
+        ),
+        _QuickActionIcon(
+          icon: Icons.assignment_outlined,
+          label: 'Tasks',
+          color: const Color(0xFF4ECDC4),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AllAssignmentsPage()),
+            );
+          },
+        ),
+        _QuickActionIcon(
+          icon: Icons.groups_rounded,
+          label: 'Study',
+          color: const Color(0xFFFF6B6B),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const StudyRoomsPage()),
+            );
+          },
+        ),
+        _QuickActionIcon(
+          icon: Icons.auto_awesome,
+          label: 'AI',
+          color: const Color(0xFFFFB347),
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const AiToolsPage()),
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
+
+class _QuickActionIcon extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _QuickActionIcon({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedScaleButton(
+      onTap: onTap,
+      child: Column(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: color.withValues(alpha: 0.4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Icon(icon, color: Colors.white, size: 26),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: GoogleFonts.inter(
+              color: Colors.grey[400],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============ WEEK SCHEDULE CALENDAR ============
+
+/// A week-view schedule calendar widget
+class _WeekScheduleCalendar extends StatefulWidget {
+  const _WeekScheduleCalendar();
+
+  @override
+  State<_WeekScheduleCalendar> createState() => _WeekScheduleCalendarState();
+}
+
+class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
+  late DateTime _currentWeekStart;
+  late ScrollController _scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    // Start from Monday of current week
+    final now = DateTime.now();
+    _currentWeekStart = now.subtract(Duration(days: now.weekday - 1));
+    _scrollController = ScrollController();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _previousWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.subtract(const Duration(days: 7));
+    });
+  }
+
+  void _nextWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.add(const Duration(days: 7));
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF1C1C2E),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey[800]!, width: 1),
+      ),
+      child: Column(
+        children: [
+          // Week Navigation Header
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: _previousWeek,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.chevron_left, color: Colors.white, size: 20),
+                  ),
+                ),
+                Text(
+                  _getWeekLabel(),
+                  style: GoogleFonts.inter(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: _nextWeek,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.chevron_right, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Days Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.03),
+              border: Border(
+                top: BorderSide(color: Colors.grey[800]!, width: 1),
+                bottom: BorderSide(color: Colors.grey[800]!, width: 1),
+              ),
+            ),
+            child: Row(
+              children: List.generate(7, (index) {
+                final day = _currentWeekStart.add(Duration(days: index));
+                final isToday = _isToday(day);
+                return Expanded(
+                  child: Column(
+                    children: [
+                      Text(
+                        _getDayName(index),
+                        style: GoogleFonts.inter(
+                          color: isToday ? const Color(0xFF22D3EE) : Colors.grey[500],
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: isToday ? const Color(0xFF22D3EE) : Colors.transparent,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${day.day}',
+                            style: GoogleFonts.inter(
+                              color: isToday ? Colors.black : Colors.white,
+                              fontSize: 13,
+                              fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+          
+          // Schedule Content
+          if (uid == null)
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                'Sign in to view schedule',
+                style: GoogleFonts.inter(color: Colors.grey[500]),
+              ),
+            )
+          else
+            StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(uid)
+                  .snapshots(),
+              builder: (context, userSnap) {
+                if (!userSnap.hasData) {
+                  return const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  );
+                }
+                
+                final enrolledClasses = List<String>.from(
+                  userSnap.data?.data()?['enrolledClasses'] ?? []
+                );
+                
+                if (enrolledClasses.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, 
+                             color: Colors.grey[700], size: 32),
+                        const SizedBox(height: 8),
+                        Text(
+                          'No classes enrolled',
+                          style: GoogleFonts.inter(color: Colors.grey[500]),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return FutureBuilder<List<_ScheduleEvent>>(
+                  future: _fetchScheduleEvents(enrolledClasses),
+                  builder: (context, scheduleSnap) {
+                    if (!scheduleSnap.hasData) {
+                      return const Padding(
+                        padding: EdgeInsets.all(24),
+                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      );
+                    }
+                    
+                    final events = scheduleSnap.data!;
+                    
+                    if (events.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          children: [
+                            Icon(Icons.event_available, 
+                                 color: Colors.grey[700], size: 32),
+                            const SizedBox(height: 8),
+                            Text(
+                              'No scheduled classes this week',
+                              style: GoogleFonts.inter(color: Colors.grey[500]),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    
+                    // Group events by day of week
+                    final eventsByDay = <int, List<_ScheduleEvent>>{};
+                    for (final event in events) {
+                      final dayIndex = event.dayOfWeek;
+                      eventsByDay.putIfAbsent(dayIndex, () => []).add(event);
+                    }
+                    
+                    // Time labels from 8am to 6pm
+                    const startHour = 8;
+                    const endHour = 18;
+                    const hourHeight = 50.0;
+                    
+                    return SizedBox(
+                      height: 280,
+                      child: SingleChildScrollView(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Time labels column (left side)
+                            SizedBox(
+                              width: 45,
+                              child: Column(
+                                children: List.generate(endHour - startHour + 1, (index) {
+                                  final hour = startHour + index;
+                                  final label = hour < 12 
+                                      ? '${hour}am' 
+                                      : hour == 12 
+                                          ? '12pm' 
+                                          : '${hour - 12}pm';
+                                  return SizedBox(
+                                    height: hourHeight,
+                                    child: Align(
+                                      alignment: Alignment.topRight,
+                                      child: Padding(
+                                        padding: const EdgeInsets.only(right: 8, top: 0),
+                                        child: Text(
+                                          label,
+                                          style: GoogleFonts.inter(
+                                            color: Colors.grey[600],
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                            
+                            // Grid with events
+                            Expanded(
+                              child: SingleChildScrollView(
+                                controller: _scrollController,
+                                scrollDirection: Axis.horizontal,
+                                child: SizedBox(
+                                  width: 7 * 90.0, // 7 days × width per day
+                                  child: Stack(
+                                    children: [
+                                      // Grid lines
+                                      Column(
+                                        children: List.generate(endHour - startHour + 1, (index) {
+                                          return Container(
+                                            height: hourHeight,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                top: BorderSide(
+                                                  color: Colors.grey[800]!.withValues(alpha: 0.5),
+                                                  width: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                      
+                                      // Vertical day dividers
+                                      Row(
+                                        children: List.generate(7, (index) {
+                                          return Container(
+                                            width: 90,
+                                            height: (endHour - startHour + 1) * hourHeight,
+                                            decoration: BoxDecoration(
+                                              border: Border(
+                                                right: BorderSide(
+                                                  color: Colors.grey[800]!.withValues(alpha: 0.3),
+                                                  width: 0.5,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        }),
+                                      ),
+                                      
+                                      // Event cards positioned by time
+                                      ...events.map((event) {
+                                        final startHourEvent = _parseHour(event.startTime);
+                                        final endHourEvent = _parseHour(event.endTime);
+                                        final top = (startHourEvent - startHour) * hourHeight;
+                                        final height = (endHourEvent - startHourEvent) * hourHeight;
+                                        final left = event.dayOfWeek * 90.0 + 2;
+                                        
+                                        return Positioned(
+                                          top: top.clamp(0, double.infinity),
+                                          left: left,
+                                          width: 86,
+                                          height: height.clamp(hourHeight * 0.8, double.infinity),
+                                          child: _TimeGridEventCard(event: event),
+                                        );
+                                      }),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _getWeekLabel() {
+    final endOfWeek = _currentWeekStart.add(const Duration(days: 6));
+    final startMonth = DateFormat('MMM').format(_currentWeekStart);
+    final endMonth = DateFormat('MMM').format(endOfWeek);
+    
+    if (startMonth == endMonth) {
+      return '${DateFormat('MMM d').format(_currentWeekStart)} - ${endOfWeek.day}, ${endOfWeek.year}';
+    } else {
+      return '${DateFormat('MMM d').format(_currentWeekStart)} - ${DateFormat('MMM d').format(endOfWeek)}, ${endOfWeek.year}';
+    }
+  }
+
+  String _getDayName(int index) {
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    return days[index];
+  }
+
+  bool _isToday(DateTime date) {
+    final now = DateTime.now();
+    return date.year == now.year && date.month == now.month && date.day == now.day;
+  }
+
+  double _parseHour(String time) {
+    // Parse "HH:MM" or "H:MM" format to decimal hours
+    final parts = time.split(':');
+    if (parts.length != 2) return 9.0; // Default
+    final hours = int.tryParse(parts[0]) ?? 9;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    return hours + (minutes / 60.0);
+  }
+
+  Future<List<_ScheduleEvent>> _fetchScheduleEvents(List<String> classCodes) async {
+    final events = <_ScheduleEvent>[];
+    
+    // Define schedule colors
+    final colors = [
+      const Color(0xFFFDE68A), // Amber
+      const Color(0xFF86EFAC), // Green
+      const Color(0xFF93C5FD), // Blue
+      const Color(0xFFFCA5A5), // Red
+      const Color(0xFFD8B4FE), // Purple
+      const Color(0xFF67E8F9), // Cyan
+    ];
+    
+    for (int i = 0; i < classCodes.length; i++) {
+      final classCode = classCodes[i];
+      try {
+        final classDoc = await FirebaseFirestore.instance
+            .collection('classes')
+            .doc(classCode)
+            .get();
+        
+        if (classDoc.exists) {
+          final data = classDoc.data()!;
+          final className = data['className'] ?? classCode;
+          final schedule = data['schedule'] as Map<String, dynamic>?;
+          
+          if (schedule != null) {
+            // Parse schedule format: { "dayOfWeek": 0-6, "startTime": "09:00", "endTime": "11:00", "room": "Lab 1" }
+            final dayOfWeek = schedule['dayOfWeek'] as int? ?? 0;
+            final startTime = schedule['startTime'] as String? ?? '09:00';
+            final endTime = schedule['endTime'] as String? ?? '10:00';
+            final room = schedule['room'] as String? ?? '';
+            
+            events.add(_ScheduleEvent(
+              className: className,
+              classCode: classCode,
+              dayOfWeek: dayOfWeek,
+              startTime: startTime,
+              endTime: endTime,
+              room: room,
+              color: colors[i % colors.length],
+            ));
+          } else {
+            // If no schedule, assign a default based on index
+            events.add(_ScheduleEvent(
+              className: className,
+              classCode: classCode,
+              dayOfWeek: i % 5, // Mon-Fri
+              startTime: '${9 + (i % 4)}:00',
+              endTime: '${10 + (i % 4)}:00',
+              room: '',
+              color: colors[i % colors.length],
+            ));
+          }
+        }
+      } catch (e) {
+        debugPrint('Error fetching class $classCode: $e');
+      }
+    }
+    
+    // Sort by day and time
+    events.sort((a, b) {
+      if (a.dayOfWeek != b.dayOfWeek) return a.dayOfWeek.compareTo(b.dayOfWeek);
+      return a.startTime.compareTo(b.startTime);
+    });
+    
+    return events;
+  }
+}
+
+class _ScheduleEvent {
+  final String className;
+  final String classCode;
+  final int dayOfWeek; // 0 = Monday, 6 = Sunday
+  final String startTime;
+  final String endTime;
+  final String room;
+  final Color color;
+
+  _ScheduleEvent({
+    required this.className,
+    required this.classCode,
+    required this.dayOfWeek,
+    required this.startTime,
+    required this.endTime,
+    required this.room,
+    required this.color,
+  });
+}
+
+class _ScheduleEventCard extends StatelessWidget {
+  final _ScheduleEvent event;
+
+  const _ScheduleEventCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: event.color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(8),
+        border: Border(
+          left: BorderSide(color: event.color, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${event.startTime} - ${event.endTime}',
+            style: GoogleFonts.inter(
+              color: event.color,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            event.className,
+            style: GoogleFonts.inter(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+          ),
+          if (event.room.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              event.room,
+              style: GoogleFonts.inter(
+                color: Colors.grey[400],
+                fontSize: 10,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Event card for time grid layout
+class _TimeGridEventCard extends StatelessWidget {
+  final _ScheduleEvent event;
+
+  const _TimeGridEventCard({required this.event});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: event.color.withValues(alpha: 0.25),
+        borderRadius: BorderRadius.circular(6),
+        border: Border(
+          left: BorderSide(color: event.color, width: 3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '${event.startTime} - ${event.endTime}',
+            style: GoogleFonts.inter(
+              color: event.color,
+              fontSize: 9,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Flexible(
+            child: Text(
+              event.className,
+              style: GoogleFonts.inter(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          if (event.room.isNotEmpty) 
+            Text(
+              event.room,
+              style: GoogleFonts.inter(
+                color: Colors.grey[400],
+                fontSize: 8,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+        ],
       ),
     );
   }

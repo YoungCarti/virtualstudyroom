@@ -4,8 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'app_theme.dart';
+import 'widgets/animated_components.dart';
 import 'settings_page.dart';
-
 import 'profile_page.dart';
 import 'login_page.dart';
 import 'account_page.dart';
@@ -22,9 +23,9 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Background Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+    // Background Colors - New Ocean Sunset
+    const Color topColor = AppTheme.deepNavy;
+    const Color bottomColor = AppTheme.midnightBlue;
 
     if (_uid == null) {
       return Scaffold(
@@ -84,7 +85,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                   height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.15), // Violet
+                    color: AppTheme.electricBlue.withValues(alpha: 0.15),
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -92,7 +93,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                   ),
                 ),
               ),
-              // Top-right: fuchsia/magenta glow
+              // Top-right: coral glow
               Positioned(
                 top: -40,
                 right: -40,
@@ -101,7 +102,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFFD946EF).withValues(alpha: 0.4), // Fuchsia
+                    color: AppTheme.coral.withValues(alpha: 0.25),
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
