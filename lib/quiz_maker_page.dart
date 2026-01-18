@@ -264,153 +264,166 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-                const SizedBox(height: 32),
-                
-                // Question Count
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _midnightBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Questions (max 100)',
-                        style: GoogleFonts.outfit(
-                          color: _pureWhite.withOpacity(0.7),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _questionCount.round().toString(),
-                        style: GoogleFonts.outfit(
-                          color: _pureWhite,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Slider(
-                        value: _questionCount,
-                        min: 5,
-                        max: 100,
-                        activeColor: _mintGreen,
-                        inactiveColor: _deepNavy,
-                        onChanged: (val) => setModalState(() => _questionCount = val),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // Timer
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: _midnightBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Timer (minutes)',
-                        style: GoogleFonts.outfit(
-                          color: _pureWhite.withOpacity(0.7),
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _timerMinutes.round().toString(),
-                        style: GoogleFonts.outfit(
-                          color: _pureWhite,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                       Slider(
-                        value: _timerMinutes,
-                        min: 5,
-                        max: 60,
-                        activeColor: _mintGreen,
-                        inactiveColor: _deepNavy,
-                        onChanged: (val) => setModalState(() => _timerMinutes = val),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 24),
                 
-                // Toggles
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Multiple choice',
-                      style: GoogleFonts.outfit(
-                        color: _pureWhite,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                // Scrollable Configuration Section
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Question Count
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _midnightBlue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Questions (max 100)',
+                                style: GoogleFonts.outfit(
+                                  color: _pureWhite.withOpacity(0.7),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _questionCount.round().toString(),
+                                style: GoogleFonts.outfit(
+                                  color: _pureWhite,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Slider(
+                                value: _questionCount,
+                                min: 5,
+                                max: 100,
+                                activeColor: _mintGreen,
+                                inactiveColor: _deepNavy,
+                                onChanged: (val) => setModalState(() => _questionCount = val),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        
+                        // Timer
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: _midnightBlue,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Timer (minutes)',
+                                style: GoogleFonts.outfit(
+                                  color: _pureWhite.withOpacity(0.7),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                _timerMinutes.round().toString(),
+                                style: GoogleFonts.outfit(
+                                  color: _pureWhite,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                               Slider(
+                                value: _timerMinutes,
+                                min: 5,
+                                max: 60,
+                                activeColor: _mintGreen,
+                                inactiveColor: _deepNavy,
+                                onChanged: (val) => setModalState(() => _timerMinutes = val),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        
+                        // Toggles
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Multiple choice',
+                              style: GoogleFonts.outfit(
+                                color: _pureWhite,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Switch(
+                              value: _isMultipleChoice,
+                              onChanged: (val) => setModalState(() => _isMultipleChoice = true),
+                              activeColor: _electricBlue,
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                         Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Written',
+                              style: GoogleFonts.outfit(
+                                color: _pureWhite,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Switch(
+                              value: !_isMultipleChoice,
+                              onChanged: (val) => setModalState(() => _isMultipleChoice = false),
+                              activeColor: _electricBlue,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    Switch(
-                      value: _isMultipleChoice,
-                      onChanged: (val) => setModalState(() => _isMultipleChoice = true), // For now enforce one or other
-                      activeColor: _electricBlue,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Written',
-                      style: GoogleFonts.outfit(
-                        color: _pureWhite,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
-                    Switch(
-                      value: !_isMultipleChoice,
-                      onChanged: (val) => setModalState(() => _isMultipleChoice = false),
-                      activeColor: _electricBlue,
-                    ),
-                  ],
-                ),
-                
-                const Spacer(),
-                
-                // Actions
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Close modal
-                    _generateQuiz(context, title, content);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: _electricBlue,
-                    elevation: 0,
                   ),
-                  child: const Text('Take this test', style: TextStyle(fontWeight: FontWeight.bold)),
+                ),
+                
+                const SizedBox(height: 16),
+                
+                // Actions (Fixed at bottom)
+                Center(
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close modal
+                      _generateQuiz(context, title, content);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: _electricBlue,
+                      foregroundColor: _pureWhite,
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                    ),
+                    child: const Text('Take this test', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
                 ),
                 const SizedBox(height: 8),
-                 ElevatedButton(
-                  onPressed: () {
-                     // TODO: View question bank
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.transparent,
-                    foregroundColor: _pureWhite,
-                    elevation: 0,
+                Center(
+                   child: TextButton(
+                    onPressed: () {
+                       // TODO: View question bank
+                    },
+                    style: TextButton.styleFrom(
+                      foregroundColor: _pureWhite.withOpacity(0.7),
+                    ),
+                     child: const Text('View question bank'),
                   ),
-                   child: const Text('View question bank', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
