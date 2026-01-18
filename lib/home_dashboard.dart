@@ -110,7 +110,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                         }
                         // Get additional data for stats
                         final enrolledClasses = (snapshot.data?.data()?['enrolledClasses'] as List<dynamic>?)?.length ?? 0;
-                        final streak = (snapshot.data?.data()?['streak'] ?? 0) as int;
+                        final streak = (snapshot.data?.data()?['currentStreak'] ?? 0) as int;
 
                         return Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
