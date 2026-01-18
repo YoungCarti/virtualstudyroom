@@ -36,6 +36,9 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
   double _timerMinutes = 30;
   bool _isMultipleChoice = true;
   bool _isGenerating = false;
+  
+  // Generated questions storage
+  List<dynamic> _generatedQuestions = [];
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +136,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                     final dateStr = date != null ? '${date.month}/${date.day}/${date.year}' : '';
                     
                     return GestureDetector(
-                      onTap: () => _showConfigurationModal(
+                      onTap: () => _generateAndShowConfig(
                         docs[index].id, 
                         title, 
                         data['outline'] ?? ''
@@ -225,7 +228,116 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
     );
   }
 
-  void _showConfigurationModal(String id, String title, String content) {
+  /// Generate questions first, then show config modal
+  Future<void> _generateAndShowConfig(String id, String title, String content) async {
+    // Show loading dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Center(
+        child: Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: _midnightBlue,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: _mintGreen),
+              const SizedBox(height: 16),
+              Text(
+                'Generating questions...',
+                style: GoogleFonts.outfit(color: _pureWhite),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    try {
+      // Generate unique timestamp seed for variety
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      final prompt = '''
+Create a UNIQUE practice test based on the following study notes.
+Generate exactly 50 diverse multiple choice questions.
+
+IMPORTANT RULES:
+- Each question MUST be different from any previous generation
+- Cover ALL topics in the notes, not just the beginning
+- Mix difficulty levels (easy, medium, hard)
+- Use different question formats (what, why, how, which, when)
+- Randomize the position of correct answers (don't always make it option A)
+- Seed: $timestamp
+
+Return ONLY a valid JSON array of objects.
+Format:
+[
+  {
+    "question": "The question text",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctIndex": 0
+  }
+]
+
+Study Notes:
+$content
+''';
+
+      final response = await http.post(
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_geminiApiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [{'text': prompt}]
+            }
+          ],
+          'generationConfig': {
+            'temperature': 1.0, // Higher temperature = more variety
+            'topP': 0.95,
+            'topK': 40,
+          }
+        }),
+      );
+
+      if (context.mounted) Navigator.pop(context); // Close loading dialog
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final contentText = data['candidates'][0]['content']['parts'][0]['text'];
+        
+        final jsonString = contentText.replaceAll('```json', '').replaceAll('```', '').trim();
+        final List<dynamic> questions = jsonDecode(jsonString);
+        
+        // Shuffle questions for extra randomness
+        questions.shuffle();
+        
+        setState(() {
+          _generatedQuestions = questions;
+          _selectedOutlineTitle = title;
+          _questionCount = questions.length.toDouble().clamp(5, 50);
+        });
+        
+        if (context.mounted) {
+          _showConfigurationModal(title, questions.length);
+        }
+      } else {
+        throw Exception('API Error: ${response.body}');
+      }
+    } catch (e) {
+      if (context.mounted) Navigator.pop(context); // Close loading dialog if error
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating quiz: $e')),
+        );
+      }
+    }
+  }
+
+  void _showConfigurationModal(String title, int totalQuestions) {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -256,10 +368,10 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                 const SizedBox(height: 8),
                 Center(
                   child: Text(
-                    "Customize '$title'",
+                    "$totalQuestions questions ready • Customize '$title'",
                     style: GoogleFonts.outfit(
                       color: _pureWhite.withOpacity(0.8),
-                      fontSize: 16,
+                      fontSize: 14,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -283,7 +395,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Questions (max 100)',
+                                'Questions (max $totalQuestions)',
                                 style: GoogleFonts.outfit(
                                   color: _pureWhite.withOpacity(0.7),
                                   fontSize: 12,
@@ -302,7 +414,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                               Slider(
                                 value: _questionCount,
                                 min: 5,
-                                max: 100,
+                                max: totalQuestions.toDouble(),
                                 activeColor: _mintGreen,
                                 inactiveColor: _deepNavy,
                                 onChanged: (val) => setModalState(() => _questionCount = val),
@@ -402,7 +514,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                   child: ElevatedButton(
                     onPressed: () {
                       Navigator.pop(context); // Close modal
-                      _generateQuiz(context, title, content);
+                      _startQuiz();
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _electricBlue,
@@ -433,82 +545,20 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
     );
   }
 
-  Future<void> _generateQuiz(BuildContext context, String title, String content) async {
-    setState(() => _isGenerating = true);
+  void _startQuiz() {
+    // Take only the number of questions the user selected
+    final questionsToUse = _generatedQuestions.take(_questionCount.round()).toList();
     
-    // Show loading dialog
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(child: CircularProgressIndicator()),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => QuizPage(
+          title: _selectedOutlineTitle ?? 'Quiz',
+          questions: questionsToUse,
+          timerMinutes: _timerMinutes.round(),
+        ),
+      ),
     );
-
-    try {
-      final prompt = '''
-Create a practice test based on the following study notes.
-Number of questions: ${_questionCount.round()}
-Type: ${_isMultipleChoice ? "Multiple Choice" : "Written/Short Answer"}
-
-Return ONLY a valid JSON array of objects.
-Format:
-[
-  {
-    "question": "The question text",
-    "options": ["Option A", "Option B", "Option C", "Option D"], // Only if multiple choice
-    "correctIndex": 0 // Index of the correct option (0-3)
-  }
-]
-
-Review Notes:
-$content
-''';
-
-      final response = await http.post(
-        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_geminiApiKey'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'contents': [
-            {
-              'parts': [{'text': prompt}]
-            }
-          ]
-        }),
-      );
-
-      if (context.mounted) Navigator.pop(context); // Close loading dialog
-      setState(() => _isGenerating = false);
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final contentText = data['candidates'][0]['content']['parts'][0]['text'];
-        
-        final jsonString = contentText.replaceAll('```json', '').replaceAll('```', '').trim();
-        final List<dynamic> questions = jsonDecode(jsonString);
-        
-        if (context.mounted) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => QuizPage(
-                title: title,
-                questions: questions,
-                timerMinutes: _timerMinutes.round(),
-              ),
-            ),
-          );
-        }
-      } else {
-        throw Exception('API Error: ${response.body}');
-      }
-    } catch (e) {
-      if (context.mounted)Navigator.pop(context); // Close loading dialog if error
-      setState(() => _isGenerating = false);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating quiz: $e')),
-        );
-      }
-    }
   }
 }
 
@@ -531,8 +581,10 @@ class QuizPage extends StatefulWidget {
 class _QuizPageState extends State<QuizPage> {
   int _currentQuestionIndex = 0;
   Map<int, int> _selectedAnswers = {};
+  Map<int, bool> _checkedAnswers = {}; // Track which questions have been checked
   int _secondsRemaining = 0;
   Timer? _timer;
+  bool _quizCompleted = false;
   
   @override
   void initState() {
@@ -549,10 +601,25 @@ class _QuizPageState extends State<QuizPage> {
         });
       } else {
         _timer?.cancel();
-        // TODO: Auto-submit quiz
-        Navigator.pop(context);
+        _finishQuiz();
       }
     });
+  }
+
+  void _finishQuiz() {
+    _timer?.cancel();
+    setState(() => _quizCompleted = true);
+  }
+
+  int _calculateScore() {
+    int correct = 0;
+    for (int i = 0; i < widget.questions.length; i++) {
+      final correctIndex = widget.questions[i]['correctIndex'];
+      if (_selectedAnswers[i] == correctIndex) {
+        correct++;
+      }
+    }
+    return correct;
   }
 
   @override
@@ -563,8 +630,16 @@ class _QuizPageState extends State<QuizPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Show results page if quiz is completed
+    if (_quizCompleted) {
+      return _buildResultsPage();
+    }
+    
     final question = widget.questions[_currentQuestionIndex];
     final options = List<String>.from(question['options'] ?? []);
+    final correctIndex = question['correctIndex'] as int;
+    final hasChecked = _checkedAnswers[_currentQuestionIndex] == true;
+    final selectedIndex = _selectedAnswers[_currentQuestionIndex];
 
     return Scaffold(
       backgroundColor: _deepNavy,
@@ -628,9 +703,34 @@ class _QuizPageState extends State<QuizPage> {
                   const SizedBox(height: 32),
                   
                   ...List.generate(options.length, (index) {
-                    final isSelected = _selectedAnswers[_currentQuestionIndex] == index;
+                    final isSelected = selectedIndex == index;
+                    final isCorrect = index == correctIndex;
+                    
+                    // Determine colors based on check status
+                    Color bgColor = _midnightBlue;
+                    Color borderColor = Colors.transparent;
+                    IconData? feedbackIcon;
+                    Color? iconColor;
+                    
+                    if (hasChecked) {
+                      if (isCorrect) {
+                        bgColor = const Color(0xFF1B5E20).withOpacity(0.3); // Green
+                        borderColor = const Color(0xFF4CAF50);
+                        feedbackIcon = Icons.check_circle;
+                        iconColor = const Color(0xFF4CAF50);
+                      } else if (isSelected && !isCorrect) {
+                        bgColor = const Color(0xFFB71C1C).withOpacity(0.3); // Red
+                        borderColor = const Color(0xFFF44336);
+                        feedbackIcon = Icons.cancel;
+                        iconColor = const Color(0xFFF44336);
+                      }
+                    } else if (isSelected) {
+                      bgColor = _electricBlue.withOpacity(0.2);
+                      borderColor = _electricBlue;
+                    }
+                    
                     return GestureDetector(
-                      onTap: () {
+                      onTap: hasChecked ? null : () {
                         setState(() {
                           _selectedAnswers[_currentQuestionIndex] = index;
                         });
@@ -639,38 +739,42 @@ class _QuizPageState extends State<QuizPage> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: isSelected ? _electricBlue.withOpacity(0.2) : _midnightBlue,
+                          color: bgColor,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? _electricBlue : Colors.transparent,
+                            color: borderColor,
                             width: 2,
                           ),
                         ),
                         child: Row(
                           children: [
-                            Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: isSelected ? _electricBlue : _pureWhite.withOpacity(0.5),
-                                  width: 2,
+                            if (feedbackIcon != null) ...[
+                              Icon(feedbackIcon, color: iconColor, size: 24),
+                            ] else ...[
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: isSelected ? _electricBlue : _pureWhite.withOpacity(0.5),
+                                    width: 2,
+                                  ),
                                 ),
-                              ),
-                              child: isSelected
-                                  ? Center(
-                                      child: Container(
-                                        width: 12,
-                                        height: 12,
-                                        decoration: const BoxDecoration(
-                                          color: _electricBlue,
-                                          shape: BoxShape.circle,
+                                child: isSelected
+                                    ? Center(
+                                        child: Container(
+                                          width: 12,
+                                          height: 12,
+                                          decoration: const BoxDecoration(
+                                            color: _electricBlue,
+                                            shape: BoxShape.circle,
+                                          ),
                                         ),
-                                      ),
-                                    )
-                                  : null,
-                            ),
+                                      )
+                                    : null,
+                              ),
+                            ],
                             const SizedBox(width: 16),
                             Expanded(
                               child: Text(
@@ -686,6 +790,62 @@ class _QuizPageState extends State<QuizPage> {
                       ),
                     );
                   }),
+                  
+                  // Show "Check Answer" button if not yet checked
+                  if (!hasChecked && selectedIndex != null) ...[
+                    const SizedBox(height: 16),
+                    Center(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _checkedAnswers[_currentQuestionIndex] = true;
+                          });
+                        },
+                        icon: const Icon(Icons.visibility),
+                        label: const Text('Check Answer'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: _mintGreen,
+                          foregroundColor: _deepNavy,
+                          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                        ),
+                      ),
+                    ),
+                  ],
+                  
+                  // Show feedback message after checking
+                  if (hasChecked) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: selectedIndex == correctIndex 
+                            ? const Color(0xFF1B5E20).withOpacity(0.2)
+                            : const Color(0xFFB71C1C).withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            selectedIndex == correctIndex ? Icons.celebration : Icons.lightbulb_outline,
+                            color: selectedIndex == correctIndex ? const Color(0xFF4CAF50) : _softOrange,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              selectedIndex == correctIndex 
+                                  ? 'Correct! Well done!' 
+                                  : 'The correct answer is: ${options[correctIndex]}',
+                              style: GoogleFonts.outfit(
+                                color: _pureWhite,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -715,9 +875,7 @@ class _QuizPageState extends State<QuizPage> {
                     if (_currentQuestionIndex < widget.questions.length - 1) {
                       setState(() => _currentQuestionIndex++);
                     } else {
-                      // Finish Quiz
-                      Navigator.pop(context); // Basic exit for now
-                      // TODO: Show Results Page
+                      _finishQuiz();
                     }
                   },
                   style: ElevatedButton.styleFrom(
@@ -735,6 +893,166 @@ class _QuizPageState extends State<QuizPage> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildResultsPage() {
+    final score = _calculateScore();
+    final total = widget.questions.length;
+    final percentage = (score / total * 100).round();
+    
+    return Scaffold(
+      backgroundColor: _deepNavy,
+      appBar: AppBar(
+        title: Text('Results', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        foregroundColor: _pureWhite,
+        automaticallyImplyLeading: false,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            // Score Card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(32),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: percentage >= 70 
+                      ? [const Color(0xFF1B5E20), const Color(0xFF2E7D32)]
+                      : percentage >= 50 
+                          ? [const Color(0xFFF57C00), const Color(0xFFFF9800)]
+                          : [const Color(0xFFB71C1C), const Color(0xFFD32F2F)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  Icon(
+                    percentage >= 70 ? Icons.emoji_events : percentage >= 50 ? Icons.thumb_up : Icons.refresh,
+                    size: 64,
+                    color: _pureWhite,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '$percentage%',
+                    style: GoogleFonts.outfit(
+                      color: _pureWhite,
+                      fontSize: 48,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Text(
+                    '$score out of $total correct',
+                    style: GoogleFonts.outfit(
+                      color: _pureWhite.withOpacity(0.9),
+                      fontSize: 18,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    percentage >= 70 ? 'Excellent work!' : percentage >= 50 ? 'Good effort!' : 'Keep practicing!',
+                    style: GoogleFonts.outfit(
+                      color: _pureWhite.withOpacity(0.8),
+                      fontSize: 16,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 24),
+            
+            // Question Summary
+            Text(
+              'Question Summary',
+              style: GoogleFonts.outfit(
+                color: _pureWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            ...List.generate(widget.questions.length, (index) {
+              final question = widget.questions[index];
+              final correctIndex = question['correctIndex'] as int;
+              final userAnswer = _selectedAnswers[index];
+              final isCorrect = userAnswer == correctIndex;
+              final options = List<String>.from(question['options'] ?? []);
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: _midnightBlue,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                    width: 2,
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(
+                          isCorrect ? Icons.check_circle : Icons.cancel,
+                          color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Question ${index + 1}',
+                          style: GoogleFonts.outfit(
+                            color: _pureWhite,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      question['question'],
+                      style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.9)),
+                    ),
+                    const SizedBox(height: 8),
+                    if (userAnswer != null)
+                      Text(
+                        'Your answer: ${options[userAnswer]}',
+                        style: GoogleFonts.outfit(
+                          color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                        ),
+                      ),
+                    if (!isCorrect)
+                      Text(
+                        'Correct answer: ${options[correctIndex]}',
+                        style: GoogleFonts.outfit(color: const Color(0xFF4CAF50)),
+                      ),
+                  ],
+                ),
+              );
+            }),
+            
+            const SizedBox(height: 24),
+            
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _electricBlue,
+                foregroundColor: _pureWhite,
+                padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+              ),
+              child: const Text('Done', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
       ),
     );
   }
