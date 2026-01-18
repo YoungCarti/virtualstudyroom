@@ -141,9 +141,14 @@ class _AssignmentDetailsPageState extends State<AssignmentDetailsPage> {
       final uid = FirebaseAuth.instance.currentUser?.uid ?? '';
       final submissionId = _studentGroupId ?? uid;
       
-      // Get student name
+      // Get student name (try fullName, then name, then displayName, then Unknown)
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final studentName = _studentGroupName ?? userDoc.data()?['displayName'] ?? 'Unknown';
+      final userData = userDoc.data();
+      final studentName = _studentGroupName ?? 
+                          userData?['fullName'] ?? 
+                          userData?['name'] ?? 
+                          userData?['displayName'] ?? 
+                          'Unknown';
       
       // Upload file to storage - path must match storage.rules
       final ref = FirebaseStorage.instance
@@ -881,11 +886,33 @@ class _AssignmentDetailsPageState extends State<AssignmentDetailsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(s.studentName, style: AppFonts.clashGrotesk(color: _AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600)),
                           Text(
-                            s.submittedAt != null ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) : 'Unknown',
-                            style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 12),
+                            s.attachmentName ?? 'Submission',
+                            style: AppFonts.clashGrotesk(color: _AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
+                          const SizedBox(height: 2),
+                          if (s.studentName == 'Unknown' && s.studentId.isNotEmpty)
+                            FutureBuilder<DocumentSnapshot>(
+                              future: FirebaseFirestore.instance.collection('users').doc(s.studentId).get(),
+                              builder: (context, snapshot) {
+                                String name = 'Unknown';
+                                if (snapshot.hasData && snapshot.data?.data() != null) {
+                                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                                  name = data['fullName'] ?? data['name'] ?? data['displayName'] ?? 'Unknown';
+                                }
+                                return Text(
+                                  '$name • ${s.submittedAt != null ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) : ''}',
+                                  style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 12),
+                                );
+                              }
+                            )
+                          else
+                            Text(
+                              '${s.studentName} • ${s.submittedAt != null ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) : ''}',
+                              style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 12),
+                            ),
                         ],
                       ),
                     ),
