@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:io';
 import 'dart:math'; 
 import 'dart:ui';
@@ -567,7 +568,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           },
           child: Text(
             widget.groupName,
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w600,
@@ -608,7 +609,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                   builder: (context, snap) {
                     if (snap.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
                     final docs = snap.data?.docs ?? [];
-                    if (docs.isEmpty) return Center(child: Text('No messages yet.', style: GoogleFonts.inter(color: Colors.white54)));
+                    if (docs.isEmpty) return Center(child: Text('No messages yet.', style: AppFonts.clashGrotesk(color: Colors.white54)));
 
                     final List<_MessageItem> items = [];
                     String? lastDate;

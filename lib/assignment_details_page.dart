@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -94,7 +95,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                   return Center(
                     child: Text(
                       'Assignment not found',
-                      style: GoogleFonts.inter(color: Colors.white70),
+                      style: AppFonts.clashGrotesk(color: Colors.white70),
                     ),
                   );
                 }
@@ -115,7 +116,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                           ),
                           Text(
                             'Assignment Details',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white,
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -165,7 +166,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                                 children: [
                                   Text(
                                     assignment.title,
-                                    style: GoogleFonts.inter(
+                                    style: AppFonts.clashGrotesk(
                                       color: Colors.white,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold,
@@ -174,7 +175,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                                   const SizedBox(height: 12),
                                   Text(
                                     assignment.description,
-                                    style: GoogleFonts.inter(
+                                    style: AppFonts.clashGrotesk(
                                       color: Colors.white.withValues(alpha: 0.8),
                                       fontSize: 15,
                                       height: 1.5,
@@ -218,7 +219,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                                             Expanded(
                                               child: Text(
                                                 assignment.attachmentName ?? 'Attached File',
-                                                style: GoogleFonts.inter(
+                                                style: AppFonts.clashGrotesk(
                                                   color: const Color(0xFFA855F7),
                                                   fontWeight: FontWeight.w500,
                                                   decoration: TextDecoration.underline,
@@ -241,7 +242,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                             // Submissions Header
                             Text(
                               'Submissions',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -332,7 +333,7 @@ class AssignmentDetailsPage extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Text(
                 'No submissions yet.',
-                style: GoogleFonts.inter(color: Colors.white54),
+                style: AppFonts.clashGrotesk(color: Colors.white54),
               ),
             ),
           );
@@ -360,7 +361,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                       children: [
                         Text(
                           s.studentName,
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: Colors.white,
                             fontSize: 15,
                             fontWeight: FontWeight.w600,
@@ -370,7 +371,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             s.attachmentName!,
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: const Color(0xFF22D3EE),
                               fontSize: 13,
                             ),
@@ -381,7 +382,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                           s.submittedAt != null 
                               ? DateFormat('MMM d, h:mm a').format(s.submittedAt!) 
                               : 'Unknown',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: Colors.white54,
                             fontSize: 12,
                           ),
@@ -439,7 +440,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'This is a group assignment. You must be in a group to submit.',
-                    style: GoogleFonts.inter(color: const Color(0xFFF59E0B)),
+                    style: AppFonts.clashGrotesk(color: const Color(0xFFF59E0B)),
                   ),
                 ),
               ],
@@ -476,7 +477,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                             assignment.submissionType == 'group' 
                                 ? 'Submitted by ${mySubmission.studentName}' 
                                 : 'Submitted',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: const Color(0xFF10B981),
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -487,7 +488,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                             mySubmission.submittedAt != null 
                                 ? DateFormat('MMM d, h:mm a').format(mySubmission.submittedAt!) 
                                 : '',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white70,
                               fontSize: 13,
                             ),
@@ -496,7 +497,7 @@ class AssignmentDetailsPage extends StatelessWidget {
                             const SizedBox(height: 2),
                             Text(
                               mySubmission.attachmentName!,
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 color: Colors.white54,
                                 fontSize: 12,
                                 fontStyle: FontStyle.italic,
@@ -648,7 +649,7 @@ class _DetailRow extends StatelessWidget {
           children: [
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.white54,
                 fontSize: 12,
               ),
@@ -656,7 +657,7 @@ class _DetailRow extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               value,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.white,
                 fontSize: 14,
                 fontWeight: FontWeight.w500,

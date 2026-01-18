@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -124,7 +125,7 @@ class _ClassesPageState extends State<ClassesPage> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Enroll in a Class', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Enroll in a Class', style: AppFonts.clashGrotesk(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -161,7 +162,7 @@ class _ClassesPageState extends State<ClassesPage> {
       builder: (context) => AlertDialog(
         backgroundColor: const Color(0xFF1C1C2E),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Create a Class', style: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold)),
+        title: Text('Create a Class', style: AppFonts.clashGrotesk(color: Colors.white, fontWeight: FontWeight.bold)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -220,7 +221,7 @@ class _ClassesPageState extends State<ClassesPage> {
                     padding: const EdgeInsets.only(left: 4),
                     child: Text(
                       'My Classes',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
@@ -249,7 +250,7 @@ class _ClassesPageState extends State<ClassesPage> {
                               children: [
                                 Text(
                                   'Enrolled Classes',
-                                  style: GoogleFonts.inter(
+                                  style: AppFonts.clashGrotesk(
                                     color: Colors.white,
                                     fontSize: 18,
                                     fontWeight: FontWeight.w600,
@@ -280,7 +281,7 @@ class _ClassesPageState extends State<ClassesPage> {
                                       const SizedBox(height: 12),
                                       Text(
                                         'No classes enrolled yet',
-                                        style: GoogleFonts.inter(
+                                        style: AppFonts.clashGrotesk(
                                           color: Colors.grey[500],
                                           fontSize: 14,
                                         ),
@@ -535,7 +536,7 @@ class _ClassCard extends StatelessWidget {
                             className,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -544,7 +545,7 @@ class _ClassCard extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             '$totalMaterials materials',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.grey[400],
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
@@ -563,7 +564,7 @@ class _ClassCard extends StatelessWidget {
                       ),
                       child: Text(
                         '$completedMaterials/$totalMaterials',
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -622,7 +623,7 @@ class _LecturerChip extends StatelessWidget {
               const SizedBox(width: 8),
               Text(
                 name,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   color: Colors.black87,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

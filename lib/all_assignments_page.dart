@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -152,7 +153,7 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
                       const SizedBox(width: 16),
                       Text(
                         'All Assignments',
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
@@ -175,7 +176,7 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
                                   const SizedBox(height: 16),
                                   Text(
                                     'All done!',
-                                    style: GoogleFonts.inter(color: Colors.white54, fontSize: 16),
+                                    style: AppFonts.clashGrotesk(color: Colors.white54, fontSize: 16),
                                   ),
                                 ],
                               ),
@@ -274,7 +275,7 @@ class AssignmentItem extends StatelessWidget {
                     children: [
                       Text(
                         assignment.title,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -285,7 +286,7 @@ class AssignmentItem extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         assignment.className.isNotEmpty ? assignment.className : assignment.classCode,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 12,
                         ),
@@ -302,7 +303,7 @@ class AssignmentItem extends StatelessWidget {
                   ),
                   child: Text(
                     status,
-                    style: GoogleFonts.inter(
+                    style: AppFonts.clashGrotesk(
                       color: statusColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,

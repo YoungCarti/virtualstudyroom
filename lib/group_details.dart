@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -86,7 +87,7 @@ class GroupDetailsPage extends StatelessWidget {
                       ),
                       Text(
                         groupName,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white,
                           fontSize: 18,
                           fontWeight: FontWeight.w600,
@@ -105,7 +106,7 @@ class GroupDetailsPage extends StatelessWidget {
                       children: [
                         Text(
                           'Members',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: Colors.white,
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -128,7 +129,7 @@ class GroupDetailsPage extends StatelessWidget {
                             if (!snapshot.hasData || !snapshot.data!.exists) {
                               return Text(
                                 'Group not found.',
-                                style: GoogleFonts.inter(color: Colors.white54),
+                                style: AppFonts.clashGrotesk(color: Colors.white54),
                               );
                             }
 
@@ -138,7 +139,7 @@ class GroupDetailsPage extends StatelessWidget {
                             if (memberIds.isEmpty) {
                               return Text(
                                 'No members in this group yet.',
-                                style: GoogleFonts.inter(color: Colors.white54),
+                                style: AppFonts.clashGrotesk(color: Colors.white54),
                               );
                             }
 
@@ -256,7 +257,7 @@ class _MemberItem extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   name.isNotEmpty ? name[0].toUpperCase() : 'U',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: const Color(0xFFA855F7),
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
@@ -270,7 +271,7 @@ class _MemberItem extends StatelessWidget {
                   children: [
                     Text(
                       name,
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -279,7 +280,7 @@ class _MemberItem extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       email,
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 13,
                       ),

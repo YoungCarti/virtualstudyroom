@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -170,7 +171,7 @@ class _ProfilePageState extends State<ProfilePage> {
                             const SizedBox(height: 16),
                             Text(
                               fullName,
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 fontSize: 24,
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white,
@@ -196,7 +197,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   const SizedBox(width: 6),
                                   Text(
                                     "Active Student",
-                                    style: GoogleFonts.inter(
+                                    style: AppFonts.clashGrotesk(
                                       color: const Color(0xFF22D3EE),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
@@ -248,7 +249,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         children: [
                                           Text(
                                             "Program",
-                                            style: GoogleFonts.inter(
+                                            style: AppFonts.clashGrotesk(
                                               color: Colors.white.withValues(alpha: 0.6),
                                               fontSize: 12,
                                             ),
@@ -256,7 +257,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                           const SizedBox(height: 2),
                                           Text(
                                             program,
-                                            style: GoogleFonts.inter(
+                                            style: AppFonts.clashGrotesk(
                                               color: Colors.white,
                                               fontSize: 15,
                                               fontWeight: FontWeight.w500,
@@ -382,7 +383,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         const SizedBox(width: 8),
                                         Text(
                                           "Bio",
-                                          style: GoogleFonts.inter(
+                                          style: AppFonts.clashGrotesk(
                                             color: Colors.white,
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
@@ -393,7 +394,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                     const SizedBox(height: 12),
                                     Text(
                                       bio,
-                                      style: GoogleFonts.inter(
+                                      style: AppFonts.clashGrotesk(
                                         color: Colors.white.withValues(alpha: 0.75),
                                         fontSize: 14,
                                         height: 1.5,
@@ -420,7 +421,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         const SizedBox(width: 8),
                                         Text(
                                           "Interests",
-                                          style: GoogleFonts.inter(
+                                          style: AppFonts.clashGrotesk(
                                             color: Colors.white,
                                             fontSize: 16,
                                             fontWeight: FontWeight.w500,
@@ -518,7 +519,7 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           number,
-          style: GoogleFonts.inter(
+          style: AppFonts.clashGrotesk(
             color: Colors.white,
             fontSize: 20,
             fontWeight: FontWeight.bold,
@@ -527,7 +528,7 @@ class _StatItem extends StatelessWidget {
         const SizedBox(height: 4),
         Text(
           label,
-          style: GoogleFonts.inter(
+          style: AppFonts.clashGrotesk(
             color: Colors.white.withValues(alpha: 0.5),
             fontSize: 13,
           ),
@@ -624,7 +625,7 @@ class _InfoCard extends StatelessWidget {
                   children: [
                     Text(
                       label,
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white.withValues(alpha: 0.6),
                         fontSize: 11,
                       ),
@@ -632,7 +633,7 @@ class _InfoCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       title,
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white,
                         fontSize: isLargeValue ? 24 : 14,
                         fontWeight: isLargeValue ? FontWeight.bold : FontWeight.w500,
@@ -667,7 +668,7 @@ class _InterestTag extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.inter(
+        style: AppFonts.clashGrotesk(
           color: Colors.white,
           fontSize: 13,
           fontWeight: FontWeight.w500,

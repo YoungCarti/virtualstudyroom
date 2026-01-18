@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 // import 'package:video_player/video_player.dart'; // Option 2: Uncomment for video background
@@ -145,7 +146,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Text(
                       "Join a growing community of students and enjoy a more focused and connected way of studying together online",
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         fontSize: 15,
                         fontWeight: FontWeight.w400,
                         color: Colors.white.withValues(alpha: 0.85),
@@ -175,7 +176,7 @@ class _SplashScreenState extends State<SplashScreen> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        textStyle: GoogleFonts.inter(
+                        textStyle: AppFonts.clashGrotesk(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -198,7 +199,7 @@ class _SplashScreenState extends State<SplashScreen> {
                     },
                     child: RichText(
                       text: TextSpan(
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           fontSize: 14,
                           color: Colors.white,
                         ),

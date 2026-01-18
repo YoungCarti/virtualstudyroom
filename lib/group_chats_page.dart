@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -65,7 +66,7 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
                   children: [
                     Text(
                       'Messages',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.w600,
@@ -104,11 +105,11 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
                     indicatorWeight: 2,
                     labelColor: Colors.white,
                     unselectedLabelColor: Colors.grey[500],
-                    labelStyle: GoogleFonts.inter(
+                    labelStyle: AppFonts.clashGrotesk(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
-                    unselectedLabelStyle: GoogleFonts.inter(
+                    unselectedLabelStyle: AppFonts.clashGrotesk(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -431,7 +432,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                     child: Center(
                       child: Text(
                         initials,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: avatarColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -472,7 +473,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             group.groupName,
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white,
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
@@ -483,7 +484,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                         if (group.lastMessageTime != null)
                           Text(
                             _formatTime(group.lastMessageTime),
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.grey[500],
                               fontSize: 12,
                             ),
@@ -505,7 +506,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             group.lastMessage ?? 'Tap to start chatting',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.grey[500],
                               fontSize: 13,
                             ),
@@ -523,7 +524,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                             ),
                             child: Text(
                               '${group.unreadCount}',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 color: Colors.white,
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
@@ -560,7 +561,7 @@ class _EmptyState extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               message,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.grey[500],
                 fontSize: 14,
               ),

@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -77,7 +78,7 @@ class _LoginPageState extends State<LoginPage> {
             Text(
               'Reset Password',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
                 color: Colors.white,
@@ -87,7 +88,7 @@ class _LoginPageState extends State<LoginPage> {
             Text(
               'Enter your email to receive a reset link.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.inter(color: Colors.white60, fontSize: 14),
+              style: AppFonts.clashGrotesk(color: Colors.white60, fontSize: 14),
             ),
             const SizedBox(height: 24),
             // Reusing your glassmorphism style input for consistency
@@ -134,7 +135,7 @@ class _LoginPageState extends State<LoginPage> {
                 },
                 child: Text(
                   'Send Reset Link',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
                   ),
@@ -292,7 +293,7 @@ class _LoginPageState extends State<LoginPage> {
                         const SizedBox(width: 12),
                         Text(
                           'StudyLink',
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
@@ -305,7 +306,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Welcome Title
                     Text(
                       'Sign in to your\nAccount',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -328,14 +329,14 @@ class _LoginPageState extends State<LoginPage> {
                       child: RichText(
                         text: TextSpan(
                           text: "Don't have an account? ",
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             fontSize: 14,
                             color: Colors.white.withOpacity(0.6),
                           ),
                           children: [
                             TextSpan(
                               text: 'Sign Up',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF22D3EE),
@@ -412,7 +413,7 @@ class _LoginPageState extends State<LoginPage> {
                               const SizedBox(width: 8),
                               Text(
                                 'Remember me',
-                                style: GoogleFonts.inter(
+                                style: AppFonts.clashGrotesk(
                                   fontSize: 14,
                                   color: Colors.white.withOpacity(0.7),
                                 ),
@@ -424,7 +425,7 @@ class _LoginPageState extends State<LoginPage> {
                           onPressed: _showForgotPasswordSheet,
                           child: Text(
                             'Forgot Password ?',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
                               color: const Color(0xFF22D3EE),
@@ -467,7 +468,7 @@ class _LoginPageState extends State<LoginPage> {
                                 )
                               : Text(
                                   'Log In',
-                                  style: GoogleFonts.inter(
+                                  style: AppFonts.clashGrotesk(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -488,7 +489,7 @@ class _LoginPageState extends State<LoginPage> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Text(
                             'Or login with',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               fontSize: 13,
                               color: Colors.white.withOpacity(0.5),
                             ),
@@ -515,7 +516,7 @@ class _LoginPageState extends State<LoginPage> {
                       child: Text(
                         'By signing up, you agree to the Terms of Service and Data Processing Agreement',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           fontSize: 12,
                           color: Colors.white.withOpacity(0.5),
                           height: 1.4,
@@ -536,7 +537,7 @@ class _LoginPageState extends State<LoginPage> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: GoogleFonts.inter(
+      style: AppFonts.clashGrotesk(
         fontSize: 13,
         color: Colors.white.withOpacity(0.5),
       ),
@@ -574,7 +575,7 @@ class _LoginPageState extends State<LoginPage> {
                 controller: controller,
                 keyboardType: keyboardType,
                 obscureText: obscureText,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
@@ -582,7 +583,7 @@ class _LoginPageState extends State<LoginPage> {
                 cursorColor: const Color(0xFF22D3EE),
                 decoration: InputDecoration(
                   hintText: placeholder,
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: AppFonts.clashGrotesk(
                     color: Colors.white.withOpacity(0.4),
                   ),
                   prefixIcon: Icon(icon,
@@ -613,7 +614,7 @@ class _LoginPageState extends State<LoginPage> {
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
               errorText,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 fontSize: 12,
                 color: const Color(0xFFEF4444),
               ),
@@ -648,7 +649,7 @@ class _LoginPageState extends State<LoginPage> {
                 const SizedBox(width: 8),
                 Text(
                   text,
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     fontSize: 15,
                     fontWeight: FontWeight.w500,
                     color: Colors.white,

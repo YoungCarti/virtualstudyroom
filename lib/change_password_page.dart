@@ -184,7 +184,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
                       color: Colors.white,
                       fontSize: 24,
                       fontWeight: FontWeight.w600,
-                      fontFamily: 'Inter',
+                      fontFamily: 'ClashGrotesk',
                     ),
                   ),
                   const SizedBox(height: 16),

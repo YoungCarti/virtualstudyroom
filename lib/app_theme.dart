@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -78,49 +79,49 @@ class AppTheme {
   
   // ============ TEXT STYLES ============
   
-  static TextStyle get headingLarge => GoogleFonts.inter(
+  static TextStyle get headingLarge => AppFonts.clashGrotesk(
     fontSize: 28,
     fontWeight: FontWeight.bold,
     color: textPrimary,
   );
   
-  static TextStyle get headingMedium => GoogleFonts.inter(
+  static TextStyle get headingMedium => AppFonts.clashGrotesk(
     fontSize: 22,
     fontWeight: FontWeight.w600,
     color: textPrimary,
   );
   
-  static TextStyle get headingSmall => GoogleFonts.inter(
+  static TextStyle get headingSmall => AppFonts.clashGrotesk(
     fontSize: 18,
     fontWeight: FontWeight.w600,
     color: textPrimary,
   );
   
-  static TextStyle get bodyLarge => GoogleFonts.inter(
+  static TextStyle get bodyLarge => AppFonts.clashGrotesk(
     fontSize: 16,
     fontWeight: FontWeight.w500,
     color: textPrimary,
   );
   
-  static TextStyle get bodyMedium => GoogleFonts.inter(
+  static TextStyle get bodyMedium => AppFonts.clashGrotesk(
     fontSize: 14,
     fontWeight: FontWeight.w400,
     color: textPrimary,
   );
   
-  static TextStyle get bodySmall => GoogleFonts.inter(
+  static TextStyle get bodySmall => AppFonts.clashGrotesk(
     fontSize: 12,
     fontWeight: FontWeight.w400,
     color: textSecondary,
   );
   
-  static TextStyle get caption => GoogleFonts.inter(
+  static TextStyle get caption => AppFonts.clashGrotesk(
     fontSize: 11,
     fontWeight: FontWeight.w500,
     color: textMuted,
   );
   
-  static TextStyle get buttonText => GoogleFonts.inter(
+  static TextStyle get buttonText => AppFonts.clashGrotesk(
     fontSize: 15,
     fontWeight: FontWeight.w600,
     color: textPrimary,

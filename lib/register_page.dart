@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -181,7 +182,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     // Header
                     Text(
                       'Create Account',
-                      style: GoogleFonts.inter(
+                      style: AppFonts.clashGrotesk(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -197,14 +198,14 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: RichText(
                         text: TextSpan(
                           text: "Already have an account? ",
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             fontSize: 14,
                             color: Colors.white.withOpacity(0.6),
                           ),
                           children: [
                             TextSpan(
                               text: 'Log In',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                                 color: const Color(0xFF22D3EE),
@@ -284,7 +285,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             ),
                             ignoreBlank: false,
                             autoValidateMode: AutovalidateMode.disabled,
-                            selectorTextStyle: GoogleFonts.inter(color: Colors.white),
+                            selectorTextStyle: AppFonts.clashGrotesk(color: Colors.white),
                             initialValue: _number,
                             textFieldController: _phoneController,
                             formatInput: true,
@@ -292,10 +293,10 @@ class _RegisterPageState extends State<RegisterPage> {
                             inputDecoration: InputDecoration(
                               border: InputBorder.none,
                               hintText: 'Phone Number',
-                              hintStyle: GoogleFonts.inter(color: Colors.white.withOpacity(0.4)),
+                              hintStyle: AppFonts.clashGrotesk(color: Colors.white.withOpacity(0.4)),
                               contentPadding: const EdgeInsets.only(bottom: 12),
                             ),
-                            textStyle: GoogleFonts.inter(
+                            textStyle: AppFonts.clashGrotesk(
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                               color: Colors.white,
@@ -352,7 +353,7 @@ class _RegisterPageState extends State<RegisterPage> {
                                 )
                               : Text(
                                   'Create Account',
-                                  style: GoogleFonts.inter(
+                                  style: AppFonts.clashGrotesk(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w600,
                                     color: Colors.white,
@@ -369,7 +370,7 @@ class _RegisterPageState extends State<RegisterPage> {
                       child: Text(
                         'By creating an account, you agree to our Terms of Service and Privacy Policy',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           fontSize: 12,
                           color: Colors.white.withOpacity(0.5),
                           height: 1.4,
@@ -390,7 +391,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Widget _buildLabel(String text) {
     return Text(
       text,
-      style: GoogleFonts.inter(
+      style: AppFonts.clashGrotesk(
         fontSize: 13,
         color: Colors.white.withOpacity(0.5),
       ),
@@ -432,7 +433,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: controller,
                 keyboardType: keyboardType,
                 obscureText: obscureText,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: Colors.white,
@@ -440,7 +441,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 cursorColor: const Color(0xFF22D3EE),
                 decoration: InputDecoration(
                   hintText: placeholder,
-                  hintStyle: GoogleFonts.inter(
+                  hintStyle: AppFonts.clashGrotesk(
                     color: Colors.white.withOpacity(0.4),
                   ),
                   prefixIcon: Icon(icon, color: Colors.white.withOpacity(0.5), size: 20),
@@ -466,7 +467,7 @@ class _RegisterPageState extends State<RegisterPage> {
             padding: const EdgeInsets.only(top: 6, left: 4),
             child: Text(
               errorText,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 fontSize: 12,
                 color: const Color(0xFFEF4444),
               ),

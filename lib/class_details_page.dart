@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -120,7 +121,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
         title: 'Delete Material?',
         content: Text(
           'This will permanently delete the file.',
-          style: GoogleFonts.inter(color: _AppColors.textSecondary),
+          style: AppFonts.clashGrotesk(color: _AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -266,7 +267,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
         title: 'Leave Class?',
         content: Text(
           'Are you sure you want to leave ${widget.className}?',
-          style: GoogleFonts.inter(color: _AppColors.textSecondary),
+          style: AppFonts.clashGrotesk(color: _AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -311,7 +312,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
         title: 'Delete Class?',
         content: Text(
           'This action cannot be undone. All data will be removed.',
-          style: GoogleFonts.inter(color: _AppColors.textSecondary),
+          style: AppFonts.clashGrotesk(color: _AppColors.textSecondary),
         ),
         actions: [
           TextButton(
@@ -617,7 +618,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           ),
           child: Text(
             'View Assignments',
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               fontSize: 16,
               fontWeight: FontWeight.w600,
             ),
@@ -645,7 +646,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           child: Center(
             child: Text(
               widget.className.isNotEmpty ? widget.className[0].toUpperCase() : '?',
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.white,
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
@@ -660,7 +661,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
             children: [
               Text(
                 widget.className,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   color: _AppColors.textPrimary,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
@@ -669,7 +670,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
               const SizedBox(height: 4),
               Text(
                 widget.classCode,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   color: _AppColors.textSecondary,
                   fontSize: 14,
                 ),
@@ -697,7 +698,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           children: [
             Text(
               'About this class',
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: _AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -706,7 +707,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
             const SizedBox(height: 12),
             Text(
               description,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: _AppColors.textSecondary,
                 fontSize: 14,
                 height: 1.5,
@@ -737,7 +738,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           children: [
             Text(
               'Lecturer',
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: _AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -765,7 +766,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                         backgroundColor: _AppColors.primary.withValues(alpha: 0.2),
                         child: Text(
                           initial,
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: _AppColors.primary,
                             fontWeight: FontWeight.bold,
                           ),
@@ -780,7 +781,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                               children: [
                                 Text(
                                   name,
-                                  style: GoogleFonts.inter(
+                                  style: AppFonts.clashGrotesk(
                                     color: _AppColors.textPrimary,
                                     fontSize: 15,
                                     fontWeight: FontWeight.w600,
@@ -797,7 +798,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                             const SizedBox(height: 2),
                             Text(
                               'Course Lecturer',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 color: _AppColors.textSecondary,
                                 fontSize: 13,
                               ),
@@ -825,7 +826,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           children: [
             Text(
               'Groups',
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: _AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -862,7 +863,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
         ),
         const SizedBox(height: 12),
         if (uid == null)
-          Text('Sign in to view groups.', style: GoogleFonts.inter(color: _AppColors.textSecondary))
+          Text('Sign in to view groups.', style: AppFonts.clashGrotesk(color: _AppColors.textSecondary))
         else
           StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
             stream: FirebaseFirestore.instance
@@ -875,14 +876,14 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                 return Center(child: CircularProgressIndicator(color: _AppColors.primary));
               }
               if (!snapshot.hasData) {
-                return Text('No groups yet.', style: GoogleFonts.inter(color: _AppColors.textSecondary));
+                return Text('No groups yet.', style: AppFonts.clashGrotesk(color: _AppColors.textSecondary));
               }
               final groups = snapshot.data!.docs
                   .where((doc) => doc.id != '_placeholder')
                   .toList();
 
               if (groups.isEmpty) {
-                return Text('No groups yet.', style: GoogleFonts.inter(color: _AppColors.textSecondary));
+                return Text('No groups yet.', style: AppFonts.clashGrotesk(color: _AppColors.textSecondary));
               }
               
               return ListView.separated(
@@ -926,11 +927,11 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                               children: [
                                 Text(
                                   groupName,
-                                  style: GoogleFonts.inter(color: _AppColors.textPrimary, fontWeight: FontWeight.w600),
+                                  style: AppFonts.clashGrotesk(color: _AppColors.textPrimary, fontWeight: FontWeight.w600),
                                 ),
                                 Text(
                                   '${members.length} members',
-                                  style: GoogleFonts.inter(color: _AppColors.textSecondary, fontSize: 12),
+                                  style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 12),
                                 ),
                               ],
                             ),
@@ -951,7 +952,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                                   borderRadius: BorderRadius.circular(8),
                                   border: Border.all(color: _AppColors.primary.withValues(alpha: 0.4)),
                                 ),
-                                child: Text('Join', style: GoogleFonts.inter(color: _AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
+                                child: Text('Join', style: AppFonts.clashGrotesk(color: _AppColors.primary, fontSize: 12, fontWeight: FontWeight.bold)),
                               ),
                             )
                           else
@@ -977,7 +978,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           children: [
             Text(
               'Materials',
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: _AppColors.textPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -994,7 +995,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                     .length ?? 0;
                 return Text(
                   '$count materials',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: _AppColors.textSecondary,
                     fontSize: 13,
                   ),
@@ -1020,7 +1021,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                   const SizedBox(width: 4),
                   Text(
                     'Upload',
-                    style: GoogleFonts.inter(
+                    style: AppFonts.clashGrotesk(
                       color: _AppColors.primary,
                       fontWeight: FontWeight.w600,
                       fontSize: 12,
@@ -1043,14 +1044,14 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
               return Center(child: CircularProgressIndicator(color: _AppColors.primary));
             }
             if (!snapshot.hasData) {
-              return Text('No materials uploaded yet.', style: GoogleFonts.inter(color: _AppColors.textSecondary));
+              return Text('No materials uploaded yet.', style: AppFonts.clashGrotesk(color: _AppColors.textSecondary));
             }
             final docs = snapshot.data!.docs
                 .where((doc) => doc.id != '_placeholder')
                 .toList();
 
             if (docs.isEmpty) {
-              return Text('No materials uploaded yet.', style: GoogleFonts.inter(color: _AppColors.textSecondary));
+              return Text('No materials uploaded yet.', style: AppFonts.clashGrotesk(color: _AppColors.textSecondary));
             }
             
             return Column(
@@ -1094,7 +1095,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                                   children: [
                                     Text(
                                       data['title'] ?? 'Untitled',
-                                      style: GoogleFonts.inter(
+                                      style: AppFonts.clashGrotesk(
                                         color: _AppColors.textPrimary,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -1104,7 +1105,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                                       const SizedBox(height: 2),
                                       Text(
                                         data['note'],
-                                        style: GoogleFonts.inter(
+                                        style: AppFonts.clashGrotesk(
                                           color: _AppColors.textSecondary,
                                           fontSize: 12,
                                         ),
@@ -1190,7 +1191,7 @@ class _ClassAssignmentsPage extends StatelessWidget {
         ),
         title: Text(
           '$className - Assignments',
-          style: GoogleFonts.inter(
+          style: AppFonts.clashGrotesk(
             color: Colors.white,
             fontSize: 18,
             fontWeight: FontWeight.w600,
@@ -1230,7 +1231,7 @@ class _ClassAssignmentsPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'No assignments yet',
-                    style: GoogleFonts.inter(color: _AppColors.textSecondary, fontSize: 16),
+                    style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 16),
                   ),
                   if (isLecturer) ...[
                     const SizedBox(height: 16),
@@ -1298,7 +1299,7 @@ class _ClassAssignmentsPage extends StatelessWidget {
                             children: [
                               Text(
                                 a.title,
-                                style: GoogleFonts.inter(
+                                style: AppFonts.clashGrotesk(
                                   color: _AppColors.textPrimary,
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
@@ -1307,7 +1308,7 @@ class _ClassAssignmentsPage extends StatelessWidget {
                               const SizedBox(height: 4),
                               Text(
                                 'Due: ${DateFormat('MMM d, yyyy').format(a.dueDate)}',
-                                style: GoogleFonts.inter(
+                                style: AppFonts.clashGrotesk(
                                   color: _AppColors.textSecondary,
                                   fontSize: 13,
                                 ),
@@ -1346,7 +1347,7 @@ class _StyledDialog extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(color: _AppColors.divider),
       ),
-      title: Text(title, style: GoogleFonts.inter(color: _AppColors.textPrimary)),
+      title: Text(title, style: AppFonts.clashGrotesk(color: _AppColors.textPrimary)),
       content: content,
       actions: actions,
     );

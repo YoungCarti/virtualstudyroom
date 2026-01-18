@@ -227,7 +227,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.w600,
-              fontFamily: 'Inter', // Assuming Inter is available or falls back
+              fontFamily: 'ClashGrotesk', // Assuming Inter is available or falls back
             ),
           ),
           _buildCircularButton(

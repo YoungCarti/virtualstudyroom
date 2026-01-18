@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
@@ -142,7 +143,7 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                             // Schedule Calendar
                             Text(
                               'Schedule',
-                              style: GoogleFonts.inter(
+                              style: AppFonts.clashGrotesk(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w600,
@@ -226,7 +227,7 @@ class _HeaderSection extends StatelessWidget {
               children: [
                 Text(
                   'Hello, $userName!',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -234,7 +235,7 @@ class _HeaderSection extends StatelessWidget {
                 ),
                 Text(
                   "Let's learn something new",
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 13,
                   ),
@@ -413,7 +414,7 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
             children: [
               Text(
                 'Assignments Due',
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -438,7 +439,7 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
                           const SizedBox(width: 4),
                           Text(
                             '$pendingCount pending',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: const Color(0xFFF43F5E),
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
@@ -462,7 +463,7 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
                   const SizedBox(height: 12),
                   Text(
                     'All caught up!',
-                    style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.5)),
+                    style: AppFonts.clashGrotesk(color: Colors.white.withValues(alpha: 0.5)),
                   ),
                 ],
               ),
@@ -490,7 +491,7 @@ class _AssignmentsCardState extends State<_AssignmentsCard> {
                 children: [
                   Text(
                     'View all assignments',
-                    style: GoogleFonts.inter(
+                    style: AppFonts.clashGrotesk(
                       color: Colors.white.withValues(alpha: 0.6),
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -585,7 +586,7 @@ class _AssignmentItem extends StatelessWidget {
                     children: [
                       Text(
                         assignment.title,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white,
                           fontSize: 15,
                           fontWeight: FontWeight.w600,
@@ -596,7 +597,7 @@ class _AssignmentItem extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         assignment.className.isNotEmpty ? assignment.className : assignment.classCode,
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 12,
                         ),
@@ -613,7 +614,7 @@ class _AssignmentItem extends StatelessWidget {
                   ),
                   child: Text(
                     status,
-                    style: GoogleFonts.inter(
+                    style: AppFonts.clashGrotesk(
                       color: statusColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
@@ -842,7 +843,7 @@ class _WelcomeCard extends StatelessWidget {
               children: [
                 Text(
                   _getGreeting(),
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: AppTheme.textSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -851,7 +852,7 @@ class _WelcomeCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   "Let's make today count!",
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -860,7 +861,7 @@ class _WelcomeCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   _getMotivationalQuote(),
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: AppTheme.textMuted,
                     fontSize: 11,
                     fontStyle: FontStyle.italic,
@@ -893,7 +894,7 @@ class _WelcomeCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '$streak',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -901,7 +902,7 @@ class _WelcomeCard extends StatelessWidget {
                 ),
                 Text(
                   'day streak',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white.withValues(alpha: 0.8),
                     fontSize: 10,
                     fontWeight: FontWeight.w500,
@@ -929,7 +930,7 @@ class _QuickActionsGrid extends StatelessWidget {
           padding: const EdgeInsets.only(left: 4, bottom: 12),
           child: Text(
             'Quick Actions',
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: Colors.white,
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -1041,7 +1042,7 @@ class _QuickActionButton extends StatelessWidget {
             Expanded(
               child: Text(
                 label,
-                style: GoogleFonts.inter(
+                style: AppFonts.clashGrotesk(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
@@ -1117,7 +1118,7 @@ class _CleanHeader extends StatelessWidget {
               children: [
                 Text(
                   'Hi, $userName',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -1126,7 +1127,7 @@ class _CleanHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Here is your activity today.',
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.grey[500],
                     fontSize: 14,
                   ),
@@ -1288,7 +1289,7 @@ class _StatCard extends StatelessWidget {
               children: [
                 Text(
                   value,
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: color,
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
@@ -1300,7 +1301,7 @@ class _StatCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               label,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.grey[500],
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
@@ -1404,7 +1405,7 @@ class _QuickActionIcon extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             label,
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: Colors.grey[400],
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -1488,7 +1489,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                 ),
                 Text(
                   _getWeekLabel(),
-                  style: GoogleFonts.inter(
+                  style: AppFonts.clashGrotesk(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -1528,7 +1529,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                     children: [
                       Text(
                         _getDayName(index),
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           color: isToday ? const Color(0xFF22D3EE) : Colors.grey[500],
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
@@ -1545,7 +1546,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                         child: Center(
                           child: Text(
                             '${day.day}',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: isToday ? Colors.black : Colors.white,
                               fontSize: 13,
                               fontWeight: isToday ? FontWeight.bold : FontWeight.w500,
@@ -1566,7 +1567,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
               padding: const EdgeInsets.all(24),
               child: Text(
                 'Sign in to view schedule',
-                style: GoogleFonts.inter(color: Colors.grey[500]),
+                style: AppFonts.clashGrotesk(color: Colors.grey[500]),
               ),
             )
           else
@@ -1597,7 +1598,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                         const SizedBox(height: 8),
                         Text(
                           'No classes enrolled',
-                          style: GoogleFonts.inter(color: Colors.grey[500]),
+                          style: AppFonts.clashGrotesk(color: Colors.grey[500]),
                         ),
                       ],
                     ),
@@ -1626,7 +1627,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                             const SizedBox(height: 8),
                             Text(
                               'No scheduled classes this week',
-                              style: GoogleFonts.inter(color: Colors.grey[500]),
+                              style: AppFonts.clashGrotesk(color: Colors.grey[500]),
                             ),
                           ],
                         ),
@@ -1670,7 +1671,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                                         padding: const EdgeInsets.only(right: 8, top: 0),
                                         child: Text(
                                           label,
-                                          style: GoogleFonts.inter(
+                                          style: AppFonts.clashGrotesk(
                                             color: Colors.grey[600],
                                             fontSize: 11,
                                             fontWeight: FontWeight.w500,
@@ -1905,7 +1906,7 @@ class _ScheduleEventCard extends StatelessWidget {
         children: [
           Text(
             '${event.startTime} - ${event.endTime}',
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: event.color,
               fontSize: 10,
               fontWeight: FontWeight.w600,
@@ -1914,7 +1915,7 @@ class _ScheduleEventCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             event.className,
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: Colors.white,
               fontSize: 12,
               fontWeight: FontWeight.w600,
@@ -1926,7 +1927,7 @@ class _ScheduleEventCard extends StatelessWidget {
             const SizedBox(height: 2),
             Text(
               event.room,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.grey[400],
                 fontSize: 10,
               ),
@@ -1963,7 +1964,7 @@ class _TimeGridEventCard extends StatelessWidget {
         children: [
           Text(
             '${event.startTime} - ${event.endTime}',
-            style: GoogleFonts.inter(
+            style: AppFonts.clashGrotesk(
               color: event.color,
               fontSize: 9,
               fontWeight: FontWeight.w600,
@@ -1973,7 +1974,7 @@ class _TimeGridEventCard extends StatelessWidget {
           Flexible(
             child: Text(
               event.className,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.white,
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
@@ -1985,7 +1986,7 @@ class _TimeGridEventCard extends StatelessWidget {
           if (event.room.isNotEmpty) 
             Text(
               event.room,
-              style: GoogleFonts.inter(
+              style: AppFonts.clashGrotesk(
                 color: Colors.grey[400],
                 fontSize: 8,
               ),

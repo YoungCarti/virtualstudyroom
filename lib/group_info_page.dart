@@ -1,3 +1,4 @@
+import 'app_fonts.dart';
 import 'dart:ui';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -157,7 +158,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                         child: Text(
                           widget.groupName,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.w600,
@@ -233,7 +234,7 @@ class _GroupInfoPageState extends State<GroupInfoPage> {
                       icon: const Icon(Icons.exit_to_app),
                       label: Text(
                         'Leave Group',
-                        style: GoogleFonts.inter(
+                        style: AppFonts.clashGrotesk(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
                         ),
@@ -289,7 +290,7 @@ class _MediaSection extends StatelessWidget {
           return Center(
             child: Text(
               'No media shared yet',
-              style: GoogleFonts.inter(color: Colors.white54),
+              style: AppFonts.clashGrotesk(color: Colors.white54),
             ),
           );
         }
@@ -393,7 +394,7 @@ class _LinksSection extends StatelessWidget {
           return Center(
             child: Text(
               'No links shared yet',
-              style: GoogleFonts.inter(color: Colors.white54),
+              style: AppFonts.clashGrotesk(color: Colors.white54),
             ),
           );
         }
@@ -425,7 +426,7 @@ class _LinksSection extends StatelessWidget {
                       Expanded(
                         child: Text(
                           urls.first,
-                          style: GoogleFonts.inter(
+                          style: AppFonts.clashGrotesk(
                             color: const Color(0xFF22D3EE),
                             fontSize: 14,
                           ),
@@ -439,7 +440,7 @@ class _LinksSection extends StatelessWidget {
                     const SizedBox(height: 8),
                     Text(
                       text,
-                      style: GoogleFonts.inter(color: Colors.white70, fontSize: 13),
+                      style: AppFonts.clashGrotesk(color: Colors.white70, fontSize: 13),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -534,7 +535,7 @@ class _DocsSection extends StatelessWidget {
           return Center(
             child: Text(
               'No documents shared yet',
-              style: GoogleFonts.inter(color: Colors.white54),
+              style: AppFonts.clashGrotesk(color: Colors.white54),
             ),
           );
         }
@@ -570,7 +571,7 @@ class _DocsSection extends StatelessWidget {
                         children: [
                           Text(
                             fileName,
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white,
                               fontSize: 15,
                               fontWeight: FontWeight.w600,
@@ -581,7 +582,7 @@ class _DocsSection extends StatelessWidget {
                           const SizedBox(height: 4),
                           Text(
                             fileUrl != null ? 'Tap to open' : 'File',
-                            style: GoogleFonts.inter(
+                            style: AppFonts.clashGrotesk(
                               color: Colors.white54,
                               fontSize: 12,
                             ),
@@ -693,7 +694,7 @@ class _TabButton extends StatelessWidget {
         child: Text(
           label,
           textAlign: TextAlign.center,
-          style: GoogleFonts.inter(
+          style: AppFonts.clashGrotesk(
             color: isSelected ? Colors.white : Colors.white54,
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
