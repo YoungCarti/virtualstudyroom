@@ -24,8 +24,11 @@ class NotesHelperPage extends StatefulWidget {
 
 class _NotesHelperPageState extends State<NotesHelperPage> {
   final TextEditingController _notesController = TextEditingController();
+  final TextEditingController _editController = TextEditingController();
   bool _isGenerating = false;
+  bool _isEditing = false;
   String? _generatedOutline;
+  String? _generatedTitle;
   List<Map<String, String>> _references = [];
   bool _showOutline = false;
   int _selectedTab = 0;
@@ -33,6 +36,7 @@ class _NotesHelperPageState extends State<NotesHelperPage> {
   @override
   void dispose() {
     _notesController.dispose();
+    _editController.dispose();
     super.dispose();
   }
 
@@ -52,6 +56,7 @@ You are a study assistant. Analyze the following student notes and create a well
 
 Return ONLY a valid JSON object with this exact structure:
 {
+  "title": "A short, descriptive title for the notes",
   "outline": "The markdown generated outline here...",
   "references": [
     {
@@ -98,9 +103,18 @@ ${_notesController.text}
         
         if (mounted) {
           setState(() {
+             // Use AI title, or fallback to first line of notes, or generic default
+            _generatedTitle = content['title']?.toString() ?? 
+                             (_notesController.text.split('\n').firstWhere((l) => l.isNotEmpty, orElse: () => 'Study Notes').trim());
+            
+            // Ensure title isn't too long if extracted from notes
+            if (_generatedTitle!.length > 50) {
+              _generatedTitle = '${_generatedTitle!.substring(0, 47)}...';
+            }
+
             _generatedOutline = content['outline'];
             _references = List<Map<String, String>>.from(
-              (content['references'] as List).map((item) => {
+              (content['references'] as List? ?? []).map((item) => { // Handle null list
                 'title': item['title'].toString(),
                 'url': item['url'].toString(),
               })
@@ -367,6 +381,68 @@ ${_notesController.text}
 
     return Column(
       children: [
+        // Header Section
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Title - Full Width
+              Text(
+                _generatedTitle ?? 'Study Notes',
+                style: GoogleFonts.outfit(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: _pureWhite,
+                  height: 1.2,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Metadata and Actions Row
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    // Date
+                    Icon(Icons.calendar_today, color: _pureWhite.withValues(alpha: 0.6), size: 16),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Created ${_getCurrentDate()}',
+                      style: GoogleFonts.outfit(
+                        color: _pureWhite.withValues(alpha: 0.6),
+                        fontSize: 14,
+                      ),
+                    ),
+                    
+                    const SizedBox(width: 24), // Spacer replacement
+                    
+                    // Actions
+                    Row(
+                      children: [
+                        _buildHeaderAction(Icons.bookmark_border, 'Save'),
+                        const SizedBox(width: 8),
+                        _buildHeaderAction(Icons.share_outlined, 'Share'),
+                        const SizedBox(width: 8),
+                        // Compact "More" button to save space
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: _midnightBlue,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(Icons.more_horiz, color: _pureWhite, size: 16),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+
         // Tab bar
         Container(
           margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -385,10 +461,31 @@ ${_notesController.text}
         
         // Outline content
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: _buildMarkdownContent(_generatedOutline!),
-          ),
+          child: _isEditing
+              ? Container(
+                  margin: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _midnightBlue,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: TextField(
+                    controller: _editController,
+                    maxLines: null,
+                    style: GoogleFonts.firaCode(
+                      color: _pureWhite,
+                      fontSize: 14,
+                      height: 1.5,
+                    ),
+                    decoration: const InputDecoration(
+                      border: InputBorder.none,
+                    ),
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: _buildMarkdownContent(_generatedOutline!),
+                ),
         ),
         
         // Bottom action bar
@@ -398,10 +495,22 @@ ${_notesController.text}
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               _buildActionButton(
-                icon: Icons.edit_outlined,
-                label: 'Edit outline',
-                onTap: () => setState(() => _showOutline = false),
-                isPrimary: false,
+                icon: _isEditing ? Icons.check_rounded : Icons.edit_outlined,
+                label: _isEditing ? 'Save changes' : 'Edit outline',
+                onTap: () {
+                  if (_isEditing) {
+                    // Save changes
+                    setState(() {
+                      _generatedOutline = _editController.text;
+                      _isEditing = false;
+                    });
+                  } else {
+                    // Start editing
+                    _editController.text = _generatedOutline ?? '';
+                    setState(() => _isEditing = true);
+                  }
+                },
+                isPrimary: _isEditing,
               ),
               const SizedBox(width: 12),
               _buildActionButton(
@@ -710,5 +819,39 @@ ${_notesController.text}
       }
     }
     return codeBlockCount % 2 == 1;
+  }
+
+  Widget _buildHeaderAction(IconData icon, String? label) {
+    return Container(
+      padding: label != null 
+          ? const EdgeInsets.symmetric(horizontal: 12, vertical: 6)
+          : const EdgeInsets.all(6),
+      decoration: BoxDecoration(
+        color: _midnightBlue,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: _pureWhite, size: 16),
+          if (label != null) ...[
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: GoogleFonts.outfit(
+                color: _pureWhite,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _getCurrentDate() {
+    final now = DateTime.now();
+    return '${now.month}/${now.day}/${now.year.toString().substring(2)}';
   }
 }
