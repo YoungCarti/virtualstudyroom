@@ -5,6 +5,11 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null;
       allow write: if request.auth.uid == userId;
+      
+      // Forest Pomodoro sessions - users can read/write their own sessions
+      match /forest_sessions/{sessionId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
 
     // Classes

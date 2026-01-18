@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'forest_timer_page.dart';
 
-const Color _primaryPurple = Color(0xFF6C63FF);
-const Color _secondaryPurple = Color(0xFFB4A0FF);
-const Color _backgroundTint = Color(0xFFF4F1FF);
+// Ocean Sunset Color Palette
+const Color _deepNavy = Color(0xFF0A1929);      // Background base
+const Color _midnightBlue = Color(0xFF122A46);  // Cards/containers
+const Color _electricBlue = Color(0xFF2196F3); // Primary actions
+const Color _mintGreen = Color(0xFF4ECDC4);    // Success/positive
+const Color _pureWhite = Color(0xFFFFFFFF);    // Text
 
 class AiToolsPage extends StatefulWidget {
   const AiToolsPage({super.key});
@@ -16,9 +20,7 @@ class _AiToolsPageState extends State<AiToolsPage>
   late final TabController _tabController =
       TabController(length: 4, vsync: this);
 
-  double _studyMinutes = 25;
-  double _breakMinutes = 5;
-  bool _smartBreaks = true;
+
   String _summary = 'Upload content to get AI-generated study notes.';
   bool _uploading = false;
 
@@ -31,18 +33,7 @@ class _AiToolsPageState extends State<AiToolsPage>
     super.dispose();
   }
 
-  String get _timerSuggestion {
-    if (_studyMinutes >= 45) {
-      return 'AI Suggestion: Consider shorter sprints for better retention.';
-    }
-    if (_breakMinutes <= 3 && _smartBreaks) {
-      return 'AI Suggestion: Micro-breaks detected. Try 5 mins for brain recovery.';
-    }
-    if (_smartBreaks && _studyMinutes >= 25) {
-      return 'AI Suggestion: Balanced Pomodoro detected. Great for focus!';
-    }
-    return 'AI Suggestion: Enable Smart Breaks for adaptive pacing.';
-  }
+
 
   Future<void> _simulateSummary() async {
     if (_summarizerInput.text.trim().isEmpty) {
@@ -63,16 +54,14 @@ class _AiToolsPageState extends State<AiToolsPage>
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121121) : _backgroundTint,
+      backgroundColor: _deepNavy,
       appBar: AppBar(
         title: const Text('AI Tools Hub'),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF1F1F33),
+        foregroundColor: _pureWhite,
       ),
       body: SafeArea(
         child: Column(
@@ -81,25 +70,27 @@ class _AiToolsPageState extends State<AiToolsPage>
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.08)
-                      : Colors.white.withValues(alpha: 0.95),
-                  borderRadius: BorderRadius.circular(24),
+                  color: _midnightBlue,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                padding: const EdgeInsets.all(4),
                 child: TabBar(
                   controller: _tabController,
                   indicator: BoxDecoration(
-                    color: _primaryPurple,
-                    borderRadius: BorderRadius.circular(24),
+                    color: _electricBlue,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  labelColor: Colors.white,
-                  unselectedLabelColor:
-                      isDark ? Colors.white70 : const Color(0xFF6A6A84),
+                  indicatorSize: TabBarIndicatorSize.tab,
+                  dividerColor: Colors.transparent,
+                  labelColor: _pureWhite,
+                  labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                  unselectedLabelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                  unselectedLabelColor: _pureWhite.withValues(alpha: 0.6),
                   tabs: const [
-                    Tab(text: 'AI Timer'),
-                    Tab(text: 'AI Summarizer'),
-                    Tab(text: 'AI Quiz Maker'),
-                    Tab(text: 'AI Notes Helper'),
+                    Tab(text: 'Timer'),
+                    Tab(text: 'Summary'),
+                    Tab(text: 'Quiz'),
+                    Tab(text: 'Notes'),
                   ],
                 ),
               ),
@@ -109,25 +100,12 @@ class _AiToolsPageState extends State<AiToolsPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _AiTimerTab(
-                    isDark: isDark,
-                    studyMinutes: _studyMinutes,
-                    breakMinutes: _breakMinutes,
-                    smartBreaks: _smartBreaks,
-                    suggestion: _timerSuggestion,
-                    onStudyChanged: (value) =>
-                        setState(() => _studyMinutes = value),
-                    onBreakChanged: (value) =>
-                        setState(() => _breakMinutes = value),
-                    onSmartBreaksChanged: (value) =>
-                        setState(() => _smartBreaks = value),
-                  ),
+                  const ForestTimerView(),
                   _AiSummarizerTab(
                     controller: _summarizerInput,
                     summary: _summary,
                     uploading: _uploading,
                     onUpload: _simulateSummary,
-                    isDark: isDark,
                   ),
                   const _PlaceholderTab(
                     title: 'AI Quiz Maker',
@@ -149,146 +127,7 @@ class _AiToolsPageState extends State<AiToolsPage>
   }
 }
 
-class _AiTimerTab extends StatelessWidget {
-  const _AiTimerTab({
-    required this.isDark,
-    required this.studyMinutes,
-    required this.breakMinutes,
-    required this.smartBreaks,
-    required this.suggestion,
-    required this.onStudyChanged,
-    required this.onBreakChanged,
-    required this.onSmartBreaksChanged,
-  });
-
-  final bool isDark;
-  final double studyMinutes;
-  final double breakMinutes;
-  final bool smartBreaks;
-  final String suggestion;
-  final ValueChanged<double> onStudyChanged;
-  final ValueChanged<double> onBreakChanged;
-  final ValueChanged<bool> onSmartBreaksChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Study Duration',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${studyMinutes.round()} minutes',
-                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _primaryPurple,
-                      ),
-                ),
-                Slider(
-                  min: 15,
-                  max: 90,
-                  divisions: 15,
-                  value: studyMinutes,
-                  activeColor: _primaryPurple,
-                  onChanged: onStudyChanged,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _GlassCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Break Duration',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  '${breakMinutes.round()} minutes',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        color: _secondaryPurple,
-                      ),
-                ),
-                Slider(
-                  min: 3,
-                  max: 20,
-                  divisions: 17,
-                  value: breakMinutes,
-                  activeColor: _secondaryPurple,
-                  onChanged: onBreakChanged,
-                ),
-                SwitchListTile.adaptive(
-                  title: const Text('Enable Smart Break Scheduling'),
-                  subtitle: const Text('AI adjusts breaks based on fatigue.'),
-                  value: smartBreaks,
-                  activeTrackColor: _primaryPurple,
-                  onChanged: onSmartBreaksChanged,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          _GlassCard(
-            highlight: true,
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Icon(Icons.auto_awesome_rounded, color: _primaryPurple),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    suggestion,
-                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: _primaryPurple,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-              ),
-            ),
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('AI Timer started (demo).')),
-              );
-            },
-            child: const Text(
-              'Start Timer',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// _AiTimerTab removed - replaced by ForestTimerPage
 
 class _AiSummarizerTab extends StatelessWidget {
   const _AiSummarizerTab({
@@ -296,19 +135,15 @@ class _AiSummarizerTab extends StatelessWidget {
     required this.summary,
     required this.uploading,
     required this.onUpload,
-    required this.isDark,
   });
 
   final TextEditingController controller;
   final String summary;
   final bool uploading;
   final Future<void> Function() onUpload;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
-    final textColor = isDark ? Colors.white : const Color(0xFF1F1F33);
-
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -321,6 +156,7 @@ class _AiSummarizerTab extends StatelessWidget {
                   'Paste text or drop an image link',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: _pureWhite,
                       ),
                 ),
                 const SizedBox(height: 12),
@@ -329,33 +165,37 @@ class _AiSummarizerTab extends StatelessWidget {
                   maxLines: 6,
                   decoration: InputDecoration(
                     hintText: 'Paste your lecture notes, article, or image URL...',
+                    hintStyle: TextStyle(color: _pureWhite.withValues(alpha: 0.5)),
                     filled: true,
-                    fillColor: isDark
-                        ? Colors.white.withValues(alpha: 0.05)
-                        : Colors.white,
+                    fillColor: _deepNavy,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                   ),
-                  style: TextStyle(color: textColor),
+                  style: const TextStyle(color: _pureWhite),
                 ),
                 const SizedBox(height: 12),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
                   children: [
                     OutlinedButton.icon(
                       onPressed:
                           uploading ? null : () => onUpload.call(),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _electricBlue,
+                        side: const BorderSide(color: _electricBlue),
+                      ),
                       icon: uploading
                           ? const SizedBox(
                               width: 16,
                               height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(strokeWidth: 2, color: _electricBlue),
                             )
                           : const Icon(Icons.upload_rounded),
                       label: Text(uploading ? 'Analyzing...' : 'Upload & Summarize'),
                     ),
-                    const SizedBox(width: 12),
                     TextButton.icon(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -364,6 +204,7 @@ class _AiSummarizerTab extends StatelessWidget {
                           ),
                         );
                       },
+                      style: TextButton.styleFrom(foregroundColor: _mintGreen),
                       icon: const Icon(Icons.image_rounded),
                       label: const Text('Add Image'),
                     ),
@@ -381,13 +222,14 @@ class _AiSummarizerTab extends StatelessWidget {
                   'AI Summary',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.bold,
+                        color: _pureWhite,
                       ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   summary,
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: textColor,
+                        color: _pureWhite.withValues(alpha: 0.8),
                         height: 1.4,
                       ),
                 ),
@@ -428,9 +270,9 @@ class _SummaryTag extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Chip(
-      avatar: Icon(icon, color: _primaryPurple, size: 18),
-      label: Text(label),
-      backgroundColor: _primaryPurple.withValues(alpha: 0.08),
+      avatar: Icon(icon, color: _electricBlue, size: 18),
+      label: Text(label, style: const TextStyle(color: _pureWhite)),
+      backgroundColor: _electricBlue.withValues(alpha: 0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     );
   }
@@ -450,12 +292,13 @@ class _PlaceholderTab extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.auto_awesome, color: _primaryPurple, size: 36),
+            Icon(Icons.auto_awesome, color: _electricBlue, size: 36),
             const SizedBox(height: 12),
             Text(
               title,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: _pureWhite,
                   ),
               textAlign: TextAlign.center,
             ),
@@ -463,7 +306,7 @@ class _PlaceholderTab extends StatelessWidget {
             Text(
               description,
               style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFF5A5A74),
+                    color: _pureWhite.withValues(alpha: 0.7),
                   ),
               textAlign: TextAlign.center,
             ),
@@ -474,6 +317,7 @@ class _PlaceholderTab extends StatelessWidget {
                   const SnackBar(content: Text('Stay tuned!')),
                 );
               },
+              style: TextButton.styleFrom(foregroundColor: _mintGreen),
               child: const Text('Join waitlist'),
             ),
           ],
@@ -496,11 +340,6 @@ class _GlassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final baseColor = isDark
-        ? Colors.white.withValues( alpha: highlight ? 0.08 : 0.06)
-        : Colors.white.withValues(alpha: highlight ? 0.45 : 0.95);
-
     return ConstrainedBox(
       constraints: BoxConstraints(
         maxWidth: width ?? double.infinity,
@@ -508,21 +347,17 @@ class _GlassCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
-          color: baseColor,
+          color: _midnightBlue,
           borderRadius: BorderRadius.circular(24),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.6 : 0.08),
-              blurRadius: 40,
-              offset: const Offset(0, 20),
+              color: Colors.black.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             ),
           ],
           border: highlight
-              ? Border.all(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.2)
-                      : _primaryPurple.withValues(alpha: 0.4),
-                )
+              ? Border.all(color: _electricBlue.withValues(alpha: 0.4))
               : null,
         ),
         child: child,
@@ -530,4 +365,3 @@ class _GlassCard extends StatelessWidget {
     );
   }
 }
-
