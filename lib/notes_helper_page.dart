@@ -3,6 +3,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -12,8 +15,8 @@ const Color _mintGreen = Color(0xFF4ECDC4);
 const Color _softOrange = Color(0xFFFFB347);
 const Color _pureWhite = Color(0xFFFFFFFF);
 
-// TODO: Replace with your Gemini API key
-const String _geminiApiKey = 'AIzaSyA6mexiMdHlbCqmCrjGDtPp-OKHsCSgdss';
+// API Key from .env
+final String _geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
 class NotesHelperPage extends StatefulWidget {
   const NotesHelperPage({super.key});
@@ -420,7 +423,10 @@ ${_notesController.text}
                     // Actions
                     Row(
                       children: [
-                        _buildHeaderAction(Icons.bookmark_border, 'Save'),
+                        GestureDetector(
+                          onTap: () => _saveOutline(),
+                          child: _buildHeaderAction(Icons.bookmark_border, 'Save'),
+                        ),
                         const SizedBox(width: 8),
                         _buildHeaderAction(Icons.share_outlined, 'Share'),
                         const SizedBox(width: 8),
@@ -853,5 +859,43 @@ ${_notesController.text}
   String _getCurrentDate() {
     final now = DateTime.now();
     return '${now.month}/${now.day}/${now.year.toString().substring(2)}';
+  }
+
+  Future<void> _saveOutline() async {
+    if (_generatedOutline == null) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to save outlines')),
+      );
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance.collection('saved_outlines').add({
+        'userId': user.uid,
+        'title': _generatedTitle ?? 'Study Notes',
+        'outline': _generatedOutline,
+        'createdAt': FieldValue.serverTimestamp(),
+        'type': 'notes',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Saved to Quiz Maker!'),
+            backgroundColor: _mintGreen,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving outline: $e')),
+        );
+      }
+    }
   }
 }

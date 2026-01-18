@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'forest_timer_page.dart';
 import 'notes_helper_page.dart';
+import 'quiz_maker_page.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -93,7 +94,12 @@ class AiToolsPage extends StatelessWidget {
                       title: 'Quiz Maker',
                       description: 'Generate quizzes from your study materials',
                       color: _softOrange,
-                      onTap: () => _showComingSoon(context, 'Quiz Maker'),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const QuizMakerPage(),
+                        ),
+                      ),
                     ),
                     _FeatureCard(
                       icon: Icons.note_alt_rounded,
