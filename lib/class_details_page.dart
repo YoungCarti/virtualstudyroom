@@ -1167,7 +1167,7 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
 
 // --- CLASS ASSIGNMENTS PAGE ---
 
-class _ClassAssignmentsPage extends StatelessWidget {
+class _ClassAssignmentsPage extends StatefulWidget {
   final String classCode;
   final String className;
   final bool isLecturer;
@@ -1177,6 +1177,14 @@ class _ClassAssignmentsPage extends StatelessWidget {
     required this.className,
     required this.isLecturer,
   });
+
+  @override
+  State<_ClassAssignmentsPage> createState() => _ClassAssignmentsPageState();
+}
+
+class _ClassAssignmentsPageState extends State<_ClassAssignmentsPage> {
+  DateTime _focusedMonth = DateTime.now();
+  DateTime _selectedDate = DateTime.now();
   
   @override
   Widget build(BuildContext context) {
@@ -1190,7 +1198,7 @@ class _ClassAssignmentsPage extends StatelessWidget {
           onPressed: () => Navigator.pop(context),
         ),
         title: Text(
-          '$className - Assignments',
+          'Assignments',
           style: AppFonts.clashGrotesk(
             color: Colors.white,
             fontSize: 18,
@@ -1198,13 +1206,13 @@ class _ClassAssignmentsPage extends StatelessWidget {
           ),
         ),
         actions: [
-          if (isLecturer)
+          if (widget.isLecturer)
             IconButton(
               icon: Icon(Icons.add, color: _AppColors.primary),
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => CreateAssignmentPage(classCode: classCode),
+                    builder: (_) => CreateAssignmentPage(classCode: widget.classCode),
                   ),
                 );
               },
@@ -1212,123 +1220,358 @@ class _ClassAssignmentsPage extends StatelessWidget {
         ],
       ),
       body: StreamBuilder<List<Assignment>>(
-        stream: AssignmentService.instance.getAssignmentsForClass(classCode),
+        stream: AssignmentService.instance.getAssignmentsForClass(widget.classCode),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator(color: _AppColors.primary));
           }
           
-          final assignments = (snapshot.data ?? [])
+          final allAssignments = (snapshot.data ?? [])
               .where((a) => a.id != '_placeholder')
               .toList();
           
-          if (assignments.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.assignment_outlined, color: _AppColors.textSecondary, size: 64),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No assignments yet',
-                    style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 16),
-                  ),
-                  if (isLecturer) ...[
-                    const SizedBox(height: 16),
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute<void>(
-                            builder: (_) => CreateAssignmentPage(classCode: classCode),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create Assignment'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _AppColors.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            );
+          // Build a map of dates that have assignments
+          final Map<DateTime, List<Assignment>> assignmentsByDate = {};
+          for (final a in allAssignments) {
+            final dateKey = DateTime(a.dueDate.year, a.dueDate.month, a.dueDate.day);
+            assignmentsByDate.putIfAbsent(dateKey, () => []).add(a);
           }
           
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: assignments.length,
-            itemBuilder: (context, index) {
-              final a = assignments[index];
-              return Container(
-                margin: const EdgeInsets.only(bottom: 12),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => AssignmentDetailsPage(
-                          classCode: classCode,
-                          assignmentId: a.id,
-                          isLecturer: isLecturer,
-                        ),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: _AppColors.cardBg,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: _AppColors.divider),
-                    ),
-                    child: Row(
+          // Get assignments for selected date
+          final selectedDateKey = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+          final selectedAssignments = assignmentsByDate[selectedDateKey] ?? [];
+          
+          return Column(
+            children: [
+              // Calendar Section
+              Container(
+                margin: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF122A46), // Midnight Blue
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: _AppColors.divider),
+                ),
+                child: Column(
+                  children: [
+                    // Month Header with Navigation
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: _AppColors.accent2.withValues(alpha: 0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Icon(Icons.assignment_outlined, color: _AppColors.accent2),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                a.title,
-                                style: AppFonts.clashGrotesk(
-                                  color: _AppColors.textPrimary,
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Due: ${DateFormat('MMM d, yyyy').format(a.dueDate)}',
-                                style: AppFonts.clashGrotesk(
-                                  color: _AppColors.textSecondary,
-                                  fontSize: 13,
-                                ),
-                              ),
-                            ],
+                        Text(
+                          DateFormat('MMMM').format(_focusedMonth),
+                          style: AppFonts.clashGrotesk(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        Icon(Icons.chevron_right, color: _AppColors.textSecondary),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.chevron_left, color: _AppColors.textSecondary),
+                              onPressed: () {
+                                setState(() {
+                                  _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1);
+                                });
+                              },
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.chevron_right, color: _AppColors.textSecondary),
+                              onPressed: () {
+                                setState(() {
+                                  _focusedMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1);
+                                });
+                              },
+                            ),
+                          ],
+                        ),
                       ],
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    
+                    // Days of Week Header
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+                          .map((day) => SizedBox(
+                                width: 36,
+                                child: Center(
+                                  child: Text(
+                                    day,
+                                    style: AppFonts.clashGrotesk(
+                                      color: _AppColors.textSecondary,
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ))
+                          .toList(),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    // Calendar Grid
+                    _buildCalendarGrid(assignmentsByDate),
+                  ],
                 ),
-              );
-            },
+              ),
+              
+              // Divider
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 32),
+                height: 4,
+                decoration: BoxDecoration(
+                  color: _AppColors.divider,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              // Assignments List for Selected Date
+              Expanded(
+                child: selectedAssignments.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.event_available, color: _AppColors.textSecondary, size: 48),
+                            const SizedBox(height: 12),
+                            Text(
+                              'No assignments on ${DateFormat('MMM d').format(_selectedDate)}',
+                              style: AppFonts.clashGrotesk(color: _AppColors.textSecondary, fontSize: 14),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16),
+                        itemCount: selectedAssignments.length,
+                        itemBuilder: (context, index) {
+                          final a = selectedAssignments[index];
+                          return _buildAssignmentCard(context, a);
+                        },
+                      ),
+              ),
+            ],
           );
         },
       ),
     );
   }
+  
+  Widget _buildCalendarGrid(Map<DateTime, List<Assignment>> assignmentsByDate) {
+    final firstDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
+    final lastDayOfMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
+    final daysInMonth = lastDayOfMonth.day;
+    final startWeekday = firstDayOfMonth.weekday % 7; // 0 = Sunday
+    
+    final today = DateTime.now();
+    final todayKey = DateTime(today.year, today.month, today.day);
+    
+    List<Widget> dayWidgets = [];
+    
+    // Add empty cells for days before the first day of month
+    for (int i = 0; i < startWeekday; i++) {
+      dayWidgets.add(const SizedBox(width: 36, height: 44));
+    }
+    
+    // Add day cells
+    for (int day = 1; day <= daysInMonth; day++) {
+      final date = DateTime(_focusedMonth.year, _focusedMonth.month, day);
+      final dateKey = DateTime(date.year, date.month, date.day);
+      final hasAssignment = assignmentsByDate.containsKey(dateKey);
+      final isSelected = dateKey == DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+      final isToday = dateKey == todayKey;
+      final isCurrentMonth = date.month == _focusedMonth.month;
+      
+      dayWidgets.add(
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _selectedDate = date;
+            });
+          },
+          child: SizedBox(
+            width: 36,
+            height: 44,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isSelected ? _AppColors.primary : Colors.transparent,
+                    shape: BoxShape.circle,
+                    border: isToday && !isSelected
+                        ? Border.all(color: _AppColors.primary, width: 1.5)
+                        : null,
+                  ),
+                  child: Center(
+                    child: Text(
+                      '$day',
+                      style: AppFonts.clashGrotesk(
+                        color: isSelected
+                            ? Colors.white
+                            : isCurrentMonth
+                                ? Colors.white
+                                : _AppColors.textSecondary,
+                        fontSize: 14,
+                        fontWeight: isSelected || isToday ? FontWeight.w600 : FontWeight.w400,
+                      ),
+                    ),
+                  ),
+                ),
+                // Blue dot indicator for assignments
+                if (hasAssignment)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: isSelected ? Colors.white : _AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                  )
+                else
+                  const SizedBox(height: 7),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+    
+    // Build rows
+    List<Widget> rows = [];
+    for (int i = 0; i < dayWidgets.length; i += 7) {
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 2),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: dayWidgets.sublist(i, (i + 7).clamp(0, dayWidgets.length)),
+          ),
+        ),
+      );
+    }
+    
+    // Pad the last row if needed
+    if (dayWidgets.length % 7 != 0) {
+      final lastRowStart = (dayWidgets.length ~/ 7) * 7;
+      final remaining = dayWidgets.length - lastRowStart;
+      final lastRow = List<Widget>.from(dayWidgets.sublist(lastRowStart));
+      for (int i = 0; i < 7 - remaining; i++) {
+        lastRow.add(const SizedBox(width: 36, height: 44));
+      }
+      rows[rows.length - 1] = Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: lastRow,
+        ),
+      );
+    }
+    
+    return Column(children: rows);
+  }
+  
+  Widget _buildAssignmentCard(BuildContext context, Assignment a) {
+    final now = DateTime.now();
+    final diff = a.dueDate.difference(now);
+    
+    String timeRemaining;
+    if (diff.isNegative) {
+      timeRemaining = 'Overdue';
+    } else if (diff.inDays == 0) {
+      timeRemaining = 'Today';
+    } else if (diff.inDays == 1) {
+      timeRemaining = '1 Day';
+    } else {
+      timeRemaining = '${diff.inDays} Days';
+    }
+    
+    // Choose icon color based on assignment
+    final colors = [_AppColors.accent2, _AppColors.accent1, _AppColors.secondary, _AppColors.primary];
+    final iconColor = colors[a.title.hashCode % colors.length];
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      child: InkWell(
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => AssignmentDetailsPage(
+                classCode: widget.classCode,
+                assignmentId: a.id,
+                isLecturer: widget.isLecturer,
+              ),
+            ),
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF122A46), // Midnight Blue
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _AppColors.divider),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.assignment_outlined, color: iconColor),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      a.title,
+                      style: AppFonts.clashGrotesk(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        Icon(Icons.calendar_today_outlined, size: 14, color: _AppColors.textSecondary),
+                        const SizedBox(width: 4),
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(a.dueDate),
+                          style: AppFonts.clashGrotesk(
+                            color: _AppColors.textSecondary,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              Text(
+                timeRemaining,
+                style: AppFonts.clashGrotesk(
+                  color: diff.isNegative ? _AppColors.accent1 : _AppColors.primary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
+
 
 // --- STYLED WIDGETS ---
 
