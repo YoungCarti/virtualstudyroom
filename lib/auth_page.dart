@@ -148,7 +148,17 @@ class _AuthPageState extends State<AuthPage> {
       return;
     }
 
-    if (pass.length < 6) {
+    if (_isRegister) {
+      final hasUpper = pass.contains(RegExp(r'[A-Z]'));
+      final hasLower = pass.contains(RegExp(r'[a-z]'));
+      final hasDigitOrSymbol = pass.contains(RegExp(r'[\d\W]'));
+      if (pass.length < 6 || !hasUpper || !hasLower || !hasDigitOrSymbol) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password must vary (6+ chars, Aa, 1#)')),
+        );
+        return;
+      }
+    } else if (pass.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Password must be at least 6 characters.')),
       );
@@ -173,7 +183,7 @@ class _AuthPageState extends State<AuthPage> {
           password: pass,
           firstName: 'New',
           lastName: 'User',
-          phone: '',
+
         );
       } else {
         await _auth.signInWithEmail(email, pass);

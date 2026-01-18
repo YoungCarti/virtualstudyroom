@@ -47,7 +47,7 @@ class AuthService {
     required String password,
     required String firstName,
     required String lastName,
-    required String phone,
+    // Phone removed
   }) async {
     try {
       final userCred = await _auth.createUserWithEmailAndPassword(
@@ -67,8 +67,7 @@ class AuthService {
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
         'name': displayName,
-        'phone': phone.trim(),
-        'role': 'student',
+        'role': 'student', // Default role
         'enrolledClasses': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
         'currentStreak': 1,

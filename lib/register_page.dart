@@ -2,11 +2,13 @@ import 'app_fonts.dart';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+
 import 'auth_service.dart';
 import 'login_page.dart';
 import 'home_dashboard.dart';
 import 'widgets/gradient_background.dart';
+import 'verification_page.dart';
+
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -20,20 +22,17 @@ class _RegisterPageState extends State<RegisterPage> {
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _phoneController = TextEditingController();
-  
-  String _initialCountry = 'CH'; // Switzerland as per design
-  PhoneNumber _number = PhoneNumber(isoCode: 'CH');
-  String? _phoneNumber;
+  final _confirmPasswordController = TextEditingController();
   
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
   
   // Error messages
   String? _firstNameError;
   String? _lastNameError;
   String? _emailError;
-  String? _phoneError;
+  String? _confirmPasswordError;
   String? _passwordError;
 
   final _auth = AuthService.instance;
@@ -44,7 +43,7 @@ class _RegisterPageState extends State<RegisterPage> {
     _lastNameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
-    _phoneController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -55,7 +54,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _firstNameError = null;
       _lastNameError = null;
       _emailError = null;
-      _phoneError = null;
+      _confirmPasswordError = null;
       _passwordError = null;
     });
 
@@ -76,13 +75,18 @@ class _RegisterPageState extends State<RegisterPage> {
     }
 
 
-    // Phone validation is handled by the input widget mostly, but we check if empty
-    if (_phoneNumber == null || _phoneNumber!.isEmpty) {
-       // Optional: Add strict phone validation if needed
+    if (_passwordController.text != _confirmPasswordController.text) {
+      setState(() => _confirmPasswordError = 'Passwords do not match');
+      isValid = false;
     }
 
-    if (_passwordController.text.length < 6) {
-      setState(() => _passwordError = 'Password must be at least 6 characters');
+    final password = _passwordController.text;
+    final hasUpperCase = password.contains(RegExp(r'[A-Z]'));
+    final hasLowerCase = password.contains(RegExp(r'[a-z]'));
+    final hasDigitOrSymbol = password.contains(RegExp(r'[\d\W]'));
+
+    if (password.length < 6 || !hasUpperCase || !hasLowerCase || !hasDigitOrSymbol) {
+      setState(() => _passwordError = 'Min 6 chars, uppercase, lowercase, & number/symbol');
       isValid = false;
     }
 
@@ -95,18 +99,28 @@ class _RegisterPageState extends State<RegisterPage> {
     setState(() => _isLoading = true);
 
     try {
+
+      
+      // 1. Create Account
       await _auth.registerWithEmail(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
-        phone: _phoneNumber ?? '',
       );
 
+      // 2. Send Verification Link
+      final user = _auth.currentUser;
+      await user?.sendEmailVerification();
+      
       if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const HomeDashboardPage()),
-          (route) => false,
+        // Navigate to Native Verification Page
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => VerificationPage(
+              email: _emailController.text.trim(),
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -255,58 +269,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Phone Number
-                    _buildLabel('Phone Number'),
-                    const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(16),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.06),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: Colors.white.withOpacity(0.1),
-                            ),
-                          ),
-                          child: InternationalPhoneNumberInput(
-                            onInputChanged: (PhoneNumber number) {
-                              _number = number;
-                              _phoneNumber = number.phoneNumber;
-                            },
-                            selectorConfig: const SelectorConfig(
-                              selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
-                              showFlags: true,
-                              useEmoji: true,
-                              setSelectorButtonAsPrefixIcon: true,
-                              leadingPadding: 10,
-                            ),
-                            ignoreBlank: false,
-                            autoValidateMode: AutovalidateMode.disabled,
-                            selectorTextStyle: AppFonts.clashGrotesk(color: Colors.white),
-                            initialValue: _number,
-                            textFieldController: _phoneController,
-                            formatInput: true,
-                            keyboardType: const TextInputType.numberWithOptions(signed: true, decimal: true),
-                            inputDecoration: InputDecoration(
-                              border: InputBorder.none,
-                              hintText: 'Phone Number',
-                              hintStyle: AppFonts.clashGrotesk(color: Colors.white.withOpacity(0.4)),
-                              contentPadding: const EdgeInsets.only(bottom: 12),
-                            ),
-                            textStyle: AppFonts.clashGrotesk(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.white,
-                            ),
-                            cursorColor: const Color(0xFF22D3EE),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+
 
                     // Password
                     _buildInput(
@@ -318,6 +281,19 @@ class _RegisterPageState extends State<RegisterPage> {
                       obscureText: _obscurePassword,
                       onToggleVisibility: () => setState(() => _obscurePassword = !_obscurePassword),
                       errorText: _passwordError,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Confirm Password
+                    _buildInput(
+                      label: 'Confirm Password',
+                      controller: _confirmPasswordController,
+                      placeholder: 'Re-enter password',
+                      icon: Icons.lock_outline_rounded,
+                      isPassword: true,
+                      obscureText: _obscureConfirmPassword,
+                      onToggleVisibility: () => setState(() => _obscureConfirmPassword = !_obscureConfirmPassword),
+                      errorText: _confirmPasswordError,
                     ),
                     const SizedBox(height: 40),
 
