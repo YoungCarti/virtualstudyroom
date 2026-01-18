@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'auth_page.dart';
 import 'login_page.dart';
@@ -37,6 +38,13 @@ class _MyAppState extends State<MyApp> {
       await Firebase.initializeApp(
         options: DefaultFirebaseOptions.currentPlatform,
       );
+      
+      // Initialize App Check with debug provider for development
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: const AndroidDebugProvider(),
+        providerApple: const AppleDebugProvider(),
+      );
+      
       if (mounted) {
         setState(() => _firebaseReady = true);
       }
