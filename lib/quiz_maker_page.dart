@@ -10,6 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'widgets/share_dialogs.dart';
+import 'quiz_history_page.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -87,7 +88,16 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
         ),
         backgroundColor: Colors.transparent,
         elevation: 0,
+
         foregroundColor: _pureWhite,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.history),
+            tooltip: 'Quiz History',
+            onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const QuizHistoryPage())),
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -1273,8 +1283,32 @@ class _QuizPageState extends State<QuizPage> {
     });
   }
 
+  Future<void> _saveQuizResult() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+      
+      final score = _calculateScore();
+      final total = widget.questions.length;
+      final percentage = (score / total * 100).round();
+      
+      await FirebaseFirestore.instance.collection('quiz_results').add({
+        'userId': user.uid,
+        'quizTitle': widget.title,
+        'score': score,
+        'totalQuestions': total,
+        'percentage': percentage,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      // Fail silently or log
+      print('Error saving quiz result: $e');
+    }
+  }
+
   void _finishQuiz() {
     _timer?.cancel();
+    _saveQuizResult();
     setState(() => _quizCompleted = true);
   }
 

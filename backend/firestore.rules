@@ -55,9 +55,28 @@ service cloud.firestore {
     }
 
     // Legacy groups (for chat) - kept for backward compatibility
+    // Legacy groups (for chat) - kept for backward compatibility
     match /groups/{groupId} {
       allow read, write: if request.auth != null && request.auth.uid in resource.data.members;
       allow create: if request.auth != null;
+    }
+
+    // Generated Flashcards
+    match /generated_flashcards/{deckId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Quiz Results
+    match /quiz_results/{resultId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // Saved Study Outlines
+    match /saved_outlines/{outlineId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create, update, delete: if request.auth != null && request.resource.data.userId == request.auth.uid;
     }
   }
 }

@@ -15,6 +15,7 @@ const Color _deepNavy = Color(0xFF0A1929);
 const Color _midnightBlue = Color(0xFF122A46);
 const Color _electricBlue = Color(0xFF2196F3);
 const Color _purpleAccent = Color(0xFF9B59B6);
+const Color _mintGreen = Color(0xFF4ECDC4);
 const Color _pureWhite = Color(0xFFFFFFFF);
 
 class FlashcardGeneratorPage extends StatefulWidget {
@@ -370,16 +371,39 @@ $materialDescription
       );
     }
     
-    return Scaffold(
-      backgroundColor: _deepNavy,
-      appBar: AppBar(
-        title: Text('Flashcard Generator', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
-        centerTitle: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        foregroundColor: _pureWhite,
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: _deepNavy,
+        appBar: AppBar(
+          title: Text('Flashcard Generator', style: GoogleFonts.outfit(fontWeight: FontWeight.bold)),
+          centerTitle: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          foregroundColor: _pureWhite,
+          bottom: TabBar(
+            indicatorColor: _purpleAccent,
+            labelColor: _purpleAccent,
+            unselectedLabelColor: _pureWhite.withOpacity(0.5),
+            labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
+            tabs: const [
+              Tab(text: "Create"),
+              Tab(text: "My Library"),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+            _buildCreateTab(),
+            _buildLibraryTab(),
+          ],
+        ),
       ),
-      body: SingleChildScrollView(
+    );
+  }
+
+  Widget _buildCreateTab() {
+    return SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -477,7 +501,7 @@ $materialDescription
               child: ElevatedButton(
                 onPressed: (_notesController.text.trim().isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty) || _isGenerating
                     ? null
-                    : _generateFlashcards,
+                    : () => _generateFlashcards(),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: _purpleAccent,
                   foregroundColor: _pureWhite,
@@ -497,7 +521,6 @@ $materialDescription
                     : Text('Generate Flashcards', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
             ),
-
             
             const SizedBox(height: 32),
             
@@ -610,7 +633,6 @@ $materialDescription
                                 ],
                               ),
                             ),
-                            // Share Icon
                             IconButton(
                               icon: Icon(Icons.share, color: _pureWhite.withOpacity(0.5), size: 20),
                               padding: EdgeInsets.zero,
@@ -639,8 +661,84 @@ $materialDescription
             ),
           ],
         ),
-      ),
-    );
+      );
+  }
+
+  Widget _buildLibraryTab() {
+     return StreamBuilder<QuerySnapshot>(
+        stream: FirebaseAuth.instance.currentUser != null 
+          ? FirebaseFirestore.instance
+            .collection('generated_flashcards')
+            .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+            .orderBy('createdAt', descending: true)
+            .snapshots()
+          : const Stream.empty(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+             return Center(child: Text('Error: ${snapshot.error}', style: GoogleFonts.outfit(color: Colors.red)));
+          }
+           final docs = snapshot.data?.docs ?? [];
+           if (docs.isEmpty) {
+              return Center(child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.style_outlined, size: 60, color: _pureWhite.withOpacity(0.3)),
+                  const SizedBox(height: 16),
+                  Text('No saved decks yet', style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.5))),
+                  const SizedBox(height: 8),
+                  Text('Generate flashcards and save them to see them here.', style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.3), fontSize: 12)),
+                ],
+              ));
+           }
+           return ListView.separated(
+             padding: const EdgeInsets.all(20),
+             itemCount: docs.length,
+             separatorBuilder: (c, i) => const SizedBox(height: 12),
+             itemBuilder: (context, index) {
+                final data = docs[index].data() as Map<String, dynamic>;
+                final title = data['title'] ?? 'Untitled Deck';
+                final count = (data['cards'] as List?)?.length ?? 0;
+                final date = (data['createdAt'] as Timestamp?)?.toDate();
+                final dateStr = date != null ? '${date.month}/${date.day}/${date.year}' : '';
+                
+                return GestureDetector(
+                   onTap: () {
+                      final cards = (data['cards'] as List).map<Map<String,String>>((e) => {
+                         'front': e['front']?.toString() ?? '',
+                         'back': e['back']?.toString() ?? '',
+                      }).toList();
+                      
+                      setState(() {
+                         _flashcards = cards;
+                         _showViewer = true; // Auto open viewer
+                         _showEditor = false;
+                      });
+                   },
+                   child: Container(
+                     padding: const EdgeInsets.all(16),
+                     decoration: BoxDecoration(
+                        color: _midnightBlue,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: _pureWhite.withOpacity(0.1)),
+                     ),
+                     child: Row(children: [
+                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: _deepNavy, borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.style, color: _mintGreen)),
+                        const SizedBox(width: 16),
+                        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                           Text(title, style: GoogleFonts.outfit(color: _pureWhite, fontWeight: FontWeight.bold, fontSize: 16)),
+                           Text('$count cards • $dateStr', style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.5), fontSize: 12)),
+                        ])),
+                        const Icon(Icons.play_arrow_rounded, color: _mintGreen, size: 28),
+                     ]),
+                   ),
+                );
+             }
+           );
+        }
+     );
   }
 }
 
@@ -1091,6 +1189,85 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
     );
   }
 
+  Future<void> _saveDeck() async {
+    final titleController = TextEditingController();
+    
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: _midnightBlue,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Save Flashcard Deck', style: GoogleFonts.outfit(color: _pureWhite, fontWeight: FontWeight.bold)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('Give your study deck a name to save it to your library.', style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.7))),
+            const SizedBox(height: 16),
+            TextField(
+              controller: titleController,
+              autofocus: true,
+              style: GoogleFonts.outfit(color: _pureWhite),
+              decoration: InputDecoration(
+                labelText: 'Deck Title',
+                labelStyle: GoogleFonts.outfit(color: _purpleAccent),
+                filled: true,
+                fillColor: _deepNavy,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.6))),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty) return;
+              
+              final user = FirebaseAuth.instance.currentUser;
+              if (user == null) return;
+              
+              try {
+                // Prepare cards
+                final cleanCards = _editableCards.map((e) => {
+                  'front': e['front'].toString(),
+                  'back': e['back'].toString(),
+                }).toList();
+                
+                await FirebaseFirestore.instance.collection('generated_flashcards').add({
+                  'userId': user.uid,
+                  'title': titleController.text.trim(),
+                  'cards': cleanCards,
+                  'createdAt': FieldValue.serverTimestamp(),
+                });
+                
+                if (context.mounted) {
+                  Navigator.pop(context); // Close dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Deck saved to Library!', style: GoogleFonts.outfit()),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error saving: $e'), backgroundColor: Colors.red),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: _purpleAccent),
+            child: Text('Save', style: GoogleFonts.outfit(color: _pureWhite)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1105,6 +1282,14 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         foregroundColor: _pureWhite,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.save),
+            tooltip: 'Save Deck',
+            onPressed: _saveDeck,
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Column(
         children: [
