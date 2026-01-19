@@ -8,6 +8,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'widgets/share_dialogs.dart';
 
 // Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -17,7 +18,9 @@ const Color _purpleAccent = Color(0xFF9B59B6);
 const Color _pureWhite = Color(0xFFFFFFFF);
 
 class FlashcardGeneratorPage extends StatefulWidget {
-  const FlashcardGeneratorPage({super.key});
+  const FlashcardGeneratorPage({super.key, this.initialOutline});
+
+  final String? initialOutline;
 
   @override
   State<FlashcardGeneratorPage> createState() => _FlashcardGeneratorPageState();
@@ -26,6 +29,18 @@ class FlashcardGeneratorPage extends StatefulWidget {
 class _FlashcardGeneratorPageState extends State<FlashcardGeneratorPage> {
   final TextEditingController _notesController = TextEditingController();
   final String _geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialOutline != null) {
+      _notesController.text = widget.initialOutline!;
+      // Auto-trigger generation after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _generateFlashcards(autoStart: true);
+      });
+    }
+  }
   
   // Attachments
   List<File> _attachedImages = [];
@@ -43,7 +58,7 @@ class _FlashcardGeneratorPageState extends State<FlashcardGeneratorPage> {
     super.dispose();
   }
 
-  Future<void> _generateFlashcards() async {
+  Future<void> _generateFlashcards({bool autoStart = false}) async {
     final content = _notesController.text.trim();
     
     if (content.isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty) {
@@ -175,7 +190,12 @@ $materialDescription
             'front': item['front']?.toString() ?? '',
             'back': item['back']?.toString() ?? '',
           }).toList();
-          _showEditor = true;  // Show editor first, not viewer
+          if (autoStart) {
+            _showViewer = true;
+            _showEditor = false;
+          } else {
+            _showEditor = true;  // Show editor first, not viewer
+          }
           _attachedImages.clear();
           _attachedFiles.clear();
         });
@@ -530,7 +550,7 @@ $materialDescription
                   itemBuilder: (context, index) {
                     final data = docs[index].data() as Map<String, dynamic>;
                     final title = data['title'] ?? 'Untitled';
-                    final content = data['outline'] ?? '';
+                    final content = (data['outline'] ?? data['content'] ?? '') as String;
                     final date = (data['createdAt'] as Timestamp?)?.toDate();
                     final dateStr = date != null ? '${date.month}/${date.day}/${date.year}' : '';
                     
@@ -590,6 +610,21 @@ $materialDescription
                                 ],
                               ),
                             ),
+                            // Share Icon
+                            IconButton(
+                              icon: Icon(Icons.share, color: _pureWhite.withOpacity(0.5), size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                ShareHelper.shareContent(
+                                  context: context,
+                                  title: title,
+                                  content: content,
+                                  type: 'Flashcard Deck',
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 12),
                             Icon(Icons.arrow_forward_ios, 
                               color: _pureWhite.withOpacity(0.3), 
                               size: 16

@@ -15,6 +15,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'quiz_maker_page.dart';
+import 'flashcard_generator_page.dart';
+import 'notes_helper_page.dart';
 
 import 'video_call_page.dart';
 import 'audio_call_page.dart';
@@ -676,6 +679,10 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                           type: item.type, meetingCode: item.meetingCode, participants: item.participants,
                           onJoinMeeting: (code, msgId) => _joinMeetingWithCode(code, messageId: msgId),
                           status: item.status,
+                          isSharedContent: item.isSharedContent,
+                          contentTitle: item.contentTitle,
+                          contentType: item.contentType,
+                          sharedData: item.sharedData,
                         );
                       },
                     );
@@ -702,9 +709,11 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 // --- HELPERS ---
 
 class _MessageItem {
-  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false, type = null, meetingCode = null, participants = const [], status = 'active';
-  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false, type = data['type'] as String?, meetingCode = data['meetingCode'] as String?, participants = List<String>.from(data['participants'] ?? []), status = data['status'] as String? ?? 'active';
+  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false, type = null, meetingCode = null, participants = const [], status = 'active', isSharedContent = false, contentTitle = null, contentType = null, sharedData = null;
+  _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false, type = data['type'] as String?, meetingCode = data['meetingCode'] as String?, participants = List<String>.from(data['participants'] ?? []), status = data['status'] as String? ?? 'active',
+      isSharedContent = data['isSharedContent'] as bool? ?? false, contentTitle = data['contentTitle'] as String?, contentType = data['contentType'] as String?, sharedData = data['sharedData'] as String?;
   final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final String? senderName; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted; final String? type; final String? meetingCode; final List<String> participants; final String status;
+  final bool isSharedContent; final String? contentTitle; final String? contentType; final String? sharedData;
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -714,6 +723,7 @@ class _MessageBubble extends StatelessWidget {
     this.fileUrl, this.fileType, this.fileName, required this.messageId,
     required this.onDelete, required this.isDeleted,
     this.type, this.meetingCode, this.participants = const [], this.onJoinMeeting, this.status = 'active',
+    this.isSharedContent = false, this.contentTitle, this.contentType, this.sharedData,
   });
 
   final String text; final String senderId; final String senderName; final DateTime? createdAt;
@@ -722,6 +732,7 @@ class _MessageBubble extends StatelessWidget {
   final Function(String, bool) onDelete; final bool isDeleted;
   final String? type; final String? meetingCode; final List<String> participants;
   final Function(String, String)? onJoinMeeting; final String status;
+  final bool isSharedContent; final String? contentTitle; final String? contentType; final String? sharedData;
 
   void _showOptions(BuildContext context) {
     if (isDeleted) return;
@@ -818,7 +829,7 @@ class _MessageBubble extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.all(12),
             constraints: const BoxConstraints(maxWidth: 280),
-            decoration: type == 'meeting' ? null : bubbleDecoration,
+            decoration: (type == 'meeting' || isSharedContent) ? null : bubbleDecoration,
             child: type == 'meeting' 
                 ? _MeetingCard(
                     meetingCode: meetingCode ?? '',
@@ -827,7 +838,14 @@ class _MessageBubble extends StatelessWidget {
                     isMe: isMe,
                     status: status ?? 'active',
                   )
-                : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                : isSharedContent 
+                  ? _SharedContentCard(
+                      title: contentTitle ?? 'Shared Content', 
+                      type: contentType ?? 'Study Material', 
+                      data: sharedData ?? '', 
+                      isMe: isMe
+                    )
+                  : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (fileUrl != null) ...[
                 if (fileType == 'image') 
                   GestureDetector(
@@ -1180,5 +1198,82 @@ class _MeetingCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _SharedContentCard extends StatelessWidget {
+  const _SharedContentCard({
+    super.key,
+    required this.title,
+    required this.type,
+    required this.data,
+    required this.isMe,
+  });
+
+  final String title;
+  final String type;
+  final String data; // outline content
+  final bool isMe;
+
+  void _onOpen(BuildContext context) {
+    if (type.contains('Flashcard')) {
+       Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardGeneratorPage(initialOutline: data)));
+    } else if (type.contains('Quiz')) {
+       Navigator.push(context, MaterialPageRoute(builder: (_) => QuizMakerPage(initialOutline: data)));
+    } else if (type.contains('Note')) {
+       Navigator.push(context, MaterialPageRoute(builder: (_) => NotesHelperPage(initialContent: data, initialTitle: title)));
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Unknown content type")));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+      return Container(
+          width: 260,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isMe ? Colors.white.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start, 
+            children: [
+             Row(
+               children: [
+                const Icon(Icons.description_outlined, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    type, 
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+             ],
+             ),
+             const SizedBox(height: 8),
+             Text(
+               title, 
+               style: const TextStyle(color: Colors.white70, fontSize: 13), 
+               maxLines: 3, 
+               overflow: TextOverflow.ellipsis
+             ),
+             const SizedBox(height: 12),
+             SizedBox(
+               width: double.infinity, 
+               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white, 
+                  foregroundColor: const Color(0xFF0A1929),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
+                onPressed: () => _onOpen(context),
+                child: const Text('Open'),
+             )),
+          ]),
+      );
   }
 }

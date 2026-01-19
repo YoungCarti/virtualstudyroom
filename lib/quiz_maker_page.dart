@@ -9,6 +9,7 @@ import 'dart:io';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'widgets/share_dialogs.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -22,7 +23,9 @@ const Color _pureWhite = Color(0xFFFFFFFF);
 final String _geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
 class QuizMakerPage extends StatefulWidget {
-  const QuizMakerPage({super.key});
+  const QuizMakerPage({super.key, this.initialOutline});
+
+  final String? initialOutline;
 
   @override
   State<QuizMakerPage> createState() => _QuizMakerPageState();
@@ -31,6 +34,18 @@ class QuizMakerPage extends StatefulWidget {
 class _QuizMakerPageState extends State<QuizMakerPage> {
   final user = FirebaseAuth.instance.currentUser;
   final TextEditingController _notesController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialOutline != null) {
+      _notesController.text = widget.initialOutline!;
+      // Auto-trigger generation after first frame
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _generateFromPastedText(autoStart: true);
+      });
+    }
+  }
   
   // Quiz Configuration State
   String? _selectedOutlineId;
@@ -434,7 +449,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                       onTap: () => _generateAndShowConfig(
                         docs[index].id, 
                         title, 
-                        data['outline'] ?? ''
+                        (data['outline'] ?? data['content'] ?? '') as String
                       ),
                       child: Container(
                         padding: const EdgeInsets.all(16),
@@ -477,6 +492,20 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                                 ],
                               ),
                             ),
+                            IconButton(
+                              icon: Icon(Icons.share, color: _pureWhite.withOpacity(0.5), size: 20),
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                              onPressed: () {
+                                ShareHelper.shareContent(
+                                  context: context,
+                                  title: title,
+                                  content: data['outline'] ?? '',
+                                  type: 'Quiz Study Guide',
+                                );
+                              },
+                            ),
+                            const SizedBox(width: 12),
                             Icon(Icons.arrow_forward_ios, 
                               color: _pureWhite.withOpacity(0.5), 
                               size: 16,
@@ -497,7 +526,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
   }
 
   /// Generate questions from pasted text, images, and documents
-  Future<void> _generateFromPastedText() async {
+  Future<void> _generateFromPastedText({bool autoStart = false}) async {
     final content = _notesController.text.trim();
     
     // Check if there's any content (text, images, or files)
@@ -633,7 +662,11 @@ $materialDescription
         });
         
         if (context.mounted) {
-          _showConfigurationModal('Custom Notes', questions.length);
+          if (autoStart) {
+            _startQuiz();
+          } else {
+            _showConfigurationModal('Custom Notes', questions.length);
+          }
         }
       } else {
         throw Exception('API Error: ${response.body}');

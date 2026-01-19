@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'widgets/share_dialogs.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -19,7 +20,10 @@ const Color _pureWhite = Color(0xFFFFFFFF);
 final String _geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
 class NotesHelperPage extends StatefulWidget {
-  const NotesHelperPage({super.key});
+  const NotesHelperPage({super.key, this.initialContent, this.initialTitle});
+
+  final String? initialContent;
+  final String? initialTitle;
 
   @override
   State<NotesHelperPage> createState() => _NotesHelperPageState();
@@ -27,6 +31,16 @@ class NotesHelperPage extends StatefulWidget {
 
 class _NotesHelperPageState extends State<NotesHelperPage> {
   final TextEditingController _notesController = TextEditingController();
+  
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialContent != null) {
+      _generatedOutline = widget.initialContent;
+      _generatedTitle = widget.initialTitle ?? 'Shared Notes';
+      _showOutline = true;
+    }
+  }
   final TextEditingController _editController = TextEditingController();
   bool _isGenerating = false;
   bool _isEditing = false;
@@ -428,7 +442,17 @@ ${_notesController.text}
                           child: _buildHeaderAction(Icons.bookmark_border, 'Save'),
                         ),
                         const SizedBox(width: 8),
-                        _buildHeaderAction(Icons.share_outlined, 'Share'),
+                        GestureDetector(
+                          onTap: () {
+                             ShareHelper.shareContent(
+                                context: context,
+                                title: _generatedTitle ?? 'Study Notes',
+                                content: _generatedOutline ?? '',
+                                type: 'Notes',
+                             );
+                          },
+                          child: _buildHeaderAction(Icons.share_outlined, 'Share'),
+                        ),
                         const SizedBox(width: 8),
                         // Compact "More" button to save space
                         Container(
