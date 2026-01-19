@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'quiz_maker_page.dart';
 
 import 'assignment_details_page.dart';
 import 'create_assignment_page.dart';
@@ -564,6 +565,11 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
                     _buildLecturerSection(),
                     
                     const SizedBox(height: 24),
+
+                    // Leaderboard Section
+                    _buildLeaderboardSection(),
+                    
+                    const SizedBox(height: 24),
                     
                     // Groups Section
                     _buildGroupsSection(uid),
@@ -814,6 +820,141 @@ class _ClassDetailsPageState extends State<ClassDetailsPage> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildLeaderboardSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Class Leaderboard 🏆',
+              style: AppFonts.clashGrotesk(
+                color: _AppColors.textPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => QuizMakerPage(classCode: widget.classCode)),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: _AppColors.accent2.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: _AppColors.accent2.withOpacity(0.5)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt, color: _AppColors.accent2, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      'Start Quiz',
+                      style: AppFonts.clashGrotesk(
+                        color: _AppColors.accent2,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('classes')
+              .doc(widget.classCode)
+              .collection('leaderboard')
+              .orderBy('score', descending: true)
+              .limit(5)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              print('Leaderboard Error: ${snapshot.error}');
+              return Text('Leaderboard unavailable: ${snapshot.error}', style: TextStyle(color: _AppColors.textSecondary));
+            }
+            if (snapshot.connectionState == ConnectionState.waiting) {
+               return const Center(child: CircularProgressIndicator());
+            }
+            
+            final docs = snapshot.data?.docs ?? [];
+            if (docs.isEmpty) {
+              return Text('No scores yet. Be the first!', style: TextStyle(color: _AppColors.textSecondary));
+            }
+
+            return Column(
+              children: docs.asMap().entries.map((entry) {
+                final index = entry.key;
+                final data = entry.value.data() as Map<String, dynamic>;
+                final name = data['name'] ?? 'Student';
+                final score = data['score'] ?? 0;
+                final isTop3 = index < 3;
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: _AppColors.cardBg,
+                    borderRadius: BorderRadius.circular(12),
+                    border: isTop3 ? Border.all(color: _AppColors.secondary.withValues(alpha: 0.5)) : null,
+                  ),
+                  child: Row(
+                    children: [
+                      Text(
+                        '#${index + 1}',
+                        style: AppFonts.clashGrotesk(
+                          color: isTop3 ? _AppColors.secondary : _AppColors.textSecondary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: _AppColors.primary.withValues(alpha: 0.1),
+                        child: Text(
+                          name.isNotEmpty ? name[0].toUpperCase() : '?',
+                          style: AppFonts.clashGrotesk(
+                            color: _AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: AppFonts.clashGrotesk(
+                            color: _AppColors.textPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '$score XP',
+                        style: AppFonts.clashGrotesk(
+                          color: _AppColors.accent2,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            );
+          },
+        ),
+      ],
     );
   }
 

@@ -446,6 +446,63 @@ class _ProfilePageState extends State<ProfilePage> {
                                 ),
                               ),
                             ),
+
+                            const SizedBox(height: 16),
+
+                            // Badges Section
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20),
+                              child: _GlassContainer(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        const Icon(Icons.emoji_events_outlined, color: Color(0xFF22D3EE), size: 16),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          "Earned Badges",
+                                          style: AppFonts.clashGrotesk(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Wrap(
+                                      spacing: 12,
+                                      runSpacing: 12,
+                                      children: [
+                                        _BadgeItem(
+                                          id: 'perfect_score', 
+                                          hasBadge: (data['badges'] as List?)?.contains('perfect_score') ?? false,
+                                          label: 'Perfect Score',
+                                          icon: Icons.star_rounded,
+                                          color: const Color(0xFFFFD700), // Gold
+                                        ),
+                                        _BadgeItem(
+                                          id: 'night_owl', 
+                                          hasBadge: (data['badges'] as List?)?.contains('night_owl') ?? false,
+                                          label: 'Night Owl',
+                                          icon: Icons.nightlight_round,
+                                          color: const Color(0xFF90CAF9), // Light Blue
+                                        ),
+                                        _BadgeItem(
+                                          id: 'flashcard_master', 
+                                          hasBadge: (data['badges'] as List?)?.contains('flashcard_master') ?? false,
+                                          label: 'Flashcard Master',
+                                          icon: Icons.style,
+                                          color: const Color(0xFFAB47BC), // Purple
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                             
                             const SizedBox(height: 40),
                           ],
@@ -673,6 +730,63 @@ class _InterestTag extends StatelessWidget {
           fontSize: 13,
           fontWeight: FontWeight.w500,
         ),
+      ),
+    );
+  }
+}
+
+class _BadgeItem extends StatelessWidget {
+  final String id;
+  final bool hasBadge;
+  final String label;
+  final IconData icon;
+  final Color color;
+
+  const _BadgeItem({
+    required this.id,
+    required this.hasBadge,
+    required this.label,
+    required this.icon,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: hasBadge ? 1.0 : 0.3,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.2),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: color.withOpacity(0.5),
+                width: 2,
+              ),
+              boxShadow: hasBadge ? [
+                BoxShadow(
+                  color: color.withOpacity(0.3),
+                  blurRadius: 10,
+                  spreadRadius: 2,
+                )
+              ] : [],
+            ),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            style: AppFonts.clashGrotesk(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }

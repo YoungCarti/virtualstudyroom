@@ -24,9 +24,14 @@ const Color _pureWhite = Color(0xFFFFFFFF);
 final String _geminiApiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
 
 class QuizMakerPage extends StatefulWidget {
-  const QuizMakerPage({super.key, this.initialOutline});
+  const QuizMakerPage({
+    super.key, 
+    this.initialOutline,
+    this.classCode, // Add optional classCode
+  });
 
   final String? initialOutline;
+  final String? classCode;
 
   @override
   State<QuizMakerPage> createState() => _QuizMakerPageState();
@@ -1233,6 +1238,7 @@ $content
           title: _selectedOutlineTitle ?? 'Quiz',
           questions: questionsToUse,
           timerMinutes: _timerMinutes.round(),
+          classCode: widget.classCode,
         ),
       ),
     );
@@ -1243,12 +1249,14 @@ class QuizPage extends StatefulWidget {
   final String title;
   final List<dynamic> questions;
   final int timerMinutes;
+  final String? classCode;
 
   const QuizPage({
     super.key,
     required this.title,
     required this.questions,
     required this.timerMinutes,
+    this.classCode,
   });
 
   @override
@@ -1291,15 +1299,64 @@ class _QuizPageState extends State<QuizPage> {
       final score = _calculateScore();
       final total = widget.questions.length;
       final percentage = (score / total * 100).round();
-      
+      final now = DateTime.now();
+
+        // 1. Save Quiz Result
       await FirebaseFirestore.instance.collection('quiz_results').add({
         'userId': user.uid,
         'quizTitle': widget.title,
         'score': score,
         'totalQuestions': total,
         'percentage': percentage,
+        'classCode': widget.classCode,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      // 2. Global Gamification Logic (Update User Profile)
+      final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      
+      // Update Global XP
+      await userRef.update({
+        'totalScore': FieldValue.increment(score),
+      });
+
+      // 3. Class-Specific Leaderboard (Contextual XP) 🏆
+      if (widget.classCode != null) {
+        final userData = await userRef.get();
+        final userName = userData.data()?['fullName'] ?? userData.data()?['name'] ?? 'Student';
+        
+        final leaderboardRef = FirebaseFirestore.instance
+            .collection('classes')
+            .doc(widget.classCode)
+            .collection('leaderboard')
+            .doc(user.uid);
+
+        await leaderboardRef.set({
+          'userId': user.uid,
+          'name': userName,
+          'score': FieldValue.increment(score), // Accumulate score
+          'lastActive': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      }
+    
+    // Badge: Perfect Score
+    List<String> newBadges = [];
+    if (percentage == 100) {
+      newBadges.add('perfect_score');
+    }
+    
+    // Badge: Night Owl (after 10 PM / 22:00)
+    if (now.hour >= 22) {
+      newBadges.add('night_owl');
+    }
+
+    // Update User Badges
+    if (newBadges.isNotEmpty) {
+      await userRef.set({
+        'badges': FieldValue.arrayUnion(newBadges)
+      }, SetOptions(merge: true));
+    }
+
     } catch (e) {
       // Fail silently or log
       print('Error saving quiz result: $e');

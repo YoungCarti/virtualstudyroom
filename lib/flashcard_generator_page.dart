@@ -1236,12 +1236,48 @@ class _FlashcardEditorState extends State<_FlashcardEditor> {
                   'back': e['back'].toString(),
                 }).toList();
                 
+                // 1. Save Flashcard Deck
                 await FirebaseFirestore.instance.collection('generated_flashcards').add({
                   'userId': user.uid,
                   'title': titleController.text.trim(),
                   'cards': cleanCards,
                   'createdAt': FieldValue.serverTimestamp(),
                 });
+
+                // 2. Gamification Logic (Badges)
+                try {
+                  final now = DateTime.now();
+                  final userRef = FirebaseFirestore.instance.collection('users').doc(user.uid);
+                  List<String> newBadges = [];
+
+                  // Badge: Night Owl (after 10 PM)
+                  if (now.hour >= 22) {
+                    newBadges.add('night_owl');
+                  }
+
+                  // Badge: Flashcard Master (Created 10+ decks)
+                  // We just added one, so we check the total count now
+                  final deckCountQuery = await FirebaseFirestore.instance
+                      .collection('generated_flashcards')
+                      .where('userId', isEqualTo: user.uid)
+                      .count()
+                      .get();
+                  
+                  final deckCount = deckCountQuery.count ?? 0;
+                  
+                  if (deckCount >= 10) {
+                    newBadges.add('flashcard_master');
+                  }
+
+                  // Update User Profile if badges earned
+                  if (newBadges.isNotEmpty) {
+                    await userRef.set({
+                      'badges': FieldValue.arrayUnion(newBadges)
+                    }, SetOptions(merge: true));
+                  }
+                } catch (e) {
+                  print('Error updating gamification stats: $e');
+                }
                 
                 if (context.mounted) {
                   Navigator.pop(context); // Close dialog
