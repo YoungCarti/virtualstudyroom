@@ -6,6 +6,8 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:http/http.dart' as http;
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -474,6 +476,131 @@ $materialDescription
                       )
                     : Text('Generate Flashcards', style: GoogleFonts.outfit(fontSize: 16, fontWeight: FontWeight.w600)),
               ),
+            ),
+
+            
+            const SizedBox(height: 32),
+            
+            Text(
+              'Saved Study Outlines',
+              style: GoogleFonts.outfit(fontSize: 18, color: _pureWhite, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 16),
+            
+            StreamBuilder<QuerySnapshot>(
+              stream: FirebaseAuth.instance.currentUser != null
+                  ? FirebaseFirestore.instance
+                      .collection('saved_outlines')
+                      .where('userId', isEqualTo: FirebaseAuth.instance.currentUser!.uid)
+                      .snapshots()
+                  : const Stream.empty(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}', style: GoogleFonts.outfit(color: Colors.red));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final docs = snapshot.data?.docs ?? [];
+                
+                if (docs.isEmpty) {
+                  return Container(
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: _midnightBlue.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _pureWhite.withOpacity(0.1)),
+                    ),
+                    child: Center(
+                      child: Text(
+                        'No saved outlines found',
+                        style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.5)),
+                      ),
+                    ),
+                  );
+                 }
+
+                return ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: docs.length,
+                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final data = docs[index].data() as Map<String, dynamic>;
+                    final title = data['title'] ?? 'Untitled';
+                    final content = data['outline'] ?? '';
+                    final date = (data['createdAt'] as Timestamp?)?.toDate();
+                    final dateStr = date != null ? '${date.month}/${date.day}/${date.year}' : '';
+                    
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _notesController.text = content;
+                          _attachedImages.clear();
+                          _attachedFiles.clear();
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Loaded "$title" into notes', style: GoogleFonts.outfit()),
+                            backgroundColor: _purpleAccent,
+                            duration: const Duration(seconds: 1),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: _midnightBlue,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: _pureWhite.withOpacity(0.1)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: _deepNavy,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(Icons.class_outlined, color: _purpleAccent),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    title,
+                                    style: GoogleFonts.outfit(
+                                      color: _pureWhite,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$dateStr • by you',
+                                    style: GoogleFonts.outfit(
+                                      color: _pureWhite.withOpacity(0.5),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.arrow_forward_ios, 
+                              color: _pureWhite.withOpacity(0.3), 
+                              size: 16
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
             ),
           ],
         ),
