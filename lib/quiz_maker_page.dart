@@ -27,6 +27,7 @@ class QuizMakerPage extends StatefulWidget {
 
 class _QuizMakerPageState extends State<QuizMakerPage> {
   final user = FirebaseAuth.instance.currentUser;
+  final TextEditingController _notesController = TextEditingController();
   
   // Quiz Configuration State
   String? _selectedOutlineId;
@@ -39,6 +40,12 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
   
   // Generated questions storage
   List<dynamic> _generatedQuestions = [];
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -60,43 +67,137 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
         elevation: 0,
         foregroundColor: _pureWhite,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-             child: Text(
-               'Choose or upload materials to generate practice questions designed for you',
-               style: GoogleFonts.outfit(
-                 color: _pureWhite.withOpacity(0.7),
-                 fontSize: 14,
-               ),
-             ),
-          ),
-          
-          // Tabs (Visual only for now matching screenshot)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            child: Row(
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Paste your notes to generate practice questions',
+              style: GoogleFonts.outfit(
+                color: _pureWhite.withOpacity(0.7),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Large Text Input Area
+            Container(
+              decoration: BoxDecoration(
+                color: _midnightBlue,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: _pureWhite.withOpacity(0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  TextField(
+                    controller: _notesController,
+                    maxLines: 8,
+                    maxLength: 100000,
+                    style: GoogleFonts.outfit(color: _pureWhite, fontSize: 14),
+                    decoration: InputDecoration(
+                      hintText: "Put your notes here. We'll do the rest.",
+                      hintStyle: GoogleFonts.outfit(
+                        color: _pureWhite.withOpacity(0.4),
+                        fontSize: 14,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(16),
+                      counterStyle: GoogleFonts.outfit(
+                        color: _pureWhite.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                    onChanged: (val) => setState(() {}),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Generate Button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _notesController.text.trim().isEmpty || _isGenerating
+                    ? null
+                    : () => _generateFromPastedText(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _electricBlue,
+                  foregroundColor: _pureWhite,
+                  disabledBackgroundColor: _electricBlue.withOpacity(0.3),
+                  disabledForegroundColor: _pureWhite.withOpacity(0.5),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: _isGenerating
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _pureWhite,
+                        ),
+                      )
+                    : Text(
+                        'Generate Questions',
+                        style: GoogleFonts.outfit(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+              ),
+            ),
+            
+            const SizedBox(height: 32),
+            
+            // Divider with "OR" text
+            Row(
               children: [
-                _buildTab('Flashcard sets', true),
-                _buildTab('Upload files', false),
-                _buildTab('Paste text', false),
-                _buildTab('Google Drive', false),
+                Expanded(child: Divider(color: _pureWhite.withOpacity(0.2))),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Text(
+                    'OR',
+                    style: GoogleFonts.outfit(
+                      color: _pureWhite.withOpacity(0.5),
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+                Expanded(child: Divider(color: _pureWhite.withOpacity(0.2))),
               ],
             ),
-          ),
-          
-          const Divider(color: _midnightBlue, height: 1),
-          
-          // Saved Outlines List
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            
+            const SizedBox(height: 24),
+            
+            // Saved Study Outlines Section
+            Text(
+              'Saved Study Outlines',
+              style: GoogleFonts.outfit(
+                color: _pureWhite,
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Generate questions from your saved outlines',
+              style: GoogleFonts.outfit(
+                color: _pureWhite.withOpacity(0.5),
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Saved Outlines List
+            StreamBuilder<QuerySnapshot>(
               stream: FirebaseFirestore.instance
                   .collection('saved_outlines')
                   .where('userId', isEqualTo: user!.uid)
-                  // .orderBy('createdAt', descending: true) // Temporarily removed to fix index error
                   .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.hasError) {
@@ -110,15 +211,28 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                 final docs = snapshot.data?.docs ?? [];
                 
                 if (docs.isEmpty) {
-                  return Center(
+                  return Container(
+                    padding: const EdgeInsets.all(32),
+                    decoration: BoxDecoration(
+                      color: _midnightBlue.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: _pureWhite.withOpacity(0.1)),
+                    ),
                     child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.description_outlined, size: 64, color: _pureWhite.withOpacity(0.3)),
-                        const SizedBox(height: 16),
+                        Icon(Icons.description_outlined, size: 48, color: _pureWhite.withOpacity(0.3)),
+                        const SizedBox(height: 12),
                         Text(
                           'No saved outlines yet',
                           style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.5)),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Create outlines from Study AI to see them here',
+                          style: GoogleFonts.outfit(
+                            color: _pureWhite.withOpacity(0.3),
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -126,7 +240,8 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.all(20),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: docs.length,
                   separatorBuilder: (context, index) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -173,7 +288,7 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '$dateStr • by you', // Matching screenshot "76 terms • by you" style
+                                    '$dateStr • by you',
                                     style: GoogleFonts.outfit(
                                       color: _pureWhite.withOpacity(0.5),
                                       fontSize: 12,
@@ -182,16 +297,10 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                                 ],
                               ),
                             ),
-                            Text(
-                              'Preview',
-                              style: GoogleFonts.outfit(
-                                color: _pureWhite,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 12,
-                              ),
+                            Icon(Icons.arrow_forward_ios, 
+                              color: _pureWhite.withOpacity(0.5), 
+                              size: 16,
                             ),
-                            const SizedBox(width: 16),
-                            Icon(Icons.add_circle_outline, color: _pureWhite.withOpacity(0.7)),
                           ],
                         ),
                       ),
@@ -200,32 +309,97 @@ class _QuizMakerPageState extends State<QuizMakerPage> {
                 );
               },
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTab(String label, bool isActive) {
-    return Container(
-      margin: const EdgeInsets.only(right: 24),
-      padding: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: isActive ? _pureWhite : Colors.transparent,
-            width: 2,
-          ),
-        ),
-      ),
-      child: Text(
-        label,
-        style: GoogleFonts.outfit(
-          color: isActive ? _pureWhite : _pureWhite.withOpacity(0.5),
-          fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-        ),
-      ),
-    );
+  /// Generate questions from pasted text
+  Future<void> _generateFromPastedText() async {
+    final content = _notesController.text.trim();
+    if (content.isEmpty) return;
+    
+    setState(() => _isGenerating = true);
+    
+    try {
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      final prompt = '''
+Create a UNIQUE practice test based on the following study notes.
+Generate exactly 50 diverse multiple choice questions.
+
+IMPORTANT RULES:
+- Each question MUST be different from any previous generation
+- Cover ALL topics in the notes, not just the beginning
+- Mix difficulty levels (easy, medium, hard)
+- Use different question formats (what, why, how, which, when)
+- Randomize the position of correct answers (don't always make it option A)
+- Seed: $timestamp
+
+Return ONLY a valid JSON array of objects.
+Format:
+[
+  {
+    "question": "The question text",
+    "options": ["Option A", "Option B", "Option C", "Option D"],
+    "correctIndex": 0
+  }
+]
+
+Study Notes:
+$content
+''';
+
+      final response = await http.post(
+        Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_geminiApiKey'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'contents': [
+            {
+              'parts': [{'text': prompt}]
+            }
+          ],
+          'generationConfig': {
+            'temperature': 1.0,
+            'topP': 0.95,
+            'topK': 40,
+          }
+        }),
+      );
+
+      setState(() => _isGenerating = false);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final contentText = data['candidates'][0]['content']['parts'][0]['text'];
+        
+        final jsonString = contentText.replaceAll('```json', '').replaceAll('```', '').trim();
+        final List<dynamic> questions = jsonDecode(jsonString);
+        
+        questions.shuffle();
+        
+        setState(() {
+          _generatedQuestions = questions;
+          _selectedOutlineTitle = 'Custom Notes';
+          _questionCount = questions.length.toDouble().clamp(5, 50);
+        });
+        
+        if (context.mounted) {
+          _showConfigurationModal('Custom Notes', questions.length);
+        }
+      } else {
+        throw Exception('API Error: ${response.body}');
+      }
+    } catch (e) {
+      setState(() => _isGenerating = false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating quiz: $e')),
+        );
+      }
+    }
   }
 
   /// Generate questions first, then show config modal
@@ -981,10 +1155,17 @@ class _QuizPageState extends State<QuizPage> {
             
             ...List.generate(widget.questions.length, (index) {
               final question = widget.questions[index];
-              final correctIndex = question['correctIndex'] as int;
-              final userAnswer = _selectedAnswers[index];
-              final isCorrect = userAnswer == correctIndex;
               final options = List<String>.from(question['options'] ?? []);
+              
+              // Safely get correctIndex with bounds checking
+              int correctIndex = question['correctIndex'] as int? ?? 0;
+              if (correctIndex < 0 || correctIndex >= options.length) {
+                correctIndex = 0; // Default to first option if invalid
+              }
+              
+              final userAnswer = _selectedAnswers[index];
+              final isCorrect = userAnswer != null && userAnswer == correctIndex;
+              final wasSkipped = userAnswer == null;
               
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -993,7 +1174,9 @@ class _QuizPageState extends State<QuizPage> {
                   color: _midnightBlue,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                    color: wasSkipped 
+                        ? Colors.grey 
+                        : (isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
                     width: 2,
                   ),
                 ),
@@ -1003,8 +1186,12 @@ class _QuizPageState extends State<QuizPage> {
                     Row(
                       children: [
                         Icon(
-                          isCorrect ? Icons.check_circle : Icons.cancel,
-                          color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
+                          wasSkipped 
+                              ? Icons.remove_circle_outline 
+                              : (isCorrect ? Icons.check_circle : Icons.cancel),
+                          color: wasSkipped 
+                              ? Colors.grey 
+                              : (isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336)),
                         ),
                         const SizedBox(width: 8),
                         Text(
@@ -1014,22 +1201,39 @@ class _QuizPageState extends State<QuizPage> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                        if (wasSkipped) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Skipped',
+                              style: GoogleFonts.outfit(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      question['question'],
+                      question['question'] ?? '',
                       style: GoogleFonts.outfit(color: _pureWhite.withOpacity(0.9)),
                     ),
                     const SizedBox(height: 8),
-                    if (userAnswer != null)
+                    if (userAnswer != null && userAnswer >= 0 && userAnswer < options.length)
                       Text(
                         'Your answer: ${options[userAnswer]}',
                         style: GoogleFonts.outfit(
                           color: isCorrect ? const Color(0xFF4CAF50) : const Color(0xFFF44336),
                         ),
                       ),
-                    if (!isCorrect)
+                    if (!isCorrect && options.isNotEmpty)
                       Text(
                         'Correct answer: ${options[correctIndex]}',
                         style: GoogleFonts.outfit(color: const Color(0xFF4CAF50)),
