@@ -29,8 +29,8 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   Widget build(BuildContext context) {
     // Define Theme Colors based on your profile page
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+    final Color topColor = const Color(0xFF0A1929); // Deep Navy
+    final Color bottomColor = const Color(0xFF122A46); // Midnight Blue
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -73,7 +73,7 @@ class _SettingsPageState extends State<SettingsPage> {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet glow
+                color: const Color(0xFF2196F3).withValues(alpha: 0.15), // Electric Blue
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
@@ -89,7 +89,7 @@ class _SettingsPageState extends State<SettingsPage> {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan glow
+                color: const Color(0xFF4ECDC4).withValues(alpha: 0.1), // Mint Green
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
@@ -287,8 +287,8 @@ class _SettingsPageState extends State<SettingsPage> {
           Switch.adaptive(
             value: value,
             onChanged: onChanged,
-            activeColor: const Color(0xFF22D3EE), // Cyan accent
-            activeTrackColor: const Color(0xFF22D3EE).withValues(alpha: 0.3),
+            activeColor: const Color(0xFF4ECDC4), // Mint Green
+            activeTrackColor: const Color(0xFF4ECDC4).withValues(alpha: 0.3),
             inactiveTrackColor: Colors.white.withValues(alpha: 0.1),
             inactiveThumbColor: Colors.grey[300],
           ),

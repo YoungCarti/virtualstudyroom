@@ -10,9 +10,13 @@ import 'register_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+
+
+
   runApp(const MyApp());
 }
 
@@ -57,7 +61,17 @@ class _MyAppState extends State<MyApp> {
       }
     } catch (error) {
       if (mounted) {
-        setState(() => _initializationError = error);
+        // Customize error message for Desktop platforms where Firebase is not supported natively
+        if ((defaultTargetPlatform == TargetPlatform.linux || 
+             defaultTargetPlatform == TargetPlatform.windows) && 
+             error.toString().contains("channel")) {
+          setState(() => _initializationError = 
+              "Firebase plugins are not natively supported on Linux Desktop.\n\n"
+              "Please run the app on Web (Chrome) or Android/iOS Emulator.\n"
+              "Command: flutter run -d chrome");
+        } else {
+          setState(() => _initializationError = error);
+        }
       }
     }
   }
@@ -76,12 +90,7 @@ class _MyAppState extends State<MyApp> {
   Widget build(BuildContext context) {
     Widget home;
 
-    if (_showOnboarding) {
-      home = SplashScreen(
-        onFinished: _handleOnboardingFinished,
-        isReadyToProceed: _firebaseReady && _initializationError == null,
-      );
-    } else if (_initializationError != null) {
+    if (_initializationError != null) {
       home = Scaffold(
         body: Center(
           child: Padding(
@@ -110,6 +119,11 @@ class _MyAppState extends State<MyApp> {
             ),
           ),
         ),
+      );
+    } else if (_showOnboarding) {
+      home = SplashScreen(
+        onFinished: _handleOnboardingFinished,
+        isReadyToProceed: _firebaseReady,
       );
     } else if (!_firebaseReady) {
       home = const Scaffold(

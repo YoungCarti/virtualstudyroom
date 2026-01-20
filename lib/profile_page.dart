@@ -42,11 +42,11 @@ class _ProfilePageState extends State<ProfilePage> {
   @override
   Widget build(BuildContext context) {
     // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
+    final Color topColor = const Color(0xFF0A1929); // Deep Navy
+    final Color bottomColor = const Color(0xFF122A46); // Midnight Blue
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A), // Dark Base
+      backgroundColor: const Color(0xFF0A1929), // Deep Navy Base
       body: Stack(
         children: [
           // 1. Background Gradient
@@ -69,7 +69,7 @@ class _ProfilePageState extends State<ProfilePage> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
+                color: const Color(0xFF2196F3).withValues(alpha: 0.15), // Electric Blue
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -85,7 +85,7 @@ class _ProfilePageState extends State<ProfilePage> {
               height: 250,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
+                color: const Color(0xFF4ECDC4).withValues(alpha: 0.1), // Mint Green
               ),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -183,22 +183,22 @@ class _ProfilePageState extends State<ProfilePage> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF22D3EE).withValues(alpha: 0.15),
+                                color: const Color(0xFF2196F3).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: const Color(0xFF22D3EE).withValues(alpha: 0.3),
+                                  color: const Color(0xFF2196F3).withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.school, color: Color(0xFF22D3EE), size: 14),
+                                  const Icon(Icons.school, color: Color(0xFF2196F3), size: 14),
                                   const SizedBox(width: 6),
                                   Text(
                                     "Active Student",
                                     style: AppFonts.clashGrotesk(
-                                      color: const Color(0xFF22D3EE),
+                                      color: const Color(0xFF2196F3),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
@@ -234,8 +234,8 @@ class _ProfilePageState extends State<ProfilePage> {
                                           begin: Alignment.topLeft,
                                           end: Alignment.bottomRight,
                                           colors: [
-                                            const Color(0xFFA855F7).withValues(alpha: 0.2),
-                                            const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                                            const Color(0xFF122A46).withValues(alpha: 0.8),
+                                            const Color(0xFF2196F3).withValues(alpha: 0.4),
                                           ],
                                         ),
                                         borderRadius: BorderRadius.circular(14),
@@ -290,11 +290,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                         Expanded(
                                           child: _InfoCard(
                                             colors: [
-                                              const Color(0xFF06B6D4).withValues(alpha: 0.1),
-                                              const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                                              const Color(0xFF4ECDC4).withValues(alpha: 0.1),
+                                              const Color(0xFF2196F3).withValues(alpha: 0.1),
                                             ],
                                             icon: Icons.location_on_outlined,
-                                            iconColor: const Color(0xFF22D3EE),
+                                            iconColor: const Color(0xFF4ECDC4),
                                             label: "Campus",
                                             title: campus,
                                           ),
@@ -303,11 +303,11 @@ class _ProfilePageState extends State<ProfilePage> {
                                         Expanded(
                                           child: _InfoCard(
                                             colors: [
-                                              const Color(0xFF10B981).withValues(alpha: 0.1),
-                                              const Color(0xFF14B8A6).withValues(alpha: 0.1),
+                                              const Color(0xFF2196F3).withValues(alpha: 0.1),
+                                              const Color(0xFF122A46).withValues(alpha: 0.3),
                                             ],
                                             icon: Icons.group_outlined,
-                                            iconColor: const Color(0xFF22D3EE),
+                                            iconColor: const Color(0xFF2196F3),
                                             label: "Fav Group",
                                             title: favGroup,
                                           ),
@@ -379,7 +379,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.person_outline, color: Color(0xFF22D3EE), size: 16),
+                                        const Icon(Icons.person_outline, color: Color(0xFF2196F3), size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           "Bio",
@@ -417,7 +417,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.favorite_outline, color: Color(0xFF22D3EE), size: 16),
+                                        const Icon(Icons.favorite_outline, color: Color(0xFF2196F3), size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           "Interests",
@@ -459,7 +459,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                   children: [
                                     Row(
                                       children: [
-                                        const Icon(Icons.emoji_events_outlined, color: Color(0xFF22D3EE), size: 16),
+                                        const Icon(Icons.emoji_events_outlined, color: Color(0xFF2196F3), size: 16),
                                         const SizedBox(width: 8),
                                         Text(
                                           "Earned Badges",

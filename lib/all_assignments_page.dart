@@ -105,8 +105,8 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
   @override
   Widget build(BuildContext context) {
     // Theme Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.15);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.1);
+    final Color topColor = const Color(0xFF0A1929);
+    final Color bottomColor = const Color(0xFF0A1929);
 
     final now = DateTime.now();
     final allAssignments = _assignmentsByClass.values
@@ -116,7 +116,7 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
     allAssignments.sort((a, b) => a.dueDate.compareTo(b.dueDate));
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F0F1A),
+      backgroundColor: const Color(0xFF0A1929),
       body: Stack(
         fit: StackFit.expand,
         children: [
@@ -144,7 +144,7 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
                         child: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.1),
+                            color: const Color(0xFF122A46),
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Icon(Icons.arrow_back, color: Colors.white, size: 20),
@@ -172,7 +172,7 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
                               child: Column(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                  Icon(Icons.assignment_turned_in_outlined, color: Colors.white.withValues(alpha: 0.3), size: 48),
+                                  Icon(Icons.assignment_turned_in_outlined, color: const Color(0xFF4ECDC4), size: 48),
                                   const SizedBox(height: 16),
                                   Text(
                                     'All done!',
@@ -221,24 +221,24 @@ class AssignmentItem extends StatelessWidget {
 
     if (diff.inDays == 0 && !diff.isNegative) {
       status = 'Today';
-      statusColor = const Color(0xFFF43F5E); // Red
+      statusColor = const Color(0xFFFF6B6B); // Coral Pink
     } else if (diff.inDays == 1) {
       status = 'Tomorrow';
-      statusColor = const Color(0xFFF59E0B); // Amber
+      statusColor = const Color(0xFFFFB347); // Soft Orange
     } else if (diff.isNegative) {
       status = 'Overdue';
-      statusColor = Colors.grey;
+      statusColor = const Color(0xFFFF6B6B); // Coral Pink
     } else {
       status = DateFormat('MMM d').format(assignment.dueDate);
-      statusColor = const Color(0xFF22D3EE); // Cyan
+      statusColor = const Color(0xFF2196F3); // Electric Blue
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: const Color(0xFF122A46),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: const Color(0xFF122A46)),
       ),
       child: Material(
         color: Colors.transparent,

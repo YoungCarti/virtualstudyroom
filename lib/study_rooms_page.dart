@@ -653,7 +653,7 @@ class _RoomCard extends StatelessWidget {
               onPressed: activeUsers >= maxCapacity ? null : () {
                 Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => StudyRoomDetailPage(roomName: name),
+                    builder: (_) => StudyRoomDetailPage(roomName: name, roomId: roomId),
                   ),
                 );
               },

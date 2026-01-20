@@ -93,7 +93,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                   ),
                 ),
               ),
-              // Top-right: coral glow
+              // Top-right: Mint Green glow
               Positioned(
                 top: -40,
                 right: -40,
@@ -102,7 +102,7 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                   height: 200,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.coral.withValues(alpha: 0.25),
+                    color: const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
                   ),
                   child: BackdropFilter(
                     filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
@@ -269,8 +269,8 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                         title: "Settings",
                         icon: Icons.settings,
                         gradientColors: [
-                          const Color(0xFFA855F7).withValues(alpha: 0.2),
-                          const Color(0xFF8B5CF6).withValues(alpha: 0.2),
+                          const Color(0xFF2196F3).withValues(alpha: 0.2), // Electric Blue
+                          const Color(0xFF122A46).withValues(alpha: 0.4), // Midnight Blue
                         ],
                         onTap: () {Navigator.of(context).push(
                           MaterialPageRoute<void>(

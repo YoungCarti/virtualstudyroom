@@ -160,7 +160,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2d2140),
+        backgroundColor: const Color(0xFF122A46), // Midnight Blue
         title: const Text('Add Interest', style: TextStyle(color: Colors.white)),
         content: TextField(
           controller: controller,
@@ -169,7 +169,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
             hintText: 'e.g. AI, Music',
             hintStyle: TextStyle(color: Colors.white54),
             enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white30)),
-            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF22D3EE))),
+            focusedBorder: UnderlineInputBorder(borderSide: BorderSide(color: Color(0xFF2196F3))), // Electric Blue
           ),
         ),
         actions: [
@@ -187,7 +187,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 Navigator.pop(context);
               }
             },
-            child: const Text('Add', style: TextStyle(color: Color(0xFF22D3EE))),
+            child: const Text('Add', style: TextStyle(color: Color(0xFF2196F3))),
           ),
         ],
       ),
@@ -256,7 +256,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     final shouldPop = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF2d2140),
+        backgroundColor: const Color(0xFF122A46), // Midnight Blue
         title: const Text('Unsaved Changes', style: TextStyle(color: Colors.white)),
         content: const Text('Discard changes?', style: TextStyle(color: Colors.white70)),
         actions: [
@@ -277,8 +277,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   Widget build(BuildContext context) {
     // Theme Colors (Matching SettingsPage)
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+    final Color topColor = const Color(0xFF0A1929); // Deep Navy
+    final Color bottomColor = const Color(0xFF122A46); // Midnight Blue
 
     return PopScope(
       canPop: !_hasUnsavedChanges,
@@ -322,7 +322,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               )
             else
               IconButton(
-                icon: const Icon(Icons.check, color: Color(0xFF22D3EE)),
+                icon: const Icon(Icons.check, color: Color(0xFF4ECDC4)), // Mint Green Success
                 onPressed: _saveProfile,
               ),
           ],
@@ -349,7 +349,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 height: 250,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet
+                  color: const Color(0xFF2196F3).withValues(alpha: 0.15), // Electric Blue
                 ),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
@@ -365,7 +365,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                 height: 200,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan
+                  color: const Color(0xFF4ECDC4).withValues(alpha: 0.1), // Mint Green
                 ),
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
@@ -417,15 +417,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                         height: 16,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: Color(0xFF22D3EE),
+                                          color: Color(0xFF2196F3),
                                         ),
                                       )
                                     else
-                                      const Icon(Icons.camera_alt, color: Color(0xFF22D3EE), size: 16),
+                                      const Icon(Icons.camera_alt, color: Color(0xFF2196F3), size: 16),
                                     const SizedBox(width: 6),
                                     Text(
                                       _loading ? "Uploading..." : "Change Photo",
-                                      style: const TextStyle(color: Color(0xFF22D3EE), fontSize: 13, fontWeight: FontWeight.w500),
+                                      style: const TextStyle(color: Color(0xFF2196F3), fontSize: 13, fontWeight: FontWeight.w500),
                                     ),
                                   ],
                                 ),
@@ -566,7 +566,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                                   ),
-                                  child: const Icon(Icons.add, color: Color(0xFF22D3EE), size: 20),
+                                  child: const Icon(Icons.add, color: Color(0xFF2196F3), size: 20),
                                 ),
                               ),
                             ],
@@ -639,7 +639,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500),
                   maxLines: maxLines,
                   maxLength: maxLength,
-                  cursorColor: const Color(0xFF22D3EE),
+                  cursorColor: const Color(0xFF2196F3),
                   decoration: InputDecoration(
                     hintText: label,
                     hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
@@ -668,17 +668,17 @@ class _EditProfilePageState extends State<EditProfilePage> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFF22D3EE).withValues(alpha: 0.15) : Colors.transparent,
+          color: selected ? const Color(0xFF2196F3).withValues(alpha: 0.15) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: selected ? const Color(0xFF22D3EE) : Colors.white.withValues(alpha: 0.1),
+            color: selected ? const Color(0xFF2196F3) : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
-            color: selected ? const Color(0xFF22D3EE) : Colors.white70,
+            color: selected ? const Color(0xFF2196F3) : Colors.white70,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
