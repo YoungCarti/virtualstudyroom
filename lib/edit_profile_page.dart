@@ -501,61 +501,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
                       const SizedBox(height: 24),
 
-                      // Academic Info
-                      _buildSectionHeader("Academic"),
-                      _GlassContainer(
-                        child: Column(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildToggleButton(
-                                      label: 'Student',
-                                      selected: _role == 'student',
-                                      onTap: () => setState(() { _role = 'student'; _hasUnsavedChanges = true; }),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _buildToggleButton(
-                                      label: 'Lecturer',
-                                      selected: _role == 'lecturer',
-                                      onTap: () => setState(() { _role = 'lecturer'; _hasUnsavedChanges = true; }),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            _buildDivider(),
-                            Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: _buildToggleButton(
-                                      label: 'BCS',
-                                      selected: _program == 'BCS',
-                                      onTap: () => setState(() { _program = 'BCS'; _hasUnsavedChanges = true; }),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: _buildToggleButton(
-                                      label: 'BSE',
-                                      selected: _program == 'BSE',
-                                      onTap: () => setState(() { _program = 'BSE'; _hasUnsavedChanges = true; }),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
 
-                      const SizedBox(height: 24),
 
                       // Bio
                       _buildSectionHeader("About Me"),
@@ -688,35 +634,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildToggleButton({
-    required String label,
-    required bool selected,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF2196F3).withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? const Color(0xFF2196F3) : Colors.white.withValues(alpha: 0.1),
-          ),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          label,
-          style: TextStyle(
-            color: selected ? const Color(0xFF2196F3) : Colors.white70,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
       ),
     );
   }
