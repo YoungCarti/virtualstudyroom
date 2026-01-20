@@ -1,12 +1,10 @@
 import 'app_fonts.dart';
 import 'dart:async';
 import 'dart:ui';
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
-import 'package:google_fonts/google_fonts.dart';
 
 import 'app_theme.dart';
 import 'services/notification_service.dart';
@@ -20,6 +18,7 @@ import 'notifications_page.dart';
 import 'all_assignments_page.dart';
 import 'ai_tools_page.dart';
 import 'study_rooms_page.dart';
+import 'todo_page.dart';
 
 import 'auth_service.dart';
 
@@ -1533,12 +1532,13 @@ class _QuickActionsRow extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         _QuickActionIcon(
-          icon: Icons.menu_book_rounded,
-          label: 'Classes',
+          icon: Icons.checklist_rounded,
+          label: 'To-Do',
           color: const Color(0xFF2196F3),
           onTap: () {
-            final state = context.findAncestorStateOfType<_HomeDashboardPageState>();
-            state?._onBottomNavTap(1);
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ToDoPage()),
+            );
           },
         ),
         _QuickActionIcon(

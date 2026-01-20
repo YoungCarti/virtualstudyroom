@@ -10,6 +10,11 @@ service cloud.firestore {
       match /forest_sessions/{sessionId} {
         allow read, write: if request.auth.uid == userId;
       }
+
+      // To-Do List - users can read/write their own todos
+      match /todos/{todoId} {
+        allow read, write: if request.auth.uid == userId;
+      }
     }
 
     // Classes
