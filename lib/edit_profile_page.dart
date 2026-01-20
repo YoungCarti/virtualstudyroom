@@ -340,36 +340,40 @@ class _EditProfilePageState extends State<EditProfilePage> {
               ),
             ),
 
-            // 2. Ambient Glow Orbs
+            // 2. Ambient Glow Orbs (Optimized)
             Positioned(
-              top: -50,
-              right: -50,
+              top: -100,
+              right: -60,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                       const Color(0xFF2196F3).withValues(alpha: 0.25), // Electric Blue
+                       Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.7],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 80,
+              left: -60,
               child: Container(
                 width: 250,
                 height: 250,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: const Color(0xFF2196F3).withValues(alpha: 0.15), // Electric Blue
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 100,
-              left: -50,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: const Color(0xFF4ECDC4).withValues(alpha: 0.1), // Mint Green
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                  child: Container(color: Colors.transparent),
+                  gradient: RadialGradient(
+                    colors: [
+                      const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
+                      Colors.transparent,
+                    ],
+                    stops: const [0.0, 0.7],
+                  ),
                 ),
               ),
             ),
@@ -701,23 +705,17 @@ class _GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: child,
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: const Color(0xFF122A46).withValues(alpha: 0.5), // Midnight Blue semi-transparent
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
+      child: child,
     );
   }
 }

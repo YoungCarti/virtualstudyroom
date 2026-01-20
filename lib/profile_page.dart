@@ -60,20 +60,22 @@ class _ProfilePageState extends State<ProfilePage> {
             ),
           ),
 
-          // 2. Ambient Glow Orbs
+          // 2. Ambient Glow Orbs (Optimized with RadialGradient)
           Positioned(
-            top: -50,
-            left: -50,
+            top: -100,
+            left: -100,
             child: Container(
-              width: 300,
-              height: 300,
+              width: 400,
+              height: 400,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF2196F3).withValues(alpha: 0.15), // Electric Blue
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF2196F3).withValues(alpha: 0.3), // Electric Blue
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.7],
+                ),
               ),
             ),
           ),
@@ -81,15 +83,17 @@ class _ProfilePageState extends State<ProfilePage> {
             top: 100,
             right: -80,
             child: Container(
-              width: 250,
-              height: 250,
+              width: 300,
+              height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF4ECDC4).withValues(alpha: 0.1), // Mint Green
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.7],
+                ),
               ),
             ),
           ),
@@ -603,23 +607,17 @@ class _GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(20),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
-        child: Container(
-          padding: padding,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.2), // Darker glass
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: child,
+    return Container(
+      padding: padding,
+      decoration: BoxDecoration(
+        color: const Color(0xFF122A46).withValues(alpha: 0.5), // Midnight Blue semi-transparent
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
+      child: child,
     );
   }
 }

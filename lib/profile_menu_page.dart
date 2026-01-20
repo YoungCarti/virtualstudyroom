@@ -76,37 +76,42 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
               ),
 
               // 2. Ambient Glow Orbs
-              // Top-left: violet glow
+              // 2. Ambient Glow Orbs (Optimized)
+              // Top-left: Electric Blue glow
               Positioned(
-                top: -40,
-                left: -40,
+                top: -100,
+                left: -60,
                 child: Container(
                   width: 300,
                   height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: AppTheme.electricBlue.withValues(alpha: 0.15),
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                    child: Container(color: Colors.transparent),
+                    gradient: RadialGradient(
+                      colors: [
+                         const Color(0xFF2196F3).withValues(alpha: 0.25), // Electric Blue
+                         Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.7],
+                    ),
                   ),
                 ),
               ),
               // Top-right: Mint Green glow
               Positioned(
-                top: -40,
-                right: -40,
+                top: -80,
+                right: -80,
                 child: Container(
-                  width: 200,
-                  height: 200,
+                  width: 300,
+                  height: 300,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
-                  ),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                    child: Container(color: Colors.transparent),
+                    gradient: RadialGradient(
+                      colors: [
+                        const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
+                        Colors.transparent,
+                      ],
+                      stops: const [0.0, 0.7],
+                    ),
                   ),
                 ),
               ),
@@ -305,23 +310,17 @@ class _GlassCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(20),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.1),
-                width: 1,
-              ),
-            ),
-            child: child,
+      child: Container(
+        padding: padding,
+        decoration: BoxDecoration(
+          color: const Color(0xFF122A46).withValues(alpha: 0.5), // Midnight Blue semi-transparent
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
           ),
         ),
+        child: child,
       ),
     );
   }
@@ -348,31 +347,25 @@ class _MenuCard extends StatelessWidget {
       child: Row(
         children: [
           // Icon Container
-          ClipRRect(
-            borderRadius: BorderRadius.circular(18),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-              child: Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    width: 1,
-                  ),
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: gradientColors,
-                  ),
-                ),
-                child: Icon(
-                  icon,
-                  color: Colors.white,
-                  size: 20,
-                ),
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(
+                color: Colors.white.withValues(alpha: 0.1),
+                width: 1,
               ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: gradientColors,
+              ),
+            ),
+            child: Icon(
+              icon,
+              color: Colors.white,
+              size: 20,
             ),
           ),
           const SizedBox(width: 16),
@@ -431,27 +424,21 @@ class _GlassIconButton extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: GestureDetector(
-            onTap: onTap,
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: Colors.white.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
-              child: Icon(
-                icon,
-                color: iconColor ?? Colors.white,
-                size: 20,
-              ),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.1),
+              width: 1,
             ),
+          ),
+          child: Icon(
+            icon,
+            color: iconColor ?? Colors.white,
+            size: 20,
           ),
         ),
       ),
