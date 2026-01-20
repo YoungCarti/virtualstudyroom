@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'assignment_service.dart';
 import 'assignment_details_page.dart';
+import 'create_assignment_page.dart';
 
 class AllAssignmentsPage extends StatefulWidget {
   const AllAssignmentsPage({super.key});
@@ -21,6 +22,8 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
   StreamSubscription? _userSubscription;
   final Map<String, StreamSubscription> _classSubscriptions = {};
   bool _isLoading = true;
+  String _role = 'student';
+  List<String> _enrolledClasses = [];
 
   @override
   void initState() {
@@ -53,7 +56,17 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
          return;
       }
 
-      final enrolled = List<String>.from(userSnap.data()?['enrolledClasses'] ?? []);
+      final data = userSnap.data();
+      final enrolled = List<String>.from(data?['enrolledClasses'] ?? []);
+      final role = data?['role'] ?? 'student';
+      
+      if (mounted) {
+        setState(() {
+          _role = role;
+          _enrolledClasses = enrolled;
+        });
+      }
+      
       _syncSubscriptions(enrolled);
     });
   }
@@ -185,18 +198,76 @@ class _AllAssignmentsPageState extends State<AllAssignmentsPage> {
                               padding: const EdgeInsets.all(16),
                               itemCount: allAssignments.length,
                               itemBuilder: (context, index) {
-                                return AssignmentItem(
+                              return AssignmentItem(
                                   assignment: allAssignments[index],
                                   isLecturer: false, // Viewer mode
                                 );
                               },
                             ),
-                ),
-              ],
+                  ), // Expanded
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
+      floatingActionButton: _role == 'lecturer'
+          ? FloatingActionButton.extended(
+              onPressed: () {
+                if (_enrolledClasses.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('You have no classes to post to')),
+                  );
+                  return;
+                }
+                
+                // If only one class, go directly
+                if (_enrolledClasses.length == 1) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => CreateAssignmentPage(classCode: _enrolledClasses.first),
+                    ),
+                  );
+                  return;
+                }
+                
+                // Show selection dialog
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    backgroundColor: const Color(0xFF1C1C2E),
+                    title: Text('Select Class', style: AppFonts.clashGrotesk(color: Colors.white, fontWeight: FontWeight.bold)),
+                    content: SizedBox(
+                      width: double.maxFinite,
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _enrolledClasses.length,
+                        itemBuilder: (context, index) {
+                          final code = _enrolledClasses[index];
+                          return ListTile(
+                            title: Text(code, style: const TextStyle(color: Colors.white)),
+                            trailing: const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => CreateAssignmentPage(classCode: code),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                );
+              },
+              backgroundColor: const Color(0xFF2196F3),
+              icon: const Icon(Icons.add, color: Colors.white), 
+              label: Text('Create', style: AppFonts.clashGrotesk(color: Colors.white, fontWeight: FontWeight.w600)),
+            )
+          : null,
     );
   }
 }

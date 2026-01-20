@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'app_theme.dart';
+import 'services/notification_service.dart';
 import 'widgets/animated_components.dart';
 import 'assignment_service.dart';
 import 'assignment_details_page.dart';
@@ -32,12 +33,196 @@ class HomeDashboardPage extends StatefulWidget {
 class _HomeDashboardPageState extends State<HomeDashboardPage> {
   int _selectedIndex = 0;
   String _role = 'student'; // track current role
+  
+  // Notification Subscriptions
+  final Map<String, StreamSubscription> _assignmentSubs = {};
+  final Map<String, StreamSubscription> _messageSubs = {}; // sub-subscriptions for messages
+  StreamSubscription? _userSettingsSub;
+  StreamSubscription? _groupsSub; // Main subscription to find groups
+  
+  // Settings Cache
+  bool _notifyAssignments = true;
+  bool _notifyGroups = true;
 
   @override
   void initState() {
     super.initState();
     // Update streak when dashboard loads (app start or login)
     AuthService.instance.updateUserStreak();
+    
+    // Initialize Notification Service
+    final ns = NotificationService();
+    ns.init();
+    ns.requestPermissions();
+    
+    // Setup Listeners
+    _setupNotificationListeners();
+    
+    // Listen for Notification Taps
+    NotificationService().onNotificationClick.listen((payload) {
+      _handleNotificationClick(payload);
+    });
+  }
+  
+  void _setupNotificationListeners() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    // 1. Listen to Settings & Enrollments (for Assignments)
+    _userSettingsSub = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .snapshots()
+        .listen((snapshot) {
+      if (!snapshot.exists) return;
+      final data = snapshot.data();
+      if (data == null) return;
+
+      // Update Settings
+      _notifyAssignments = data['settings_notify_assignments'] ?? true;
+      _notifyGroups = data['settings_notify_groups'] ?? true;
+      
+      // Update Role
+      if (mounted) {
+        setState(() {
+          _role = data['role'] ?? 'student';
+        });
+      }
+
+      // Update Assignment Listeners based on Enrollments
+      final enrolledClasses = List<String>.from(data['enrolledClasses'] ?? []);
+      _updateAssignmentListeners(enrolledClasses);
+    });
+
+    // 2. Listen to Groups (via Collection Group)
+    _groupsSub = FirebaseFirestore.instance
+        .collectionGroup('groups')
+        .where('members', arrayContains: uid)
+        .snapshots()
+        .listen((snapshot) {
+       _syncGroupMessageListeners(snapshot.docs);
+    });
+  }
+
+  void _updateAssignmentListeners(List<String> classCodes) {
+    // Remove stale
+    _assignmentSubs.removeWhere((code, sub) {
+      if (!classCodes.contains(code)) {
+        sub.cancel();
+        return true;
+      }
+      return false;
+    });
+
+    // Add new
+    for (final code in classCodes) {
+      if (!_assignmentSubs.containsKey(code)) {
+        _assignmentSubs[code] = FirebaseFirestore.instance
+            .collection('classes')
+            .doc(code)
+            .collection('assignments')
+            .snapshots()
+            .skip(1)
+            .listen((snapshot) {
+          if (!_notifyAssignments) return;
+          
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              final title = data?['title'] ?? 'New Assignment'; // Safe access
+              
+              // Simple check to avoid notifying for old assignments on init if skip(1) misses
+              // (skip(1) usually works for stream start, but let's be safe)
+              NotificationService().showNotification(
+                id: change.doc.hashCode,
+                title: 'New Assignment Posted',
+                body: title,
+                payload: 'assignment_${code}_${change.doc.id}',
+              );
+            }
+          }
+        });
+      }
+    }
+  }
+
+  void _handleNotificationClick(String? payload) {
+    if (payload == null) return;
+    
+    // Parse Payload: assignment_{classCode}_{assignmentId}
+    if (payload.startsWith('assignment_')) {
+      final parts = payload.split('_');
+      if (parts.length >= 3) {
+        final classCode = parts[1];
+        final assignmentId = parts[2];
+        
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AssignmentDetailsPage(
+              classCode: classCode, 
+              assignmentId: assignmentId,
+              isLecturer: _role == 'lecturer',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  void _syncGroupMessageListeners(List<DocumentSnapshot> groupDocs) {
+    final groupIds = groupDocs.map((d) => d.id).toSet();
+
+    // Remove stale
+    _messageSubs.removeWhere((id, sub) {
+      if (!groupIds.contains(id)) {
+        sub.cancel();
+        return true;
+      }
+      return false;
+    });
+
+    // Add new
+    for (final groupDoc in groupDocs) {
+      final groupId = groupDoc.id;
+      if (!_messageSubs.containsKey(groupId)) {
+        // Use the reference from the doc to access subcollection (handles any path)
+        _messageSubs[groupId] = groupDoc.reference
+            .collection('messages')
+            .snapshots()
+            .skip(1)
+            .listen((snapshot) {
+          if (!_notifyGroups) return;
+
+          for (final change in snapshot.docChanges) {
+            if (change.type == DocumentChangeType.added) {
+              final data = change.doc.data();
+              final senderId = data?['senderId'];
+              final currentUser = FirebaseAuth.instance.currentUser?.uid;
+              
+              if (senderId == currentUser) continue;
+              
+              final text = data?['text'] ?? 'New message'; // Safe access
+              NotificationService().showNotification(
+                id: change.doc.hashCode,
+                title: 'New Group Message',
+                body: text,
+                payload: 'group_$groupId',
+              );
+            }
+          }
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _userSettingsSub?.cancel();
+    _groupsSub?.cancel();
+    for (var sub in _assignmentSubs.values) sub.cancel();
+    for (var sub in _messageSubs.values) sub.cancel();
+    super.dispose();
   }
 
   void _onBottomNavTap(int index) {

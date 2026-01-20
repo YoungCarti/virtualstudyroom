@@ -110,19 +110,26 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
 
   @override
   Widget build(BuildContext context) {
-    // Background Colors
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+    // Ocean Sunset Palette
+    final Color topColor = const Color(0xFF0A1929); // Deep Navy
+    final Color bottomColor = const Color(0xFF122A46); // Midnight Blue
 
-    return GradientBackground(
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        extendBodyBehindAppBar: true,
-        body: Stack(
-          children: [
-            // 1. Background Gradient removed
+    return Scaffold(
+      extendBodyBehindAppBar: true,
+      body: Stack(
+        children: [
+          // 1. Background Gradient
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [topColor, bottomColor],
+              ),
+            ),
+          ),
 
-          // 2. Ambient Glow
+          // 2. Ambient Glow Orbs (Optimized)
            Positioned(
             top: -100,
             left: 0,
@@ -135,15 +142,11 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                   shape: BoxShape.circle,
                   gradient: RadialGradient(
                     colors: [
-                      const Color(0xFF7C3AED).withValues(alpha: 0.2),
+                      const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
                       Colors.transparent,
                     ],
-                    radius: 0.8,
+                    stops: const [0.0, 0.7],
                   ),
-                ),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                  child: Container(color: Colors.transparent),
                 ),
               ),
             ),
@@ -262,7 +265,11 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
                                 ),
                                 child: Text(
                                   _otpCountdown > 0 ? "Resend in ${_otpCountdown}s" : "Get OTP",
-                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w500,
+                                    color: _otpCountdown > 0 ? Colors.white70 : const Color(0xFF4ECDC4),
+                                  ),
                                 ),
                               ),
                             ],
@@ -285,7 +292,6 @@ class _ChangeEmailPageState extends State<ChangeEmailPage> {
           ),
         ],
       ),
-      ),
     );
   }
 }
@@ -297,29 +303,23 @@ class _GlassBackButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(12),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: GestureDetector(
-          onTap: onTap,
-          child: Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.12),
-                width: 1,
-              ),
-            ),
-            child: const Icon(
-              LucideIcons.chevronLeft,
-              color: Colors.white,
-              size: 20,
-            ),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.12),
+            width: 1,
           ),
+        ),
+        child: const Icon(
+          LucideIcons.chevronLeft,
+          color: Colors.white,
+          size: 20,
         ),
       ),
     );
@@ -367,7 +367,7 @@ class _EmailInput extends StatelessWidget {
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
-            cursorColor: const Color(0xFF8B5CF6),
+            cursorColor: const Color(0xFF4ECDC4), // Mint Green
             decoration: InputDecoration(
               hintText: placeholder,
               hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
@@ -394,41 +394,37 @@ class _UpdateEmailButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-          child: Container(
-            height: 56,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: onTap == null ? 0.05 : 0.12),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.15),
-                width: 1,
-              ),
-            ),
-            child: Center(
-              child: isLoading
-                  ? const SizedBox(
-                      width: 24,
-                      height: 24,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      "Update Email Address",
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: onTap == null ? 0.5 : 1.0),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-            ),
+      child: Container(
+        height: 56,
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: onTap == null
+              ? Colors.white.withValues(alpha: 0.05)
+              : const Color(0xFF4ECDC4).withValues(alpha: 0.8), // Mint Green
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.15),
+            width: 1,
           ),
+        ),
+        child: Center(
+          child: isLoading
+              ? const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                  ),
+                )
+              : Text(
+                  "Update Email Address",
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: onTap == null ? 0.5 : 1.0),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
         ),
       ),
     );

@@ -1,5 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -14,6 +16,10 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _notifyAssignments = true;
   bool _notifyGroups = true;
   bool _notifyAppUpdates = false;
+  bool _isLoading = true;
+
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Language Options
   final List<String> _languages = [
@@ -25,6 +31,49 @@ class _SettingsPageState extends State<SettingsPage> {
     '日本語',
     '한국어',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      try {
+        final doc = await _firestore.collection('users').doc(user.uid).get();
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          setState(() {
+            _notifyAssignments = data['settings_notify_assignments'] ?? true;
+            _notifyGroups = data['settings_notify_groups'] ?? true;
+            _notifyAppUpdates = data['settings_notify_updates'] ?? false;
+            // Language logic later if needed
+          });
+        }
+      } catch (e) {
+        debugPrint("Error loading settings: $e");
+      }
+    }
+    setState(() => _isLoading = false);
+  }
+
+  Future<void> _updateSetting(String key, bool value) async {
+    final user = _auth.currentUser;
+    if (user != null) {
+      try {
+        await _firestore.collection('users').doc(user.uid).set({
+          key: value,
+        }, SetOptions(merge: true));
+      } catch (e) {
+        debugPrint("Error saving setting: $e");
+        ScaffoldMessenger.of(context).showSnackBar(
+           SnackBar(content: Text("Failed to save setting: $e")),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -64,7 +113,6 @@ class _SettingsPageState extends State<SettingsPage> {
             ),
           ),
 
-          // 2. Ambient Glow Orbs (Visual decorations)
           // 2. Ambient Glow Orbs (Optimized)
           Positioned(
             top: -100,
@@ -105,7 +153,9 @@ class _SettingsPageState extends State<SettingsPage> {
 
           // 3. Main Content
           SafeArea(
-            child: ListView(
+            child: _isLoading 
+              ? const Center(child: CircularProgressIndicator())
+              : ListView(
               padding: const EdgeInsets.all(20),
               children: [
                 // --- SECTION 1: GENERAL (Language) ---
@@ -179,7 +229,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         subtitle: "Get notified when assignments are posted",
                         icon: Icons.assignment_outlined,
                         value: _notifyAssignments,
-                        onChanged: (v) => setState(() => _notifyAssignments = v),
+                        onChanged: (v) {
+                          setState(() => _notifyAssignments = v);
+                          _updateSetting('settings_notify_assignments', v);
+                        },
                       ),
                       _buildDivider(),
                       _buildSwitchTile(
@@ -187,7 +240,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         subtitle: "Receive messages from your study groups",
                         icon: Icons.groups_outlined,
                         value: _notifyGroups,
-                        onChanged: (v) => setState(() => _notifyGroups = v),
+                        onChanged: (v) {
+                          setState(() => _notifyGroups = v);
+                          _updateSetting('settings_notify_groups', v);
+                        },
                       ),
                       _buildDivider(),
                       _buildSwitchTile(
@@ -195,7 +251,10 @@ class _SettingsPageState extends State<SettingsPage> {
                         subtitle: "New features and system alerts",
                         icon: Icons.system_update_alt,
                         value: _notifyAppUpdates,
-                        onChanged: (v) => setState(() => _notifyAppUpdates = v),
+                        onChanged: (v) {
+                          setState(() => _notifyAppUpdates = v);
+                          _updateSetting('settings_notify_updates', v);
+                        },
                       ),
                     ],
                   ),

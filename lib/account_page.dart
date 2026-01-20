@@ -7,9 +7,11 @@ class AccountPage extends StatelessWidget {
   const AccountPage({super.key});
 
   @override
+  @override
   Widget build(BuildContext context) {
-    final Color topColor = const Color(0xFF7C3AED).withValues(alpha: 0.1);
-    final Color bottomColor = const Color(0xFFC026D3).withValues(alpha: 0.08);
+    // Ocean Sunset Palette
+    final Color topColor = const Color(0xFF0A1929); // Deep Navy
+    final Color bottomColor = const Color(0xFF122A46); // Midnight Blue
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -43,20 +45,22 @@ class AccountPage extends StatelessWidget {
             ),
           ),
 
-          // 2. Ambient Glow Orbs (Consistent with SettingsPage)
+          // 2. Ambient Glow Orbs (Optimized with RadialGradient)
           Positioned(
             top: -50,
             right: -50,
             child: Container(
-              width: 250,
-              height: 250,
+              width: 300,
+              height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF8B5CF6).withValues(alpha: 0.2), // Violet glow
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                child: Container(color: Colors.transparent),
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF2196F3).withValues(alpha: 0.25), // Electric Blue
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.7],
+                ),
               ),
             ),
           ),
@@ -68,11 +72,13 @@ class AccountPage extends StatelessWidget {
               height: 200,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.15), // Cyan glow
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
-                child: Container(color: Colors.transparent),
+                gradient: RadialGradient(
+                  colors: [
+                    const Color(0xFF4ECDC4).withValues(alpha: 0.2), // Mint Green
+                    Colors.transparent,
+                  ],
+                  stops: const [0.0, 0.7],
+                ),
               ),
             ),
           ),
@@ -90,8 +96,8 @@ class AccountPage extends StatelessWidget {
                       _buildActionTile(
                         title: "Change Password",
                         subtitle: "Update your account password",
-                        icon: Icons.lock_outline, // Changed to standard icon
-                        iconColor: const Color(0xFF6366F1), // Indigo/Blue
+                        icon: Icons.lock_outline,
+                        iconColor: const Color(0xFF2196F3), // Electric Blue
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -104,8 +110,8 @@ class AccountPage extends StatelessWidget {
                       _buildActionTile(
                         title: "Change Email Address",
                         subtitle: "Update your registered email",
-                        icon: Icons.alternate_email, // Changed to standard icon
-                        iconColor: const Color(0xFFD946EF), // Fuchsia/Pink
+                        icon: Icons.alternate_email,
+                        iconColor: const Color(0xFF4ECDC4), // Mint Green
                         onTap: () {
                           Navigator.of(context).push(
                             MaterialPageRoute(
@@ -210,22 +216,16 @@ class _GlassContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-        child: Container(
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.1),
-              width: 1,
-            ),
-          ),
-          child: child,
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF122A46).withValues(alpha: 0.5), // Midnight Blue semi-transparent
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1),
+          width: 1,
         ),
       ),
+      child: child,
     );
   }
 }
