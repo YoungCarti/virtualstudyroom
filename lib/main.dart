@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'auth_page.dart';
 import 'login_page.dart';
 import 'splash_screen.dart';
@@ -42,10 +43,14 @@ class _MyAppState extends State<MyApp> {
       );
       
       // Initialize App Check with debug provider for development
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: const AndroidDebugProvider(),
-        providerApple: const AppleDebugProvider(),
-      );
+      // Initialize App Check with debug provider for development
+      // Skip on Web for now to prevent blocking if no reCAPTCHA key is set
+      if (!kIsWeb) {
+        await FirebaseAppCheck.instance.activate(
+          providerAndroid: const AndroidDebugProvider(),
+          providerApple: const AppleDebugProvider(),
+        );
+      }
       
       if (mounted) {
         setState(() => _firebaseReady = true);

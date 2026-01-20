@@ -683,6 +683,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                           contentTitle: item.contentTitle,
                           contentType: item.contentType,
                           sharedData: item.sharedData,
+                          classCode: widget.classCode,
                         );
                       },
                     );
@@ -724,6 +725,7 @@ class _MessageBubble extends StatelessWidget {
     required this.onDelete, required this.isDeleted,
     this.type, this.meetingCode, this.participants = const [], this.onJoinMeeting, this.status = 'active',
     this.isSharedContent = false, this.contentTitle, this.contentType, this.sharedData,
+    this.classCode,
   });
 
   final String text; final String senderId; final String senderName; final DateTime? createdAt;
@@ -733,6 +735,7 @@ class _MessageBubble extends StatelessWidget {
   final String? type; final String? meetingCode; final List<String> participants;
   final Function(String, String)? onJoinMeeting; final String status;
   final bool isSharedContent; final String? contentTitle; final String? contentType; final String? sharedData;
+  final String? classCode;
 
   void _showOptions(BuildContext context) {
     if (isDeleted) return;
@@ -843,7 +846,8 @@ class _MessageBubble extends StatelessWidget {
                       title: contentTitle ?? 'Shared Content', 
                       type: contentType ?? 'Study Material', 
                       data: sharedData ?? '', 
-                      isMe: isMe
+                      isMe: isMe,
+                      classCode: classCode,
                     )
                   : Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               if (fileUrl != null) ...[
@@ -1208,18 +1212,20 @@ class _SharedContentCard extends StatelessWidget {
     required this.type,
     required this.data,
     required this.isMe,
+    this.classCode,
   });
 
   final String title;
   final String type;
   final String data; // outline content
   final bool isMe;
+  final String? classCode;
 
   void _onOpen(BuildContext context) {
     if (type.contains('Flashcard')) {
        Navigator.push(context, MaterialPageRoute(builder: (_) => FlashcardGeneratorPage(initialOutline: data)));
     } else if (type.contains('Quiz')) {
-       Navigator.push(context, MaterialPageRoute(builder: (_) => QuizMakerPage(initialOutline: data)));
+       Navigator.push(context, MaterialPageRoute(builder: (_) => QuizMakerPage(initialOutline: data, classCode: classCode)));
     } else if (type.contains('Note')) {
        Navigator.push(context, MaterialPageRoute(builder: (_) => NotesHelperPage(initialContent: data, initialTitle: title)));
     } else {

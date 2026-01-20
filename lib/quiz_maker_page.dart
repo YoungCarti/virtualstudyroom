@@ -1358,8 +1358,17 @@ class _QuizPageState extends State<QuizPage> {
     }
 
     } catch (e) {
-      // Fail silently or log
+      // DEBUG: Show error to user
       print('Error saving quiz result: $e');
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving score: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -1402,7 +1411,17 @@ class _QuizPageState extends State<QuizPage> {
     return Scaffold(
       backgroundColor: _deepNavy,
       appBar: AppBar(
-        title: Text(widget.title, style: GoogleFonts.outfit(fontSize: 16)),
+        // DEBUG: content show classCode if present
+        title: Column(
+          children: [
+            Text(widget.title, style: GoogleFonts.outfit(fontSize: 16)),
+            if (widget.classCode != null)
+              Text(
+                'Class: ${widget.classCode}', 
+                style: GoogleFonts.firaCode(fontSize: 10, color: _mintGreen)
+              ),
+          ],
+        ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
         elevation: 0,
