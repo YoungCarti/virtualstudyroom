@@ -1,10 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'app_fonts.dart';
 
 import 'study_room_detail_page.dart';
 
-const Color _primaryPurple = Color(0xFF6C63FF);
-const Color _secondaryPurple = Color(0xFFB4A0FF);
-const Color _backgroundTint = Color(0xFFF4F1FF);
+// Ocean Sunset Color Palette
+const Color _deepNavy = Color(0xFF0A1929);      // Background base
+const Color _midnightBlue = Color(0xFF122A46);  // Cards/containers
+const Color _electricBlue = Color(0xFF2196F3);  // Primary actions
+const Color _coralPink = Color(0xFFFF6B6B);     // Accents/alerts
+const Color _mintGreen = Color(0xFF4ECDC4);     // Success/positive
+const Color _softOrange = Color(0xFFFFB347);    // Warnings/attention
+const Color _pureWhite = Color(0xFFFFFFFF);     // Text
 
 class StudyRoomsPage extends StatelessWidget {
   const StudyRoomsPage({super.key});
@@ -23,15 +30,19 @@ class StudyRoomsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF10101C) : _backgroundTint,
+      backgroundColor: _deepNavy,
       appBar: AppBar(
-        title: const Text('Study Rooms'),
+        title: Text(
+          'Study Rooms',
+          style: AppFonts.clashGrotesk(
+            fontWeight: FontWeight.bold,
+            color: _pureWhite,
+          ),
+        ),
         centerTitle: true,
         backgroundColor: Colors.transparent,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF1F1F33),
+        foregroundColor: _pureWhite,
         elevation: 0,
       ),
       body: SafeArea(
@@ -40,28 +51,25 @@ class StudyRoomsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _CreateRoomBanner(isDark: isDark),
+              const _CreateRoomBanner(),
               const SizedBox(height: 24),
-              _SectionHeading(title: 'Public Rooms'),
+              const _SectionHeading(title: 'Public Rooms'),
               const SizedBox(height: 12),
-              _RoomList(rooms: _publicRooms, isDark: isDark),
+              _RoomList(rooms: _publicRooms),
               const SizedBox(height: 24),
-              _SectionHeading(title: 'Private Rooms'),
+              const _SectionHeading(title: 'Private Rooms'),
               const SizedBox(height: 12),
-              _RoomList(rooms: _privateRooms, isDark: isDark),
+              _RoomList(rooms: _privateRooms),
               const SizedBox(height: 28),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor:
-                        isDark ? Colors.white : const Color(0xFF1F1F33),
-                    side: BorderSide(
-                      color: isDark ? Colors.white24 : _primaryPurple,
-                    ),
+                    foregroundColor: _pureWhite,
+                    side: const BorderSide(color: _electricBlue),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                      borderRadius: BorderRadius.circular(16),
                     ),
                   ),
                   onPressed: () {
@@ -70,9 +78,12 @@ class StudyRoomsPage extends StatelessWidget {
                     );
                   },
                   icon: const Icon(Icons.add_rounded),
-                  label: const Text(
+                  label: Text(
                     'Create Room',
-                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                    style: AppFonts.clashGrotesk(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
                   ),
                 ),
               ),
@@ -93,31 +104,26 @@ class _SectionHeading extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white
-                : const Color(0xFF1E1E33),
-          ),
+      style: AppFonts.clashGrotesk(
+        fontSize: 18,
+        fontWeight: FontWeight.bold,
+        color: _pureWhite,
+      ),
     );
   }
 }
 
 class _RoomList extends StatelessWidget {
-  const _RoomList({required this.rooms, required this.isDark});
+  const _RoomList({required this.rooms});
 
   final List<_RoomInfo> rooms;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemBuilder: (_, index) => _RoomCard(
-        info: rooms[index],
-        isDark: isDark,
-      ),
+      itemBuilder: (_, index) => _RoomCard(info: rooms[index]),
       separatorBuilder: (_, __) => const SizedBox(height: 12),
       itemCount: rooms.length,
     );
@@ -125,30 +131,19 @@ class _RoomList extends StatelessWidget {
 }
 
 class _RoomCard extends StatelessWidget {
-  const _RoomCard({required this.info, required this.isDark});
+  const _RoomCard({required this.info});
 
   final _RoomInfo info;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E2E) : Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.12),
-            blurRadius: 30,
-            offset: const Offset(0, 18),
-            spreadRadius: -16,
-          ),
-        ],
+        color: _midnightBlue,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isDark
-              ? Colors.white.withValues(alpha: 0.05)
-              : Colors.black.withValues(alpha: 0.04),
+          color: _pureWhite.withOpacity(0.1),
         ),
       ),
       child: Column(
@@ -159,12 +154,12 @@ class _RoomCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: _primaryPurple.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(16),
+                  color: _electricBlue.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.meeting_room_rounded,
-                  color: _primaryPurple,
+                  color: _electricBlue,
                 ),
               ),
               const SizedBox(width: 12),
@@ -174,28 +169,27 @@ class _RoomCard extends StatelessWidget {
                   children: [
                     Text(
                       info.name,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: isDark ? Colors.white : const Color(0xFF1F1F33),
-                          ),
+                      style: AppFonts.clashGrotesk(
+                        fontWeight: FontWeight.bold,
+                        color: _pureWhite,
+                        fontSize: 16,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
                         Icon(
                           Icons.people_alt_rounded,
-                          size: 18,
-                          color: isDark ? Colors.white70 : Colors.grey[600],
+                          size: 16,
+                          color: _pureWhite.withOpacity(0.6),
                         ),
                         const SizedBox(width: 6),
                         Text(
                           '${info.userCount} online',
-                          style:
-                              Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: isDark
-                                        ? Colors.white70
-                                        : const Color(0xFF5C5C7A),
-                                  ),
+                          style: AppFonts.clashGrotesk(
+                            color: _pureWhite.withOpacity(0.6),
+                            fontSize: 13,
+                          ),
                         ),
                       ],
                     ),
@@ -204,16 +198,8 @@ class _RoomCard extends StatelessWidget {
               ),
               Row(
                 children: [
-                  if (info.hasChat)
-                    _IconBadge(
-                      icon: Icons.chat_bubble_outline_rounded,
-                      isDark: isDark,
-                    ),
-                  if (info.hasVideo)
-                    _IconBadge(
-                      icon: Icons.videocam_rounded,
-                      isDark: isDark,
-                    ),
+                  if (info.hasChat) const _IconBadge(icon: Icons.chat_bubble_outline_rounded),
+                  if (info.hasVideo) const _IconBadge(icon: Icons.videocam_rounded),
                 ],
               ),
             ],
@@ -223,10 +209,10 @@ class _RoomCard extends StatelessWidget {
             width: double.infinity,
             child: FilledButton(
               style: FilledButton.styleFrom(
-                backgroundColor: _primaryPurple,
+                backgroundColor: _electricBlue,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               onPressed: () {
@@ -236,11 +222,12 @@ class _RoomCard extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text(
+              child: Text(
                 'Join Now',
-                style: TextStyle(
+                style: AppFonts.clashGrotesk(
                   fontWeight: FontWeight.w700,
                   fontSize: 16,
+                  color: _pureWhite,
                 ),
               ),
             ),
@@ -252,10 +239,9 @@ class _RoomCard extends StatelessWidget {
 }
 
 class _IconBadge extends StatelessWidget {
-  const _IconBadge({required this.icon, required this.isDark});
+  const _IconBadge({required this.icon});
 
   final IconData icon;
-  final bool isDark;
 
   @override
   Widget build(BuildContext context) {
@@ -263,22 +249,20 @@ class _IconBadge extends StatelessWidget {
       margin: const EdgeInsets.only(left: 8),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white12 : _secondaryPurple.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(14),
+        color: _mintGreen.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Icon(
         icon,
         size: 18,
-        color: isDark ? Colors.white : _primaryPurple,
+        color: _mintGreen,
       ),
     );
   }
 }
 
 class _CreateRoomBanner extends StatelessWidget {
-  const _CreateRoomBanner({required this.isDark});
-
-  final bool isDark;
+  const _CreateRoomBanner();
 
   @override
   Widget build(BuildContext context) {
@@ -287,19 +271,19 @@ class _CreateRoomBanner extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            _primaryPurple,
-            _secondaryPurple,
+            _electricBlue,
+            _mintGreen,
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: _primaryPurple.withValues(alpha: 0.3),
-            blurRadius: 40,
-            offset: const Offset(0, 18),
-            spreadRadius: -12,
+            color: _electricBlue.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+            spreadRadius: -8,
           ),
         ],
       ),
@@ -311,17 +295,19 @@ class _CreateRoomBanner extends StatelessWidget {
               children: [
                 Text(
                   'Need a private focus room?',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
+                  style: AppFonts.clashGrotesk(
+                    color: _pureWhite,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 18,
+                  ),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   'Spin up a session for your class or study clan in seconds.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
+                  style: AppFonts.clashGrotesk(
+                    color: _pureWhite.withOpacity(0.85),
+                    fontSize: 14,
+                  ),
                 ),
               ],
             ),
@@ -329,11 +315,11 @@ class _CreateRoomBanner extends StatelessWidget {
           const SizedBox(width: 16),
           FilledButton(
             style: FilledButton.styleFrom(
-              backgroundColor: isDark ? Colors.black : Colors.white,
-              foregroundColor: isDark ? Colors.white : _primaryPurple,
+              backgroundColor: _pureWhite,
+              foregroundColor: _deepNavy,
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(12),
               ),
             ),
             onPressed: () {
@@ -341,9 +327,12 @@ class _CreateRoomBanner extends StatelessWidget {
                 const SnackBar(content: Text('Create flow coming soon!')),
               );
             },
-            child: const Text(
+            child: Text(
               'Create Room',
-              style: TextStyle(fontWeight: FontWeight.w700),
+              style: AppFonts.clashGrotesk(
+                fontWeight: FontWeight.w700,
+                color: _deepNavy,
+              ),
             ),
           ),
         ],
@@ -360,4 +349,3 @@ class _RoomInfo {
   final bool hasChat;
   final bool hasVideo;
 }
-
