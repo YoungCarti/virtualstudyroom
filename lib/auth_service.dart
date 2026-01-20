@@ -41,13 +41,23 @@ class AuthService {
     }
   }
 
+  // Helper to determine role based on email domain
+  String _getRoleFromEmail(String email) {
+    final lowerEmail = email.toLowerCase().trim();
+    // .edu domain = lecturer, otherwise student
+    if (lowerEmail.endsWith('.edu') || lowerEmail.endsWith('.edu.my')) {
+      return 'lecturer';
+    }
+    return 'student';
+  }
+
   // Register, set a display name and create profile document.
   Future<void> registerWithEmail({
     required String email,
     required String password,
     required String firstName,
     required String lastName,
-    // Phone removed
+    String? role,
   }) async {
     try {
       final userCred = await _auth.createUserWithEmailAndPassword(
@@ -61,13 +71,18 @@ class AuthService {
       final displayName = '$firstName $lastName';
       await user.updateDisplayName(displayName);
 
+      // Determine role: use provided role if valid, otherwise auto-detect
+      final finalRole = (role == 'student' || role == 'lecturer')
+          ? role!
+          : _getRoleFromEmail(email);
+
       // Create user profile in Firestore
       await _firestore.collection('users').doc(user.uid).set({
         'email': email.trim(),
         'firstName': firstName.trim(),
         'lastName': lastName.trim(),
         'name': displayName,
-        'role': 'student', // Default role
+        'role': finalRole,
         'enrolledClasses': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
         'currentStreak': 1,
@@ -125,10 +140,13 @@ class AuthService {
     final docRef = _firestore.collection('users').doc(user.uid);
     final snapshot = await docRef.get();
     if (!snapshot.exists) {
+      // Determine role based on email domain
+      final role = _getRoleFromEmail(user.email ?? '');
+      
       await docRef.set({
         'email': user.email,
         'name': user.displayName ?? (user.email?.split('@').first ?? 'New User'),
-        'role': 'student',
+        'role': role, // Auto-assign based on .edu domain
         'enrolledClasses': <String>[],
         'createdAt': FieldValue.serverTimestamp(),
         'currentStreak': 1,

@@ -27,6 +27,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
+  String _selectedRole = 'student'; // Default role
   
   // Error messages
   String? _firstNameError;
@@ -34,6 +35,7 @@ class _RegisterPageState extends State<RegisterPage> {
   String? _emailError;
   String? _confirmPasswordError;
   String? _passwordError;
+  String? _roleError;
 
   final _auth = AuthService.instance;
 
@@ -56,6 +58,7 @@ class _RegisterPageState extends State<RegisterPage> {
       _emailError = null;
       _confirmPasswordError = null;
       _passwordError = null;
+      _roleError = null;
     });
 
     if (_firstNameController.text.trim().length < 2) {
@@ -72,6 +75,24 @@ class _RegisterPageState extends State<RegisterPage> {
     if (email.isEmpty || !RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email)) {
       setState(() => _emailError = 'Please enter a valid email address');
       isValid = false;
+    }
+
+    // Validate role-based email restrictions
+    final lowerEmail = email.toLowerCase();
+    final isEduEmail = lowerEmail.endsWith('.edu') || lowerEmail.endsWith('.edu.my');
+    
+    if (_selectedRole == 'lecturer') {
+      // Lecturers MUST use .edu emails
+      if (!isEduEmail) {
+        setState(() => _roleError = 'Lecturer registration requires a .edu email address');
+        isValid = false;
+      }
+    } else if (_selectedRole == 'student') {
+      // Students CANNOT use .edu emails
+      if (isEduEmail) {
+        setState(() => _roleError = 'Students must use a regular email (e.g., gmail.com)');
+        isValid = false;
+      }
     }
 
 
@@ -107,6 +128,7 @@ class _RegisterPageState extends State<RegisterPage> {
         password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
+        role: _selectedRole, // Pass selected role
       );
 
       // 2. Send Verification Link
@@ -269,6 +291,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     const SizedBox(height: 20),
 
+                    // Role Selection
+                    _buildRoleSelector(),
+                    const SizedBox(height: 20),
+
 
 
                     // Password
@@ -361,6 +387,116 @@ class _RegisterPageState extends State<RegisterPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildRoleSelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildLabel('I am a'),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.06),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: _roleError != null
+                      ? const Color(0xFFEF4444).withOpacity(0.6)
+                      : Colors.white.withOpacity(0.1),
+                ),
+              ),
+              child: Row(
+                children: [
+                  const SizedBox(width: 14),
+                  Icon(
+                    Icons.school_outlined,
+                    color: Colors.white.withOpacity(0.5),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedRole,
+                        isExpanded: true,
+                        dropdownColor: const Color(0xFF1E1E2E),
+                        icon: Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white.withOpacity(0.5),
+                        ),
+                        style: AppFonts.clashGrotesk(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: 'student',
+                            child: Text('Student'),
+                          ),
+                          DropdownMenuItem(
+                            value: 'lecturer',
+                            child: Text('Lecturer'),
+                          ),
+                        ],
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              _selectedRole = value;
+                              _roleError = null;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        if (_roleError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 6, left: 4),
+            child: Text(
+              _roleError!,
+              style: AppFonts.clashGrotesk(
+                fontSize: 12,
+                color: const Color(0xFFEF4444),
+              ),
+            ),
+          ),
+        // Info text for lecturer
+        if (_selectedRole == 'lecturer')
+          Padding(
+            padding: const EdgeInsets.only(top: 8, left: 4),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 14,
+                  color: const Color(0xFF22D3EE).withOpacity(0.8),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Requires a valid .edu email address',
+                    style: AppFonts.clashGrotesk(
+                      fontSize: 12,
+                      color: const Color(0xFF22D3EE).withOpacity(0.8),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
