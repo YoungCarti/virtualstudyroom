@@ -24,13 +24,13 @@ class _ToDoPageState extends State<ToDoPage> {
       MaterialPageRoute(
         builder: (context) => AddToDoPage(
           uid: uid,
-          onAddTask: _addTask,
+          onAddTask: (t, d, dB, date, time, p, img, c) => _addTask(t, d, dB, date, time, p, img, c),
         ),
       ),
     );
   }
 
-  void _addTask(String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) async {
+  void _addTask(String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl, List<Map<String, dynamic>> checklist) async {
     if (uid == null) return;
     
     final data = <String, dynamic>{
@@ -40,6 +40,7 @@ class _ToDoPageState extends State<ToDoPage> {
       'isCompleted': false,
       'priority': priority,
       'imageUrl': imageUrl,
+      'checklist': checklist,
       'createdAt': FieldValue.serverTimestamp(),
     };
 
@@ -64,7 +65,7 @@ class _ToDoPageState extends State<ToDoPage> {
         .add(data);
   }
 
-  void _updateTask(String docId, String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) {
+  void _updateTask(String docId, String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl, List<Map<String, dynamic>> checklist) {
     if (uid == null) return;
 
     final data = <String, dynamic>{
@@ -73,6 +74,7 @@ class _ToDoPageState extends State<ToDoPage> {
       'descriptionBottom': descriptionBottom,
       'priority': priority,
       'imageUrl': imageUrl,
+      'checklist': checklist,
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
@@ -106,6 +108,9 @@ class _ToDoPageState extends State<ToDoPage> {
     final descriptionBottom = data['descriptionBottom'] as String?;
     final priority = data['priority'] as int? ?? 0;
     final imageUrl = data['imageUrl'] as String?;
+    final checklist = (data['checklist'] as List<dynamic>?)
+        ?.map((e) => e as Map<String, dynamic>)
+        .toList() ?? [];
     
     DateTime? dueDate;
     TimeOfDay? dueTime;
@@ -125,7 +130,7 @@ class _ToDoPageState extends State<ToDoPage> {
       MaterialPageRoute(
         builder: (context) => AddToDoPage(
           uid: uid,
-          onAddTask: (t, d, dB, date, time, p, img) => _updateTask(docId, t, d, dB, date, time, p, img),
+          onAddTask: (t, d, dB, date, time, p, img, c) => _updateTask(docId, t, d, dB, date, time, p, img, c),
           initialTitle: title,
           initialDescription: description,
           initialDescriptionBottom: descriptionBottom,
@@ -133,6 +138,7 @@ class _ToDoPageState extends State<ToDoPage> {
           initialTime: dueTime,
           initialPriority: priority,
           initialImageUrl: imageUrl,
+          initialChecklist: checklist,
           isEditing: true,
         ),
       ),
@@ -433,9 +439,35 @@ class _ToDoPageState extends State<ToDoPage> {
 }
 
 // Full page for adding a new task
+class ChecklistItemState {
+  TextEditingController controller;
+  bool isCompleted;
+  FocusNode focusNode;
+
+  ChecklistItemState({
+    required String text, 
+    this.isCompleted = false,
+  }) : controller = TextEditingController(text: text),
+       focusNode = FocusNode();
+       
+  void dispose() {
+    controller.dispose();
+    focusNode.dispose();
+  }
+}
+
 class AddToDoPage extends StatefulWidget {
   final String? uid;
-  final void Function(String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) onAddTask;
+  final void Function(
+    String title, 
+    String description, 
+    String? descriptionBottom, 
+    DateTime? dueDate, 
+    TimeOfDay? dueTime, 
+    int priority, 
+    String? imageUrl,
+    List<Map<String, dynamic>> checklist,
+  ) onAddTask;
   
   final String? initialTitle;
   final String? initialDescription;
@@ -444,6 +476,7 @@ class AddToDoPage extends StatefulWidget {
   final TimeOfDay? initialTime;
   final int initialPriority;
   final String? initialImageUrl;
+  final List<Map<String, dynamic>>? initialChecklist;
   final bool isEditing;
 
   const AddToDoPage({
@@ -457,6 +490,7 @@ class AddToDoPage extends StatefulWidget {
     this.initialTime,
     this.initialPriority = 0,
     this.initialImageUrl,
+    this.initialChecklist,
     this.isEditing = false,
   });
 
@@ -474,6 +508,7 @@ class _AddToDoPageState extends State<AddToDoPage> {
   XFile? selectedImage;
   String? existingImageUrl;
   bool isUploadingImage = false;
+  final List<ChecklistItemState> _checklistItems = [];
 
   @override
   void initState() {
@@ -485,6 +520,15 @@ class _AddToDoPageState extends State<AddToDoPage> {
     selectedTime = widget.initialTime;
     selectedPriority = widget.initialPriority;
     existingImageUrl = widget.initialImageUrl;
+    
+    if (widget.initialChecklist != null) {
+      for (var item in widget.initialChecklist!) {
+        _checklistItems.add(ChecklistItemState(
+          text: item['text'] ?? '',
+          isCompleted: item['isCompleted'] ?? false,
+        ));
+      }
+    }
   }
 
   @override
@@ -492,6 +536,9 @@ class _AddToDoPageState extends State<AddToDoPage> {
     titleController.dispose();
     descController.dispose();
     descBottomController.dispose();
+    for (var item in _checklistItems) {
+      item.dispose();
+    }
     super.dispose();
   }
 
@@ -734,6 +781,82 @@ class _AddToDoPageState extends State<AddToDoPage> {
                    ),
                 ],
 
+                if (_checklistItems.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  ..._checklistItems.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                item.isCompleted = !item.isCompleted;
+                              });
+                            },
+                            child: Container(
+                              width: 24,
+                              height: 24,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: item.isCompleted ? const Color(0xFFFF9800) : Colors.transparent, // Amber / Orange
+                                border: item.isCompleted 
+                                    ? null 
+                                    : Border.all(color: Colors.white.withValues(alpha: 0.3), width: 2),
+                              ),
+                              child: item.isCompleted 
+                                  ? const Icon(LucideIcons.check, size: 16, color: Colors.white) 
+                                  : null,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: item.controller,
+                              focusNode: item.focusNode,
+                              style: TextStyle(
+                                color: item.isCompleted 
+                                    ? Colors.white.withValues(alpha: 0.3) 
+                                    : Colors.white,
+                                fontSize: 16,
+                                decoration: item.isCompleted ? TextDecoration.lineThrough : null,
+                                decorationColor: Colors.white.withValues(alpha: 0.3),
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'List item',
+                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              onSubmitted: (_) {
+                                // Add new item when enter is pressed
+                                setState(() {
+                                  _checklistItems.add(ChecklistItemState(text: ''));
+                                });
+                                WidgetsBinding.instance.addPostFrameCallback((_) {
+                                  FocusScope.of(context).requestFocus(_checklistItems.last.focusNode);
+                                });
+                              },
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                _checklistItems[index].dispose();
+                                _checklistItems.removeAt(index);
+                              });
+                            },
+                            child: Icon(LucideIcons.x, size: 16, color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+
               ],
             ),
           ),
@@ -832,32 +955,17 @@ class _AddToDoPageState extends State<AddToDoPage> {
                 ),
                 
                 const SizedBox(width: 8),
-                // Checklist Icon
                 GestureDetector(
                   onTap: () {
-                    // Check which controller has focus or default to top
-                    // Simple logic: if image is present and bottom has focus or is empty?
-                    // Let's just append to top for now, or determining focus is hard without FocusNodes.
-                    // Improving: Check if bottom text is not empty? 
-                    // Let's just add to descController (top) for simplicity as user requested "below image" typing.
-                    // Actually, if user taps below image, they might want bullet there.
-                    // But without FocusNode tracking, we default to the top one or bottom one? 
-                    // Let's default to the Top one as it's the primary description.
-                    
-                    final controller = (selectedImage != null || existingImageUrl != null) && descBottomController.text.isNotEmpty
-                        ? descBottomController
-                        : descController;
-                        
-                    final text = controller.text;
-                    final newText = text.isEmpty 
-                        ? '○ ' 
-                        : text.endsWith('\n') 
-                        ? '$text○ ' 
-                            : '$text\n○ ';
-                    controller.value = TextEditingValue(
-                      text: newText,
-                      selection: TextSelection.collapsed(offset: newText.length),
-                    );
+                    setState(() {
+                      _checklistItems.add(ChecklistItemState(text: ''));
+                    });
+                    // Wait for frame to build then focus
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (_checklistItems.isNotEmpty) {
+                        FocusScope.of(context).requestFocus(_checklistItems.last.focusNode);
+                      }
+                    });
                   },
                   child: Container(
                     padding: const EdgeInsets.all(10),
@@ -880,26 +988,50 @@ class _AddToDoPageState extends State<AddToDoPage> {
                   onTap: isUploadingImage
                       ? null
                       : () async {
-                          if (titleController.text.trim().isEmpty || widget.uid == null) {
-                            Navigator.pop(context);
+                          if (titleController.text.trim().isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Please enter a task title')),
+                            );
                             return;
                           }
                           
-                          String? imageUrl = existingImageUrl;
-                          if (selectedImage != null) {
-                            imageUrl = await _uploadImage();
+                          if (widget.uid == null) {
+                             ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('User not logged in')),
+                            );
+                            return;
                           }
-                          
-                          widget.onAddTask(
-                            titleController.text.trim(),
-                            descController.text.trim(),
-                            (selectedImage != null || existingImageUrl != null) ? descBottomController.text.trim() : null,
-                            selectedDate,
-                            selectedTime,
-                            selectedPriority,
-                            imageUrl,
-                          );
-                          if (context.mounted) Navigator.pop(context);
+
+                          try {
+                            String? imageUrl = existingImageUrl;
+                            if (selectedImage != null) {
+                              imageUrl = await _uploadImage();
+                            }
+                            
+                            final checklistData = _checklistItems.map((item) => {
+                              'text': item.controller.text.trim(),
+                              'isCompleted': item.isCompleted,
+                            }).toList();
+                            
+                            widget.onAddTask(
+                              titleController.text.trim(),
+                              descController.text.trim(),
+                              (selectedImage != null || existingImageUrl != null) ? descBottomController.text.trim() : null,
+                              selectedDate,
+                              selectedTime,
+                              selectedPriority,
+                              imageUrl,
+                              checklistData,
+                            );
+                            
+                            if (context.mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error saving task: $e')),
+                              );
+                            }
+                          }
                         },
                   child: Container(
                     width: 50,
