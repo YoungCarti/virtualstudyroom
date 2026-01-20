@@ -122,7 +122,9 @@ class _EditProfilePageState extends State<EditProfilePage> {
           .child('profile_photos')
           .child('$_docId.jpg');
       
-      await storageRef.putFile(File(image.path));
+      // Use putData for cross-platform support (especially web)
+      final bytes = await image.readAsBytes();
+      await storageRef.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
       final downloadUrl = await storageRef.getDownloadURL();
 
       // Update Firestore

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'app_fonts.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'home_dashboard.dart';
 import 'services/notification_service.dart';
 
@@ -35,7 +36,7 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
   final int _totalPages = 6; // Updated from 5 to 6
 
   // Collected data
-  File? _profileImage;
+  XFile? _profileImage;
   String _displayName = '';
   List<String> _selectedInterests = [];
   String? _selectedCampus;
@@ -92,9 +93,13 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
       try {
         final ref = FirebaseStorage.instance
             .ref()
-            .child('profile_pictures')
+            .child('profile_photos') // Fixed path to match existing bucket structure
             .child('${user.uid}.jpg');
-        await ref.putFile(_profileImage!);
+        
+        // Use putData for cross-platform support (especially web)
+        final bytes = await _profileImage!.readAsBytes();
+        await ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+        
         profilePictureUrl = await ref.getDownloadURL();
       } catch (e) {
         debugPrint('Error uploading profile picture: $e');
@@ -260,8 +265,8 @@ class _OnboardingFlowPageState extends State<OnboardingFlowPage> {
 // ============================================================================
 class _StepProfile extends StatelessWidget {
   final String displayName;
-  final File? profileImage;
-  final Function(File) onImageSelected;
+  final XFile? profileImage;
+  final Function(XFile) onImageSelected;
   final Function(String) onNameChanged;
   final VoidCallback onContinue;
 
@@ -311,7 +316,7 @@ class _StepProfile extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(context);
                 final picked = await picker.pickImage(source: ImageSource.camera);
-                if (picked != null) onImageSelected(File(picked.path));
+                if (picked != null) onImageSelected(picked);
               },
             ),
             ListTile(
@@ -330,7 +335,7 @@ class _StepProfile extends StatelessWidget {
               onTap: () async {
                 Navigator.pop(context);
                 final picked = await picker.pickImage(source: ImageSource.gallery);
-                if (picked != null) onImageSelected(File(picked.path));
+                if (picked != null) onImageSelected(picked);
               },
             ),
             const SizedBox(height: 20),
@@ -382,7 +387,9 @@ class _StepProfile extends StatelessWidget {
                       border: Border.all(color: _AppColors.divider, width: 2),
                       image: profileImage != null
                           ? DecorationImage(
-                              image: FileImage(profileImage!),
+                              image: kIsWeb
+                                  ? NetworkImage(profileImage!.path)
+                                  : FileImage(File(profileImage!.path)) as ImageProvider,
                               fit: BoxFit.cover,
                             )
                           : null,

@@ -281,7 +281,8 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                         if (snapshot.hasData && snapshot.data!.data() != null) {
                           final data = snapshot.data!.data()!;
                           userName = (data['fullName'] ?? data['name'] ?? 'User') as String;
-                          photoUrl = data['photoUrl'] as String?; // Fetch photoUrl
+                          // Use profilePictureUrl from onboarding, fallback to photoUrl
+                          photoUrl = (data['profilePictureUrl'] ?? data['photoUrl']) as String?;
                           if (userName.contains(' ')) {
                             userName = userName.split(' ')[0];
                           }
@@ -397,13 +398,26 @@ class _HeaderSection extends StatelessWidget {
                     color: Colors.white.withValues(alpha: 0.15),
                     width: 2,
                   ),
-                  image: DecorationImage(
-                    image: photoUrl != null
-                        ? NetworkImage(photoUrl!)
-                        : const NetworkImage('https://i.pravatar.cc/150?img=11'),
-                    fit: BoxFit.cover,
-                  ),
+                  color: photoUrl == null || photoUrl!.isEmpty ? const Color(0xFF2196F3) : null,
+                  image: photoUrl != null && photoUrl!.isNotEmpty
+                      ? DecorationImage(
+                          image: NetworkImage(photoUrl!),
+                          fit: BoxFit.cover,
+                        )
+                      : null,
                 ),
+                child: photoUrl == null || photoUrl!.isEmpty
+                    ? Center(
+                        child: Text(
+                          _getInitials(userName),
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      )
+                    : null,
               ),
             ),
             const SizedBox(width: 16),
@@ -443,6 +457,16 @@ class _HeaderSection extends StatelessWidget {
       ],
     );
   }
+}
+
+// Helper function to get initials from a name
+String _getInitials(String name) {
+  if (name.isEmpty) return '?';
+  final parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return parts[0][0].toUpperCase();
 }
 
 /* ----------------------------- ASSIGNMENTS CARD ----------------------------- */

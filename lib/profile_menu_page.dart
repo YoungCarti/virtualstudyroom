@@ -11,6 +11,16 @@ import 'profile_page.dart';
 import 'login_page.dart';
 import 'account_page.dart';
 
+// Helper function to get initials from a name
+String _getInitials(String name) {
+  if (name.isEmpty) return '?';
+  final parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return parts[0][0].toUpperCase();
+}
+
 class ProfileMenuPage extends StatefulWidget {
   const ProfileMenuPage({super.key});
 
@@ -169,17 +179,29 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.cyan.withValues(alpha: 0.5), // Violet-to-cyan hint
+                                  color: Colors.cyan.withValues(alpha: 0.5),
                                   width: 1,
                                 ),
-                                // Use a network image or fallback to initials
-                                image: DecorationImage(
-                                  image: photoUrl != null
-                                      ? NetworkImage(photoUrl)
-                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'), // Consistent with home
-                                  fit: BoxFit.cover,
-                                ),
+                                color: photoUrl == null ? const Color(0xFF2196F3) : null,
+                                image: photoUrl != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(photoUrl),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                               ),
+                              child: photoUrl == null
+                                  ? Center(
+                                      child: Text(
+                                        _getInitials(fullName),
+                                        style: const TextStyle(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(width: 12),
                             

@@ -111,11 +111,11 @@ class _ProfilePageState extends State<ProfilePage> {
 
                       final data = snapshot.data?.data() ?? {};
                       final fullName = (data['fullName'] ?? data['name'] ?? 'Student Name') as String;
-                      final program = (data['program'] ?? 'Bachelor of Computer Science') as String;
-                      final campus = (data['campus'] ?? 'UNIMY') as String;
+                      final program = (data['program'] ?? '') as String; // Empty if not set
+                      final campus = (data['campus'] ?? '') as String; // Empty if not set
                       final favGroup = (data['favGroup'] ?? 'Study Group A') as String;
-                      final bio = (data['bio'] ?? 'Computer science student passionate about coding and algorithms.') as String;
-                      final interests = List<String>.from(data['interests'] ?? ['Coding', 'AI', 'Flutter']);
+                      final bio = (data['bio'] ?? '') as String; // Empty by default
+                      final interests = List<String>.from(data['interests'] ?? []);
                       final joinedDate = _formatCreatedAt(data['createdAt']);
                       
                       final currentStreak = (data['currentStreak'] as num?)?.toInt() ?? 0;
@@ -165,13 +165,26 @@ class _ProfilePageState extends State<ProfilePage> {
                                   color: Colors.white.withValues(alpha: 0.15),
                                   width: 3,
                                 ),
-                                image: DecorationImage(
-                                  image: photoUrl != null
-                                      ? NetworkImage(photoUrl)
-                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
-                                  fit: BoxFit.cover,
-                                ),
+                                color: photoUrl == null ? const Color(0xFF2196F3) : null,
+                                image: photoUrl != null
+                                    ? DecorationImage(
+                                        image: NetworkImage(photoUrl),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                               ),
+                              child: photoUrl == null
+                                  ? Center(
+                                      child: Text(
+                                        _getInitials(fullName),
+                                        style: AppFonts.clashGrotesk(
+                                          fontSize: 40,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             Text(
@@ -374,83 +387,85 @@ class _ProfilePageState extends State<ProfilePage> {
 
                             const SizedBox(height: 20),
 
-                            // Bio Section
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: _GlassContainer(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.person_outline, color: Color(0xFF2196F3), size: 16),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          "Bio",
-                                          style: AppFonts.clashGrotesk(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
+                            // Bio Section - Only show if bio is not empty
+                            if (bio.isNotEmpty) ...[
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: _GlassContainer(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.person_outline, color: Color(0xFF2196F3), size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Bio",
+                                            style: AppFonts.clashGrotesk(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
                                           ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      bio,
-                                      style: AppFonts.clashGrotesk(
-                                        color: Colors.white.withValues(alpha: 0.75),
-                                        fontSize: 14,
-                                        height: 1.5,
+                                        ],
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            const SizedBox(height: 16),
-
-                            // Interests Section
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              child: _GlassContainer(
-                                padding: const EdgeInsets.all(20),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.favorite_outline, color: Color(0xFF2196F3), size: 16),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          "Interests",
-                                          style: AppFonts.clashGrotesk(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        bio,
+                                        style: AppFonts.clashGrotesk(
+                                          color: Colors.white.withValues(alpha: 0.75),
+                                          fontSize: 14,
+                                          height: 1.5,
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Wrap(
-                                      spacing: 8,
-                                      runSpacing: 8,
-                                      children: interests.asMap().entries.map((entry) {
-                                        final index = entry.key;
-                                        final color = _tagColors[index % _tagColors.length];
-                                        return _InterestTag(
-                                          label: entry.value,
-                                          color: color,
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
+                              const SizedBox(height: 16),
+                            ],
+
+                            // Interests Section - Only show if interests are not empty
+                            if (interests.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 20),
+                                child: _GlassContainer(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          const Icon(Icons.favorite_outline, color: Color(0xFF2196F3), size: 16),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            "Interests",
+                                            style: AppFonts.clashGrotesk(
+                                              color: Colors.white,
+                                              fontSize: 16,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                      Wrap(
+                                        spacing: 8,
+                                        runSpacing: 8,
+                                        children: interests.asMap().entries.map((entry) {
+                                          final index = entry.key;
+                                          final color = _tagColors[index % _tagColors.length];
+                                          return _InterestTag(
+                                            label: entry.value,
+                                            color: color,
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
 
                             const SizedBox(height: 16),
 
@@ -531,6 +546,15 @@ class _ProfilePageState extends State<ProfilePage> {
     } catch (_) {
       return '2025';
     }
+  }
+
+  static String _getInitials(String name) {
+    if (name.isEmpty) return '?';
+    final parts = name.trim().split(' ');
+    if (parts.length >= 2) {
+      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    }
+    return parts[0][0].toUpperCase();
   }
 }
 
