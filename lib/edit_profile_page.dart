@@ -15,6 +15,16 @@ class EditProfilePage extends StatefulWidget {
   State<EditProfilePage> createState() => _EditProfilePageState();
 }
 
+// Helper function to get initials from a name
+String _getInitials(String name) {
+  if (name.isEmpty) return '?';
+  final parts = name.trim().split(' ');
+  if (parts.length >= 2) {
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+  return parts[0][0].toUpperCase();
+}
+
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
   
@@ -80,7 +90,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
             : data['campus'];
         _favGroupController.text = data['favGroup'] ?? '';
         _bioController.text = data['bio'] ?? '';
-        _photoUrl = data['photoUrl'];
+        // Prioritize profilePictureUrl, fallback to photoUrl
+        _photoUrl = data['profilePictureUrl'] ?? data['photoUrl'];
         
         if (data['interests'] != null) {
           _interests = List<String>.from(data['interests']);
@@ -128,7 +139,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       final downloadUrl = await storageRef.getDownloadURL();
 
       // Update Firestore
-      await _users.doc(_docId).update({'photoUrl': downloadUrl});
+      // Save to both fields for backward compatibility
+      await _users.doc(_docId).update({
+        'photoUrl': downloadUrl,
+        'profilePictureUrl': downloadUrl,
+      });
 
       if (mounted) {
         setState(() {
@@ -401,13 +416,26 @@ class _EditProfilePageState extends State<EditProfilePage> {
                                   color: Colors.white.withValues(alpha: 0.15),
                                   width: 2,
                                 ),
-                                image: DecorationImage(
-                                  image: _photoUrl != null
-                                      ? NetworkImage(_photoUrl!)
-                                      : const NetworkImage('https://i.pravatar.cc/150?img=11'),
-                                  fit: BoxFit.cover,
-                                ),
+                                color: _photoUrl == null || _photoUrl!.isEmpty ? const Color(0xFF2196F3) : null,
+                                image: _photoUrl != null && _photoUrl!.isNotEmpty
+                                    ? DecorationImage(
+                                        image: NetworkImage(_photoUrl!),
+                                        fit: BoxFit.cover,
+                                      )
+                                    : null,
                               ),
+                              child: _photoUrl == null || _photoUrl!.isEmpty
+                                  ? Center(
+                                      child: Text(
+                                        _getInitials(_fullNameController.text),
+                                        style: const TextStyle(
+                                          fontSize: 32, // Larger for this page
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    )
+                                  : null,
                             ),
                             const SizedBox(height: 12),
                             GestureDetector(
