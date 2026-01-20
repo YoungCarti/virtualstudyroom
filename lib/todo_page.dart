@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -17,24 +18,25 @@ class ToDoPage extends StatefulWidget {
 class _ToDoPageState extends State<ToDoPage> {
   final String? uid = FirebaseAuth.instance.currentUser?.uid;
 
-  void _showAddTaskSheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => _AddTaskSheet(
-        uid: uid,
-        onAddTask: _addTask,
+  void _showAddToDoPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddToDoPage(
+          uid: uid,
+          onAddTask: _addTask,
+        ),
       ),
     );
   }
 
-  void _addTask(String title, String description, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) {
+  void _addTask(String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) async {
     if (uid == null) return;
-
+    
     final data = <String, dynamic>{
       'task': title,
       'description': description,
+      'descriptionBottom': descriptionBottom,
       'isCompleted': false,
       'priority': priority,
       'imageUrl': imageUrl,
@@ -60,6 +62,81 @@ class _ToDoPageState extends State<ToDoPage> {
         .doc(uid)
         .collection('todos')
         .add(data);
+  }
+
+  void _updateTask(String docId, String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) {
+    if (uid == null) return;
+
+    final data = <String, dynamic>{
+      'task': title,
+      'description': description,
+      'descriptionBottom': descriptionBottom,
+      'priority': priority,
+      'imageUrl': imageUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (dueDate != null) {
+      DateTime finalDateTime = dueDate;
+      if (dueTime != null) {
+        finalDateTime = DateTime(
+          dueDate.year,
+          dueDate.month,
+          dueDate.day,
+          dueTime.hour,
+          dueTime.minute,
+        );
+      }
+      data['dueDate'] = Timestamp.fromDate(finalDateTime);
+    } else {
+      data['dueDate'] = null;
+    }
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('todos')
+        .doc(docId)
+        .update(data);
+  }
+
+  void _navigateToEditTask(Map<String, dynamic> data, String docId) {
+    final title = data['task'] ?? '';
+    final description = data['description'] ?? '';
+    final descriptionBottom = data['descriptionBottom'] as String?;
+    final priority = data['priority'] as int? ?? 0;
+    final imageUrl = data['imageUrl'] as String?;
+    
+    DateTime? dueDate;
+    TimeOfDay? dueTime;
+    
+    if (data['dueDate'] != null) {
+      final timestamp = data['dueDate'] as Timestamp;
+      final dt = timestamp.toDate();
+      dueDate = DateTime(dt.year, dt.month, dt.day);
+      dueTime = TimeOfDay(hour: dt.hour, minute: dt.minute);
+      
+      // If time is 00:00 and wasn't explicitly set (simplification), treat as no time
+      // But for now, we pass it as is.
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AddToDoPage(
+          uid: uid,
+          onAddTask: (t, d, dB, date, time, p, img) => _updateTask(docId, t, d, dB, date, time, p, img),
+          initialTitle: title,
+          initialDescription: description,
+          initialDescriptionBottom: descriptionBottom,
+          initialDate: dueDate,
+          initialTime: dueTime,
+          initialPriority: priority,
+          initialImageUrl: imageUrl,
+          isEditing: true,
+        ),
+      ),
+    );
   }
 
   Color _getPriorityColor(int priority) {
@@ -211,7 +288,7 @@ class _ToDoPageState extends State<ToDoPage> {
                   child: const Icon(LucideIcons.trash2, color: Colors.red),
                 ),
                 child: GestureDetector(
-                  onTap: () => _toggleTask(task.id, isCompleted),
+                  onTap: () => _navigateToEditTask(data, task.id),
                   child: Container(
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(16),
@@ -228,26 +305,29 @@ class _ToDoPageState extends State<ToDoPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Checkbox
-                        Container(
-                          width: 24,
-                          height: 24,
-                          margin: const EdgeInsets.only(top: 2),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: isCompleted
-                                ? const Color(0xFF4ECDC4)
-                                : Colors.transparent,
-                            border: Border.all(
+                        GestureDetector(
+                          onTap: () => _toggleTask(task.id, isCompleted),
+                          child: Container(
+                            width: 24,
+                            height: 24,
+                            margin: const EdgeInsets.only(top: 2),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(6),
                               color: isCompleted
                                   ? const Color(0xFF4ECDC4)
-                                  : Colors.white.withValues(alpha: 0.3),
-                              width: 2,
+                                  : Colors.transparent,
+                              border: Border.all(
+                                color: isCompleted
+                                    ? const Color(0xFF4ECDC4)
+                                    : Colors.white.withValues(alpha: 0.3),
+                                width: 2,
+                              ),
                             ),
+                            child: isCompleted
+                                ? const Icon(LucideIcons.check,
+                                    size: 14, color: Colors.black)
+                                : null,
                           ),
-                          child: isCompleted
-                              ? const Icon(LucideIcons.check,
-                                  size: 14, color: Colors.black)
-                              : null,
                         ),
                         const SizedBox(width: 16),
 
@@ -344,7 +424,7 @@ class _ToDoPageState extends State<ToDoPage> {
 
       // Floating Action Button
       floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTaskSheet,
+        onPressed: _showAddToDoPage,
         backgroundColor: const Color(0xFF2196F3),
         child: const Icon(LucideIcons.plus, color: Colors.white),
       ),
@@ -352,25 +432,68 @@ class _ToDoPageState extends State<ToDoPage> {
   }
 }
 
-// Separate stateful widget for the add task sheet
-class _AddTaskSheet extends StatefulWidget {
+// Full page for adding a new task
+class AddToDoPage extends StatefulWidget {
   final String? uid;
-  final void Function(String title, String description, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) onAddTask;
+  final void Function(String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl) onAddTask;
+  
+  final String? initialTitle;
+  final String? initialDescription;
+  final String? initialDescriptionBottom;
+  final DateTime? initialDate;
+  final TimeOfDay? initialTime;
+  final int initialPriority;
+  final String? initialImageUrl;
+  final bool isEditing;
 
-  const _AddTaskSheet({required this.uid, required this.onAddTask});
+  const AddToDoPage({
+    super.key, 
+    required this.uid, 
+    required this.onAddTask,
+    this.initialTitle,
+    this.initialDescription,
+    this.initialDescriptionBottom,
+    this.initialDate,
+    this.initialTime,
+    this.initialPriority = 0,
+    this.initialImageUrl,
+    this.isEditing = false,
+  });
 
   @override
-  State<_AddTaskSheet> createState() => _AddTaskSheetState();
+  State<AddToDoPage> createState() => _AddToDoPageState();
 }
 
-class _AddTaskSheetState extends State<_AddTaskSheet> {
-  final titleController = TextEditingController();
-  final descController = TextEditingController();
+class _AddToDoPageState extends State<AddToDoPage> {
+  late TextEditingController titleController;
+  late TextEditingController descController;
+  late TextEditingController descBottomController;
   DateTime? selectedDate;
   TimeOfDay? selectedTime;
-  int selectedPriority = 0; // 0=none, 1=low, 2=medium, 3=high
+  int selectedPriority = 0; 
   XFile? selectedImage;
+  String? existingImageUrl;
   bool isUploadingImage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    titleController = TextEditingController(text: widget.initialTitle);
+    descController = TextEditingController(text: widget.initialDescription);
+    descBottomController = TextEditingController(text: widget.initialDescriptionBottom);
+    selectedDate = widget.initialDate;
+    selectedTime = widget.initialTime;
+    selectedPriority = widget.initialPriority;
+    existingImageUrl = widget.initialImageUrl;
+  }
+
+  @override
+  void dispose() {
+    titleController.dispose();
+    descController.dispose();
+    descBottomController.dispose();
+    super.dispose();
+  }
 
   static const priorityColors = [
     Colors.grey,        // No priority
@@ -379,12 +502,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
     Color(0xFFE53935),  // High - Red
   ];
 
-  static const priorityLabels = [
-    'No Priority',
-    'Low Priority',
-    'Medium Priority',
-    'High Priority',
-  ];
+
 
   void _showDatePickerModal() {
     showModalBottomSheet(
@@ -438,6 +556,21 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
     }
   }
 
+  // Helper to remove existing image
+  void _removeImage() {
+    // When removing image, merge bottom description into main description
+    if (descBottomController.text.isNotEmpty) {
+      final sep = descController.text.isNotEmpty ? '\n\n' : '';
+      descController.text = '${descController.text}$sep${descBottomController.text}';
+      descBottomController.clear();
+    }
+    
+    setState(() {
+      selectedImage = null;
+      existingImageUrl = null;
+    });
+  }
+
   String _getDateLabel() {
     if (selectedDate == null) return '';
     final now = DateTime.now();
@@ -462,62 +595,130 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      child: Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A2E),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    return Scaffold(
+      backgroundColor: const Color(0xFF1A1A2E),
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
         ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(2),
+        title: Text(
+          widget.isEditing ? 'Edit Task' : 'Add Task',
+          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        centerTitle: true,
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.all(24),
+              children: [
+                // Title Input
+                TextField(
+                  controller: titleController,
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                  decoration: InputDecoration(
+                    hintText: 'What would you like to do?',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    border: InputBorder.none,
+                  ),
+                  maxLines: null,
                 ),
-              ),
+                
+                const SizedBox(height: 16),
+
+                // Description Input (Top)
+                TextField(
+                  controller: descController,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
+                  decoration: InputDecoration(
+                    hintText: 'Description (optional)',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+                    border: InputBorder.none,
+                  ),
+                  maxLines: null,
+                ),
+                
+                if (selectedImage != null || existingImageUrl != null) ...[
+                   const SizedBox(height: 16),
+                   Stack(
+                     children: [
+                       ClipRRect(
+                         borderRadius: BorderRadius.circular(12),
+                         child: selectedImage != null 
+                             ? Image.file(
+                                 File(selectedImage!.path), 
+                                 width: double.infinity,
+                                 height: 200,
+                                 fit: BoxFit.cover,
+                               )
+                             : Image.network(
+                                 existingImageUrl!,
+                                 width: double.infinity,
+                                 height: 200,
+                                 fit: BoxFit.cover,
+                                 errorBuilder: (context, error, stackTrace) => Container(
+                                   height: 200,
+                                   color: Colors.white.withValues(alpha: 0.1),
+                                   alignment: Alignment.center,
+                                   child: const Icon(LucideIcons.imageOff, color: Colors.white),
+                                 ),
+                               ),
+                       ),
+                       Positioned(
+                         top: 8,
+                         right: 8,
+                         child: GestureDetector(
+                           onTap: _removeImage,
+                           child: Container(
+                             padding: const EdgeInsets.all(6),
+                             decoration: const BoxDecoration(
+                               color: Colors.black54,
+                               shape: BoxShape.circle,
+                             ),
+                             child: const Icon(LucideIcons.x, size: 16, color: Colors.white),
+                           ),
+                         ),
+                       ),
+                     ],
+                   ),
+                   
+                   const SizedBox(height: 16),
+                   
+                   // Description Input Bottom (Only if image exists)
+                   TextField(
+                     controller: descBottomController,
+                     style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 16),
+                     decoration: InputDecoration(
+                       hintText: 'Description below image (optional)',
+                       hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
+                       border: InputBorder.none,
+                     ),
+                     maxLines: null,
+                   ),
+                ],
+
+              ],
             ),
-            const SizedBox(height: 24),
-
-            // Title Input
-            TextField(
-              controller: titleController,
-              autofocus: true,
-              style: const TextStyle(color: Colors.white, fontSize: 18),
-              decoration: InputDecoration(
-                hintText: 'What would you like to do?',
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                border: InputBorder.none,
-              ),
+          ),
+          
+          // Bottom Toolbar
+          Container(
+            padding: EdgeInsets.only(
+              left: 16, 
+              right: 16, 
+              top: 12, 
+              bottom: 12 + MediaQuery.of(context).padding.bottom
             ),
-
-            // Description Input
-            TextField(
-              controller: descController,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 14),
-              decoration: InputDecoration(
-                hintText: 'Description (optional)',
-                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.2)),
-                border: InputBorder.none,
-              ),
-              maxLines: 3,
-              minLines: 1,
+            decoration: BoxDecoration(
+              color: const Color(0xFF161B22),
+              border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
             ),
-
-            const SizedBox(height: 16),
-
-            // Quick Action Icons Row
-            Row(
+            child: Row(
               children: [
                 // Calendar Icon
                 GestureDetector(
@@ -527,12 +728,12 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                     decoration: BoxDecoration(
                       color: selectedDate != null
                           ? const Color(0xFF2196F3).withValues(alpha: 0.2)
-                          : Colors.white.withValues(alpha: 0.05),
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       LucideIcons.calendar,
-                      size: 20,
+                      size: 24,
                       color: selectedDate != null
                           ? const Color(0xFF2196F3)
                           : Colors.white.withValues(alpha: 0.5),
@@ -597,55 +798,19 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                     decoration: BoxDecoration(
                       color: selectedPriority > 0
                           ? priorityColors[selectedPriority].withValues(alpha: 0.2)
-                          : Colors.white.withValues(alpha: 0.05),
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       LucideIcons.flag,
-                      size: 20,
+                      size: 24,
                       color: selectedPriority > 0
                           ? priorityColors[selectedPriority]
                           : Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
-                if (selectedPriority > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: priorityColors[selectedPriority].withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          LucideIcons.flag,
-                          size: 12,
-                          color: priorityColors[selectedPriority],
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          priorityLabels[selectedPriority].split(' ')[0],
-                          style: TextStyle(
-                            color: priorityColors[selectedPriority],
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() => selectedPriority = 0),
-                          child: Icon(
-                            LucideIcons.x,
-                            size: 14,
-                            color: priorityColors[selectedPriority],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                
                 const SizedBox(width: 8),
                 // Image Icon
                 GestureDetector(
@@ -653,68 +818,45 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: selectedImage != null
+                      color: selectedImage != null || existingImageUrl != null
                           ? const Color(0xFF4ECDC4).withValues(alpha: 0.2)
-                          : Colors.white.withValues(alpha: 0.05),
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       LucideIcons.image,
-                      size: 20,
-                      color: selectedImage != null
+                      size: 24,
+                      color: selectedImage != null || existingImageUrl != null
                           ? const Color(0xFF4ECDC4)
                           : Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
-                if (selectedImage != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF4ECDC4).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          LucideIcons.image,
-                          size: 12,
-                          color: Color(0xFF4ECDC4),
-                        ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          '1 image',
-                          style: TextStyle(
-                            color: Color(0xFF4ECDC4),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() => selectedImage = null),
-                          child: const Icon(
-                            LucideIcons.x,
-                            size: 14,
-                            color: Color(0xFF4ECDC4),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                
                 const SizedBox(width: 8),
                 // Checklist Icon
                 GestureDetector(
                   onTap: () {
-                    final text = descController.text;
+                    // Check which controller has focus or default to top
+                    // Simple logic: if image is present and bottom has focus or is empty?
+                    // Let's just append to top for now, or determining focus is hard without FocusNodes.
+                    // Improving: Check if bottom text is not empty? 
+                    // Let's just add to descController (top) for simplicity as user requested "below image" typing.
+                    // Actually, if user taps below image, they might want bullet there.
+                    // But without FocusNode tracking, we default to the top one or bottom one? 
+                    // Let's default to the Top one as it's the primary description.
+                    
+                    final controller = (selectedImage != null || existingImageUrl != null) && descBottomController.text.isNotEmpty
+                        ? descBottomController
+                        : descController;
+                        
+                    final text = controller.text;
                     final newText = text.isEmpty 
                         ? '○ ' 
                         : text.endsWith('\n') 
                         ? '$text○ ' 
                             : '$text\n○ ';
-                    descController.value = TextEditingValue(
+                    controller.value = TextEditingValue(
                       text: newText,
                       selection: TextSelection.collapsed(offset: newText.length),
                     );
@@ -722,17 +864,19 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
+                      color: Colors.transparent,
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
                       LucideIcons.checkCircle2,
-                      size: 20,
+                      size: 24,
                       color: Colors.white.withValues(alpha: 0.5),
                     ),
                   ),
                 ),
+                
                 const Spacer(),
+                
                 // Send Button
                 GestureDetector(
                   onTap: isUploadingImage
@@ -743,7 +887,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                             return;
                           }
                           
-                          String? imageUrl;
+                          String? imageUrl = existingImageUrl;
                           if (selectedImage != null) {
                             imageUrl = await _uploadImage();
                           }
@@ -751,6 +895,7 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                           widget.onAddTask(
                             titleController.text.trim(),
                             descController.text.trim(),
+                            (selectedImage != null || existingImageUrl != null) ? descBottomController.text.trim() : null,
                             selectedDate,
                             selectedTime,
                             selectedPriority,
@@ -759,28 +904,38 @@ class _AddTaskSheetState extends State<_AddTaskSheet> {
                           if (context.mounted) Navigator.pop(context);
                         },
                   child: Container(
-                    width: 44,
-                    height: 44,
+                    width: 50,
+                    height: 50,
                     decoration: BoxDecoration(
                       color: const Color(0xFF2196F3),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF2196F3).withValues(alpha: 0.4),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
                     ),
                     child: isUploadingImage
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
+                            width: 24,
+                            height: 24,
+                            child: Padding(
+                              padding: EdgeInsets.all(12),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             ),
                           )
-                        : const Icon(LucideIcons.send, size: 20, color: Colors.white),
+                        : const Icon(LucideIcons.send, size: 24, color: Colors.white),
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
