@@ -96,6 +96,33 @@ class AuthService {
     }
   }
 
+  // --- NEW: Change Password with Re-authentication ---
+  Future<void> reauthenticateAndChangePassword(
+      String currentPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception('No user signed in');
+    if (user.email == null) throw Exception('User email not found');
+
+    try {
+      // 1. Re-authenticate
+      final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword,
+      );
+      await user.reauthenticateWithCredential(cred);
+
+      // 2. Update Password
+      await user.updatePassword(newPassword);
+      
+      // 3. Update Secure Storage if used
+      await saveCredentials(user.email!, newPassword);
+    } on FirebaseAuthException {
+      rethrow;
+    } catch (e) {
+      throw Exception(e.toString());
+    }
+  }
+
   // Google Sign In
   Future<UserCredential?> signInWithGoogle() async {
     try {

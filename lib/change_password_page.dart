@@ -1,8 +1,8 @@
-import 'dart:async';
-import 'dart:ui';
+import 'dart:async'; // For Timer
+import 'dart:math'; // For random OTP
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'widgets/gradient_background.dart';
+import 'auth_service.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -26,6 +26,7 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   // OTP State
   Timer? _timer;
   int _otpCountdown = 0;
+  String? _generatedOtp;
 
   // Loading State
   bool _isLoading = false;
@@ -43,6 +44,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   void _startOtpTimer() {
     setState(() {
       _otpCountdown = 60;
+      // Generate random 6-digit OTP
+      _generatedOtp = (100000 + Random().nextInt(900000)).toString();
     });
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
@@ -56,12 +59,12 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       }
     });
     
-    // Simulate sending OTP
+    // Simulate sending OTP (Display for verification since no backend email service)
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("OTP sent to your registered email"),
+      SnackBar(
+        content: Text("OTP sent (Simulated): $_generatedOtp"),
         backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -86,25 +89,37 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
       _showError("Passwords do not match");
       return;
     }
-    if (_otpController.text.length != 6) {
-      _showError("Please enter a valid 6-digit OTP");
+    if (_otpController.text != _generatedOtp) {
+      _showError("Invalid OTP. Please check the code sent.");
       return;
     }
 
     setState(() => _isLoading = true);
 
-    // Simulate API call
-    await Future.delayed(const Duration(seconds: 2));
-
-    if (mounted) {
-      setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Password updated successfully!"),
-          backgroundColor: Colors.green,
-        ),
+    try {
+      // Use the new secure re-authentication method
+      await AuthService.instance.reauthenticateAndChangePassword(
+        _currentPasswordController.text,
+        _newPasswordController.text,
       );
-      Navigator.of(context).pop();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Password updated successfully!"),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.of(context).pop();
+      }
+    } catch (e) {
+      if (mounted) {
+        _showError(e.toString().replaceAll('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
