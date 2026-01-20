@@ -2,13 +2,14 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
-import 'auth_page.dart';
 import 'login_page.dart';
 import 'splash_screen.dart';
 import 'theme_controller.dart';
 import 'register_page.dart';
 import 'firebase_options.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'home_dashboard.dart';
 
 
 Future<void> main() async {
@@ -55,6 +56,8 @@ class _MyAppState extends State<MyApp> {
           providerApple: const AppleDebugProvider(),
         );
       }
+      
+      
       
       if (mounted) {
         setState(() => _firebaseReady = true);
@@ -120,22 +123,38 @@ class _MyAppState extends State<MyApp> {
           ),
         ),
       );
-    } else if (_showOnboarding) {
-      home = SplashScreen(
-        onFinished: _handleOnboardingFinished,
-        isReadyToProceed: _firebaseReady,
-      );
+
     } else if (!_firebaseReady) {
       home = const Scaffold(
         body: Center(child: CircularProgressIndicator()),
       );
     } else {
-      if (_initialRegisterMode) {
-        home = const RegisterPage();
-      } else {
-        home = const LoginPage();
-      }
+      home = StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+             return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          if (snapshot.hasData) {
+            return const HomeDashboardPage();
+          }
+           
+           // Not logged in
+           if (_showOnboarding) {
+             return SplashScreen(
+               onFinished: _handleOnboardingFinished,
+               isReadyToProceed: true, 
+             );
+           }
+           
+           if (_initialRegisterMode) {
+             return const RegisterPage();
+           }
+           return const LoginPage();
+        },
+      );
     }
+
 
     return AnimatedBuilder(
       animation: themeController,
