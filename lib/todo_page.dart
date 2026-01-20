@@ -629,6 +629,38 @@ class _AddToDoPageState extends State<AddToDoPage> {
                   maxLines: null,
                 ),
                 
+                if (selectedDate != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.only(top: 2),
+                        child: Text(
+                          _getDateLabel(),
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.6),
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Small folder icon + category (mockup style) - optional based on screenshot but let's stick to date first
+                      // User said: "Below: Buy Groceries" -> "Oct 26 10:00"
+                      GestureDetector(
+                        onTap: () => setState(() {
+                          selectedDate = null;
+                          selectedTime = null;
+                        }),
+                        child: Icon(
+                          LucideIcons.x,
+                          size: 16,
+                          color: Colors.white.withValues(alpha: 0.4),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                
                 const SizedBox(height: 16),
 
                 // Description Input (Top)
@@ -740,40 +772,6 @@ class _AddToDoPageState extends State<AddToDoPage> {
                     ),
                   ),
                 ),
-                if (selectedDate != null) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF2196F3).withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          _getDateLabel(),
-                          style: const TextStyle(
-                            color: Color(0xFF2196F3),
-                            fontSize: 12,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        GestureDetector(
-                          onTap: () => setState(() {
-                            selectedDate = null;
-                            selectedTime = null;
-                          }),
-                          child: const Icon(
-                            LucideIcons.x,
-                            size: 14,
-                            color: Color(0xFF2196F3),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
                 const SizedBox(width: 8),
                 // Flag Icon for Priority
                 PopupMenuButton<int>(
