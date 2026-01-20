@@ -120,7 +120,8 @@ class _ProfilePageState extends State<ProfilePage> {
                       
                       final currentStreak = (data['currentStreak'] as num?)?.toInt() ?? 0;
                       final longestStreak = (data['longestStreak'] as num?)?.toInt() ?? 0;
-                      final photoUrl = data['photoUrl'] as String?;
+                      // Use profilePictureUrl from onboarding, fallback to photoUrl
+                      final photoUrl = (data['profilePictureUrl'] ?? data['photoUrl']) as String?;
 
                       return SingleChildScrollView(
                         padding: const EdgeInsets.only(bottom: 40),

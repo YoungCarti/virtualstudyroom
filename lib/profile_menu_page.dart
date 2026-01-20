@@ -59,7 +59,8 @@ class _ProfileMenuPageState extends State<ProfileMenuPage> {
         // Default data if profile not found or empty
         final data = snap.data?.data() ?? {};
         final fullName = (data['fullName'] ?? data['name'] ?? 'User Name') as String;
-        final photoUrl = data['photoUrl'] as String?;
+        // Use profilePictureUrl from onboarding, fallback to photoUrl
+        final photoUrl = data['profilePictureUrl'] ?? data['photoUrl'] as String?;
         
         return Scaffold(
           body: Stack(

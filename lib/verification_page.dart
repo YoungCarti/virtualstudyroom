@@ -1,8 +1,10 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'app_fonts.dart';
 import 'home_dashboard.dart';
+import 'onboarding_flow_page.dart';
 import 'widgets/gradient_background.dart';
 
 class VerificationPage extends StatefulWidget {
@@ -47,11 +49,29 @@ class _VerificationPageState extends State<VerificationPage> {
           });
           // Small delay for user to see success
           await Future.delayed(const Duration(seconds: 1));
+          
+          // Check if onboarding is completed
+          final userDoc = await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .get();
+          
+          final onboardingCompleted = userDoc.data()?['onboardingCompleted'] ?? false;
+          
           if (mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeDashboardPage()),
-              (route) => false,
-            );
+            if (onboardingCompleted) {
+              // Go to home if onboarding is already done
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeDashboardPage()),
+                (route) => false,
+              );
+            } else {
+              // Go to onboarding flow for new users
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const OnboardingFlowPage()),
+                (route) => false,
+              );
+            }
           }
         }
       }
