@@ -7,3 +7,6 @@ Physical Step Unlock: You must walk 100 steps to unlock the next chapter of note
 amarulabreadler@gmail.com
 Student1
 
+- canvas, movement are not great 
+- rate limit API
+- change passoword / email address
