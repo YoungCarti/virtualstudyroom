@@ -24,12 +24,18 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController?.addListener(_handleTabSelection);
   }
 
   @override
   void dispose() {
+    _tabController?.removeListener(_handleTabSelection);
     _tabController?.dispose();
     super.dispose();
+  }
+
+  void _handleTabSelection() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _refresh() async {
@@ -45,6 +51,7 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
+    final onlyUnread = _tabController?.index == 1;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0D1117), // Same as homepage
@@ -122,7 +129,11 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
                 const SizedBox(height: 16),
 
                 uid != null
-                    ? _AllGroupsList(uid: uid, key: ValueKey(_refreshKey))
+                    ? _AllGroupsList(
+                        uid: uid, 
+                        key: ValueKey(_refreshKey),
+                        onlyUnread: onlyUnread,
+                      )
                     : const _EmptyState(message: 'Sign in to see your groups.'),
               ],
             ),
@@ -136,9 +147,10 @@ class _GroupChatsPageState extends State<GroupChatsPage> with SingleTickerProvid
 /* ----------------------------- GROUP LIST ----------------------------- */
 
 class _AllGroupsList extends StatefulWidget {
-  const _AllGroupsList({super.key, required this.uid});
+  const _AllGroupsList({super.key, required this.uid, this.onlyUnread = false});
 
   final String uid;
+  final bool onlyUnread;
 
   @override
   State<_AllGroupsList> createState() => _AllGroupsListState();
@@ -242,8 +254,6 @@ class _AllGroupsListState extends State<_AllGroupsList> {
                 }
 
                 // --- Real Unread Count Logic ---
-                // Store raw total message count in the model, calculate unread in build() 
-                // to allow state updates (readCounts) to refresh the UI immediately.
                 final totalMessages = (data['messageCount'] as num?)?.toInt() ?? 0;
                 
                 groups.add(_GroupWithClass(
@@ -290,10 +300,23 @@ class _AllGroupsListState extends State<_AllGroupsList> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final allGroups = _groupsByClass.values.expand((l) => l).toList();
+    var allGroups = _groupsByClass.values.expand((l) => l).toList();
 
-    if (allGroups.isEmpty) {
-      return const _EmptyState(message: 'You are not in any groups yet.');
+    // Filter if onlyUnread is true
+    if (widget.onlyUnread) {
+      allGroups = allGroups.where((group) {
+        final readCount = (_readCounts[group.groupId] as num?)?.toInt() ?? 0;
+        final unreadCount = (group.messageCount - readCount).clamp(0, 99);
+        return unreadCount > 0;
+      }).toList();
+      
+      if (allGroups.isEmpty) {
+        return const _EmptyState(message: 'No unread messages.');
+      }
+    } else {
+      if (allGroups.isEmpty) {
+        return const _EmptyState(message: 'You are not in any groups yet.');
+      }
     }
 
     return ListView.separated(
@@ -345,7 +368,7 @@ class _GroupWithClass {
 class _MessageStyleGroupTile extends StatelessWidget {
   final _GroupWithClass group;
   final int index;
-  final int unreadCount; // Passed explicitly
+  final int unreadCount; 
 
   const _MessageStyleGroupTile({
     required this.group, 
@@ -371,15 +394,12 @@ class _MessageStyleGroupTile extends StatelessWidget {
     final diff = now.difference(time);
     
     if (diff.inDays == 0) {
-      // Today - show time
       return DateFormat('h:mm a').format(time);
     } else if (diff.inDays == 1) {
       return 'Yesterday';
     } else if (diff.inDays < 7) {
-      // This week - show day name
       return DateFormat('EEE').format(time);
     } else {
-      // Older - show date
       return DateFormat('M/d/yy').format(time);
     }
   }
@@ -413,47 +433,25 @@ class _MessageStyleGroupTile extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Avatar with online indicator
-              Stack(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: avatarColor.withValues(alpha: 0.2),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: avatarColor, width: 2),
-                    ),
-                    child: Center(
-                      child: Text(
-                        initials,
-                        style: AppFonts.clashGrotesk(
-                          color: avatarColor,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+              // Avatar (Removed online indicator)
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: avatarColor.withValues(alpha: 0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: avatarColor, width: 2),
+                ),
+                child: Center(
+                  child: Text(
+                    initials,
+                    style: AppFonts.clashGrotesk(
+                      color: avatarColor,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  // Green online indicator
-                  if (group.isActive)
-                    Positioned(
-                      bottom: 2,
-                      right: 2,
-                      child: Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF22C55E), // Green
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: const Color(0xFF0D1117),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
               const SizedBox(width: 14),
               // Name & Last Message
@@ -490,14 +488,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                     // Last message
                     Row(
                       children: [
-                        if (group.lastMessage != null && group.lastMessageTime != null) ...[
-                          Icon(
-                            Icons.done_all,
-                            size: 16,
-                            color: const Color(0xFF22D3EE),
-                          ),
-                          const SizedBox(width: 4),
-                        ],
+                        // Removed double tick Icon(Icons.done_all)
                         Expanded(
                           child: Text(
                             group.lastMessage ?? 'Tap to start chatting',

@@ -1,4 +1,5 @@
 import 'app_fonts.dart';
+import 'dart:async';
 import 'dart:io';
 import 'dart:math'; 
 import 'dart:ui';
@@ -61,13 +62,52 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
   Map<String, String> _senderNameCache = {}; // Cache for sender names
   final Set<String> _fetchingSenderIds = {}; // Track IDs currently being fetched
 
+  StreamSubscription? _groupSubscription;
+
   @override
   void initState() {
     super.initState();
     _msgController.addListener(_onTextChanged);
     _cleanupStaleMeetingParticipation();
     _fetchUserName();
-    _markAsRead(); // Mark as read when entering
+    _setupReadReceiptListener(); // Start listening for updates
+  }
+
+  @override
+  void dispose() {
+    _msgController.removeListener(_onTextChanged);
+    _msgController.dispose();
+    _scrollCtrl.dispose();
+    _groupSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupReadReceiptListener() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    _groupSubscription = FirebaseFirestore.instance
+        .collection('classes').doc(widget.classCode)
+        .collection('groups').doc(widget.groupId)
+        .snapshots()
+        .listen((groupDoc) async {
+       if (!groupDoc.exists) return;
+       
+       final currentMessageCount = (groupDoc.data()?['messageCount'] as num?)?.toInt() ?? 0;
+       
+       // Update user's read count to match current group count
+       // We can do this efficiently without checking old value, or check local cache if we want.
+       // For simplicity and robustness, just update.
+       try {
+         await FirebaseFirestore.instance.collection('users').doc(uid).set({
+          'readMessageCounts': {
+            widget.groupId: currentMessageCount,
+          }
+         }, SetOptions(merge: true));
+       } catch (e) {
+         debugPrint("Error updating read receipt: $e");
+       }
+    });
   }
 
   Future<void> _fetchUserName() async {
@@ -127,13 +167,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     }).catchError((_) => _fetchingSenderIds.remove(senderId));
   }
 
-  @override
-  void dispose() {
-    _msgController.removeListener(_onTextChanged);
-    _msgController.dispose();
-    _scrollCtrl.dispose();
-    super.dispose();
-  }
+
 
   // --- Meeting Logic ---
   String _generateMeetingCode() {
