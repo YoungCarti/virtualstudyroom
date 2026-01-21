@@ -54,3 +54,55 @@ class Stroke {
     );
   }
 }
+
+class TextElement {
+  final String id;
+  final String text;
+  final double x;
+  final double y;
+  final double fontSize;
+  final Color color;
+  final double width;
+  final double rotation;
+  final bool isBold;
+
+  TextElement({
+    required this.id,
+    required this.text,
+    required this.x,
+    required this.y,
+    required this.fontSize,
+    required this.color,
+    required this.width,
+    this.rotation = 0.0,
+    this.isBold = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'text': text,
+      'x': x,
+      'y': y,
+      'fontSize': fontSize,
+      'color': color.value,
+      'width': width,
+      'rotation': rotation,
+      'isBold': isBold,
+    };
+  }
+
+  factory TextElement.fromMap(Map<String, dynamic> map) {
+    return TextElement(
+      id: map['id'] ?? '',
+      text: map['text'] ?? '',
+      x: (map['x'] as num).toDouble(),
+      y: (map['y'] as num).toDouble(),
+      fontSize: (map['fontSize'] as num).toDouble(),
+      color: Color(map['color'] as int),
+      width: (map['width'] as num).toDouble(),
+      rotation: (map['rotation'] as num?)?.toDouble() ?? 0.0,
+      isBold: map['isBold'] ?? false,
+    );
+  }
+}

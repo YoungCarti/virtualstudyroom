@@ -4,6 +4,7 @@ import 'package:demoflutter/canvas/canvas_model.dart';
 import 'package:demoflutter/services/canvas_service.dart';
 import 'package:demoflutter/widgets/canvas_painter.dart';
 import 'package:demoflutter/widgets/grid_painter.dart';
+import 'package:demoflutter/widgets/text_element_widget.dart';
 
 class CollaborativeCanvasPage extends StatefulWidget {
   final String roomId;
@@ -25,16 +26,22 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   double _selectedStrokeWidth = 4.0;
   bool _isEraser = false;
   bool _isPanMode = false;
+  bool _isTextMode = false;
+  
+  String? _selectedTextElementId;
+
   late Stream<List<Stroke>> _strokesStream;
+  late Stream<List<TextElement>> _textElementsStream;
 
   @override
   void initState() {
     super.initState();
     _strokesStream = _canvasService.getStrokes(widget.roomId);
+    _textElementsStream = _canvasService.getTextElements(widget.roomId);
   }
 
   void _startStroke(Offset localPosition) {
-    if (_isPanMode) return; 
+    if (_isPanMode || _isTextMode) return; 
 
     final newStroke = Stroke(
       id: const Uuid().v4(),
@@ -50,7 +57,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   }
 
   void _updateStroke(Offset localPosition) {
-    if (_isPanMode || _currentStroke == null) return;
+    if (_isPanMode || _isTextMode || _currentStroke == null) return;
 
     setState(() {
       final updatedPoints = List<CanvasPoint>.from(_currentStroke!.points)
@@ -72,6 +79,23 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
       _canvasService.addStroke(widget.roomId, _currentStroke!);
       _currentStroke = null;
     }
+  }
+
+  void _addTextElement(Offset localPosition) {
+    final newText = TextElement(
+      id: const Uuid().v4(),
+      text: '', // Start with empty text, widget shows placeholder
+      x: localPosition.dx,
+      y: localPosition.dy,
+      fontSize: 14,
+      color: Colors.black,
+      width: 150,
+    );
+    _canvasService.addTextElement(widget.roomId, newText);
+    setState(() {
+      _selectedTextElementId = newText.id;
+      _isTextMode = false; // Initial creation done, switch to edit mode
+    });
   }
 
   void _clearCanvas() {
@@ -102,7 +126,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                   context: context,
                   builder: (context) => AlertDialog(
                     title: const Text('Clear Board?'),
-                    content: const Text('This will delete all drawings for everyone.'),
+                    content: const Text('This will delete all drawings and text for everyone.'),
                     actions: [
                       TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
                       TextButton(onPressed: () {
@@ -118,60 +142,88 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
       ),
       body: Stack(
         children: [
-          StreamBuilder<List<Stroke>>(
-            stream: _strokesStream,
-            builder: (context, snapshot) {
-              if (snapshot.hasError) {
-                return Center(child: Text('Error loading canvas: ${snapshot.error}', style: const TextStyle(color: Colors.red)));
-              }
-              
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              final remoteStrokes = snapshot.data ?? [];
-
-              return InteractiveViewer(
-                transformationController: _transformationController,
-                panEnabled: _isPanMode,
-                scaleEnabled: _isPanMode,
-                boundaryMargin: const EdgeInsets.all(double.infinity),
-                minScale: 0.1,
-                maxScale: 5.0,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onScaleStart: (details) {
-                      if (!_isPanMode && details.pointerCount == 1) {
-                          _startStroke(details.localFocalPoint);
-                      }
-                  },
-                  onScaleUpdate: (details) {
-                      if (!_isPanMode && details.pointerCount == 1) {
-                           _updateStroke(details.localFocalPoint);
-                      }
-                  },
-                  onScaleEnd: (details) {
-                       if (_currentStroke != null) {
-                           _endStroke();
-                       }
-                  },
-                  child: Stack(
-                    children: [
-                      // Grid Background
-                      CustomPaint(
-                        size: const Size(5000, 5000), // Large fixed size for grid
-                        painter: GridPainter(),
-                      ),
-                      // Drawings
-                      CustomPaint(
-                        size: const Size(5000, 5000),
-                        painter: CanvasPainter([...remoteStrokes, if (_currentStroke != null) _currentStroke!]),
-                      ),
-                    ],
+          // Main Canvas Stack (Strokes + Text)
+          InteractiveViewer(
+            transformationController: _transformationController,
+            panEnabled: _isPanMode,
+            scaleEnabled: _isPanMode,
+            boundaryMargin: const EdgeInsets.all(double.infinity),
+            minScale: 0.1,
+            maxScale: 5.0,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTapUp: (details) {
+                  if (_isTextMode) {
+                      _addTextElement(details.localPosition);
+                  } else {
+                     setState(() {
+                        _selectedTextElementId = null; // Deselect text
+                     });
+                  }
+              },
+              onScaleStart: (details) {
+                  if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null) {
+                      _startStroke(details.localFocalPoint);
+                  }
+              },
+              onScaleUpdate: (details) {
+                  if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null) {
+                       _updateStroke(details.localFocalPoint);
+                  }
+              },
+              onScaleEnd: (details) {
+                   if (_currentStroke != null) {
+                       _endStroke();
+                   }
+              },
+              child: Stack(
+                children: [
+                  // Grid Background
+                  CustomPaint(
+                    size: const Size(5000, 5000), 
+                    painter: GridPainter(),
                   ),
-                ),
-              );
-            },
+                  
+                  // Strokes Layer
+                  StreamBuilder<List<Stroke>>(
+                      stream: _strokesStream,
+                      builder: (context, snapshot) {
+                        final remoteStrokes = snapshot.data ?? [];
+                        return CustomPaint(
+                             size: const Size(5000, 5000),
+                             painter: CanvasPainter([...remoteStrokes, if (_currentStroke != null) _currentStroke!]),
+                        );
+                      }
+                  ),
+                  
+                  // Text Elements Layer
+                  StreamBuilder<List<TextElement>>(
+                    stream: _textElementsStream,
+                    builder: (context, snapshot) {
+                      final textElements = snapshot.data ?? [];
+                      return Stack(
+                        children: textElements.map((element) {
+                          return TextElementWidget(
+                            element: element,
+                            isSelected: _selectedTextElementId == element.id,
+                            onSelect: (id) => setState(() {
+                              _selectedTextElementId = id;
+                              _isPanMode = false; // Disable pan when text selected
+                            }),
+                            onUpdate: (updatedElement) {
+                              _canvasService.updateTextElement(widget.roomId, updatedElement);
+                            },
+                          );
+                        }).toList(),
+                      );
+                    }
+                  ),
+                  
+                  // Transparent overlay to enforce size for InteractiveViewer
+                  const SizedBox(width: 5000, height: 5000),
+                ],
+              ),
+            ),
           ),
           
           // Floating Top Left Menu (Undo/Redo)
@@ -190,13 +242,14 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                   children: [
                     IconButton(icon: const Icon(Icons.undo, color: Colors.black87), onPressed: _undo),
                     const Divider(height: 1, indent: 8, endIndent: 8),
-                    IconButton(icon: const Icon(Icons.redo, color: Colors.black87), onPressed: _undo), // Placeholder redo
+                    IconButton(icon: const Icon(Icons.redo, color: Colors.black87), onPressed: _undo), 
                   ],
                 ),
              ),
           ),
 
-          // Miro-style Bottom Floating Toolbar
+          // Tools Menu
+          if (_selectedTextElementId == null)
           Positioned(
             bottom: 30,
             left: 0,
@@ -205,7 +258,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E), // Dark gray/black
+                  color: const Color(0xFF1E1E1E), 
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: [
                     BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
@@ -217,14 +270,13 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                      IconButton(
                        icon: const Icon(Icons.grid_view_rounded, color: Colors.white70),
                        onPressed: () {
-                          // Placeholder for "Apps"
                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Apps menu not implemented')));
                        },
                      ),
                      Container(width: 1, height: 24, color: Colors.white24),
                      IconButton(
-                       icon: const Icon(Icons.add, color: Colors.white),
-                       onPressed: () => _showToolsMenu(context),
+                       icon: Icon(_isTextMode ? Icons.text_fields : Icons.add, color: _isTextMode ? Colors.blueAccent : Colors.white),
+                       onPressed: () => _isTextMode ? setState(() => _isTextMode = false) : _showToolsMenu(context),
                      ),
                   ],
                 ),
@@ -232,60 +284,75 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
             ),
           ),
           
-          // Contextual Color Palette (Visible when Pen/Eraser is active)
-          if (!_isPanMode)
+          // Contextual Text Toolbar
+          if (_selectedTextElementId != null)
+             _buildTextToolbar(),
+             
+          // Contextual Drawing Toolbar (only if not text mode and not selecting text)
+          // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
+          // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
+          if (!_isPanMode && !_isTextMode)
             Positioned(
-              top: MediaQuery.of(context).size.height * 0.15,
+              top: 100,
               right: 20,
               child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                width: 56,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(30),
+                  borderRadius: BorderRadius.circular(28),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 8, offset: const Offset(0, 2))
+                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
                   ],
                 ),
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                      // Active Tool Indicator
-                      Icon(_isEraser ? Icons.cleaning_services : Icons.edit, color: Colors.black54),
+                      // Pen Icon
+                      Icon(Icons.edit, color: !_isEraser ? Colors.black : Colors.grey, size: 24),
                       const SizedBox(height: 12),
+                      
+                      // Divider
                       Container(height: 1, width: 20, color: Colors.grey[300]),
                       const SizedBox(height: 12),
                       
                       // Colors
-                      ...[Colors.black, Colors.red, Colors.blue, Colors.green].map((color) => 
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: GestureDetector(
-                            onTap: () => setState(() {
-                                _selectedColor = color;
-                                _isEraser = false;
-                            }),
-                            child: Container(
-                              width: 24,
-                              height: 24,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: _selectedColor == color && !_isEraser ? Colors.blueAccent : Colors.transparent, 
-                                  width: 2
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      ),
+                      ...[Colors.black, const Color(0xFFF44336), const Color(0xFF2196F3), const Color(0xFF4CAF50)].map((color) {
+                          final isSelected = _selectedColor == color && !_isEraser;
+                          return GestureDetector(
+                             onTap: () => setState(() {
+                                 _selectedColor = color;
+                                 _isEraser = false;
+                             }),
+                             child: Padding(
+                               padding: const EdgeInsets.symmetric(vertical: 6),
+                               child: Container(
+                                 width: 24, height: 24,
+                                 decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
+                                    border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
+                                 ),
+                                 child: isSelected ? Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))) : null,
+                               ),
+                             ),
+                          );
+                      }),
+                      
                       const SizedBox(height: 12),
-                      IconButton(
-                        icon: Icon(Icons.cleaning_services, color: _isEraser ? Colors.blue : Colors.grey),
-                        onPressed: () => setState(() => _isEraser = true),
+                      
+                      // Eraser
+                      GestureDetector(
+                        onTap: () => setState(() => _isEraser = !_isEraser),
+                        child: Icon(Icons.cleaning_services, color: _isEraser ? Colors.blue : Colors.grey, size: 24),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () => setState(() => _isPanMode = true), // Return to pan mode
+                      
+                      const SizedBox(height: 16),
+                      
+                      // Close
+                      GestureDetector(
+                        onTap: () => setState(() => _isPanMode = true),
+                        child: const Icon(Icons.close, color: Colors.grey, size: 24),
                       ),
                   ],
                 ),
@@ -294,6 +361,138 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildTextToolbar() {
+      return StreamBuilder<List<TextElement>>(
+        stream: _textElementsStream,
+        builder: (context, snapshot) {
+            final elements = snapshot.data ?? [];
+            TextElement? selectedElement;
+            try {
+              selectedElement = elements.firstWhere((e) => e.id == _selectedTextElementId);
+            } catch (e) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned(
+              bottom: 30,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                    height: 56,
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(28), // Pill shape
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                            // Text Icon
+                            const Icon(Icons.title, color: Colors.white, size: 24),
+                            
+                            const SizedBox(width: 16),
+                            Container(width: 1, height: 24, color: Colors.white24),
+                            const SizedBox(width: 16),
+                            
+                            // Font Size Controls
+                            IconButton(
+                                icon: const Icon(Icons.remove, color: Colors.white, size: 20),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                    _canvasService.updateTextElement(widget.roomId, TextElement(
+                                        id: selectedElement!.id,
+                                        text: selectedElement.text,
+                                        x: selectedElement.x,
+                                        y: selectedElement.y,
+                                        fontSize: (selectedElement.fontSize - 2).clamp(8.0, 72.0),
+                                        color: selectedElement.color,
+                                        width: selectedElement.width,
+                                        rotation: selectedElement.rotation,
+                                        isBold: selectedElement.isBold,
+                                    ));
+                                },
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedElement!.fontSize.round().toString(), 
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)
+                            ),
+                            const SizedBox(width: 12),
+                            IconButton(
+                                icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                    _canvasService.updateTextElement(widget.roomId, TextElement(
+                                        id: selectedElement!.id,
+                                        text: selectedElement.text,
+                                        x: selectedElement.x,
+                                        y: selectedElement.y,
+                                        fontSize: (selectedElement.fontSize + 2).clamp(8.0, 72.0),
+                                        color: selectedElement.color,
+                                        width: selectedElement.width,
+                                        rotation: selectedElement.rotation,
+                                        isBold: selectedElement.isBold,
+                                    ));
+                                },
+                            ),
+                            
+                            const SizedBox(width: 16),
+                            Container(width: 1, height: 24, color: Colors.white24),
+                            const SizedBox(width: 16),
+
+                            // Delete
+                               IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                                  onPressed: () {
+                                       _canvasService.deleteTextElement(widget.roomId, selectedElement!.id);
+                                       setState(() => _selectedTextElementId = null);
+                                  },
+                              ),
+
+                              // Duplicate
+                               IconButton(
+                                  icon: const Icon(Icons.copy_all_outlined, color: Colors.white), // Use outlined/square style
+                                  onPressed: () {
+                                       final newId = const Uuid().v4();
+                                       _canvasService.addTextElement(widget.roomId, TextElement(
+                                           id: newId,
+                                           text: selectedElement!.text,
+                                           x: selectedElement.x + 20,
+                                           y: selectedElement.y + 20,
+                                           fontSize: selectedElement.fontSize,
+                                           color: selectedElement.color,
+                                           width: selectedElement.width,
+                                           rotation: selectedElement.rotation,
+                                           isBold: selectedElement.isBold,
+                                       ));
+                                       setState(() => _selectedTextElementId = newId);
+                                  },
+                              ),
+                              
+                              // More
+                              IconButton(
+                                icon: const Icon(Icons.more_vert, color: Colors.white),
+                                onPressed: () {
+                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('More options: Bold, Color, Align...')));
+                                },
+                              ),
+                          ],
+                      ),
+                    ),
+                ),
+              ),
+            );
+        }
+      );
   }
 
   void _showToolsMenu(BuildContext context) {
@@ -320,16 +519,16 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                 children: [
                   _buildToolItem(Icons.text_fields, 'Text', onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Text tool not implemented')));
+                    setState(() {
+                        _isTextMode = true;
+                        _isPanMode = false;
+                        _isEraser = false;
+                    });
                   }),
                   _buildToolItem(Icons.note_alt_outlined, 'Sticky note', onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sticky note tool not implemented')));
                   }),
-                  _buildToolItem(Icons.crop_free, 'Stickies capture', onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Stickies capture tool not implemented')));
-                  }), // Using crop_free as approx
                   _buildToolItem(Icons.comment_outlined, 'Comment', onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment tool not implemented')));
@@ -339,15 +538,12 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                      setState(() {
                        _isPanMode = false;
                        _isEraser = false;
+                       _isTextMode = false;
                      });
                   }),
                   _buildToolItem(Icons.category_outlined, 'Shapes and lines', onTap: () {
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shapes and lines tool not implemented')));
-                  }),
-                  _buildToolItem(Icons.description_outlined, 'Doc', onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Doc tool not implemented')));
                   }),
                   _buildToolItem(Icons.grid_3x3, 'Frame', onTap: () {
                     Navigator.pop(context);

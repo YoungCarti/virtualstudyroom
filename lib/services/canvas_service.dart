@@ -15,6 +15,17 @@ class CanvasService {
     });
   }
 
+  Stream<List<TextElement>> getTextElements(String roomId) {
+    return _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('texts')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => TextElement.fromMap(doc.data())).toList();
+    });
+  }
+
   Future<void> addStroke(String roomId, Stroke stroke) async {
     await _firestore
         .collection('rooms')
@@ -24,15 +35,55 @@ class CanvasService {
         .set(stroke.toMap());
   }
 
+  Future<void> addTextElement(String roomId, TextElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('texts')
+        .doc(element.id)
+        .set(element.toMap());
+  }
+
+  Future<void> updateTextElement(String roomId, TextElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('texts')
+        .doc(element.id)
+        .update(element.toMap());
+  }
+
+  Future<void> deleteTextElement(String roomId, String elementId) async {
+      await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('texts')
+        .doc(elementId)
+        .delete();
+  }
+
   Future<void> clearCanvas(String roomId) async {
     final batch = _firestore.batch();
-    final snapshots = await _firestore
+    
+    // Clear strokes
+    final strokeSnapshots = await _firestore
         .collection('rooms')
         .doc(roomId)
         .collection('strokes')
         .get();
 
-    for (var doc in snapshots.docs) {
+    for (var doc in strokeSnapshots.docs) {
+      batch.delete(doc.reference);
+    }
+    
+    // Clear texts
+    final textSnapshots = await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('texts')
+        .get();
+
+    for (var doc in textSnapshots.docs) {
       batch.delete(doc.reference);
     }
 
