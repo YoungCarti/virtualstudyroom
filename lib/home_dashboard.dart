@@ -1541,7 +1541,7 @@ class _StatsGrid extends StatelessWidget {
       }
 
       return {
-        'assignments': totalAssignments,
+        'assignments': totalAssignments - completedCount, // Show pending only
         'completeness': completeness,
       };
     } catch (e) {
