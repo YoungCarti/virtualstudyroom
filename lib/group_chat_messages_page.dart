@@ -67,6 +67,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     _msgController.addListener(_onTextChanged);
     _cleanupStaleMeetingParticipation();
     _fetchUserName();
+    _markAsRead(); // Mark as read when entering
   }
 
   Future<void> _fetchUserName() async {
@@ -82,6 +83,31 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
       } catch (e) {
         // ignore
       }
+    }
+  }
+
+  // Mark all messages in this group as read for the current user
+  Future<void> _markAsRead() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final groupDoc = await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .get();
+      
+      if (!groupDoc.exists) return;
+      
+      final currentMessageCount = (groupDoc.data()?['messageCount'] as num?)?.toInt() ?? 0;
+      
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'readMessageCounts': {
+          widget.groupId: currentMessageCount,
+        }
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint("Error marking as read: $e");
     }
   }
   
@@ -486,10 +512,38 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           updates['favGroup'] = widget.groupName;
         }
         
+        
         transaction.update(userRef, updates);
       }).catchError((e) {
          debugPrint("Error updating fav group stats: $e");
       });
+
+      // --- Update Group Metadata (Last Message & Count) ---
+      final groupRef = FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId);
+          
+      String previewText = text;
+      if (text.isEmpty && _selectedFile != null) {
+        previewText = (_selectedFileType == 'image') ? '📷 Photo' : '📎 File';
+      }
+      
+      await groupRef.update({
+        'lastMessage': previewText,
+        'lastMessageTime': FieldValue.serverTimestamp(),
+        'messageCount': FieldValue.increment(1),
+        'lastSenderId': uid,
+        'lastSenderName': _currentUserName,
+      });
+
+      // Also update read count for self so it doesn't show as unread
+      // (We can do this optimistically or wait for the count to increment)
+      // A simple way is to just call _markAsRead() again, but we need the NEW count.
+      // Since we just incremented, we might not know the exact number without reading.
+      // Optimisation: Read the new count from the group doc or just wait for next entry. 
+      // Actually, for immediate UI feedback, we can assume we read what we sent. 
+      // Better: Let's rely on _markAsRead loop or just trigger it.
+      _markAsRead(); 
       
       _msgController.clear();
       setState(() {

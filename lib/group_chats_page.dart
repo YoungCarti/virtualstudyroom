@@ -153,6 +153,9 @@ class _AllGroupsListState extends State<_AllGroupsList> {
   
   bool _isLoading = true;
 
+  // Map of GroupId -> Read Count (from User doc)
+  Map<String, dynamic> _readCounts = {};
+
   @override
   void initState() {
     super.initState();
@@ -174,7 +177,14 @@ class _AllGroupsListState extends State<_AllGroupsList> {
         .listen((userSnap) {
       if (!mounted) return;
       
-      final enrolled = List<String>.from(userSnap.data()?['enrolledClasses'] ?? []);
+      final userData = userSnap.data() ?? {};
+      final enrolled = List<String>.from(userData['enrolledClasses'] ?? []);
+      
+      // Update state with latest read counts
+      setState(() {
+        _readCounts = Map<String, dynamic>.from(userData['readMessageCounts'] ?? {});
+      });
+      
       _syncSubscriptions(enrolled);
     });
   }
@@ -196,83 +206,56 @@ class _AllGroupsListState extends State<_AllGroupsList> {
             .doc(classCode)
             .collection('groups')
             .snapshots()
-            .listen((snap) async {
+            .listen((snap) {
+              if (!mounted) return;
+              
               final groupDocs = snap.docs
                   .where((d) => List.from(d.data()['members'] ?? []).contains(widget.uid))
                   .toList();
               
-              // Fetch last message for each group
               final groups = <_GroupWithClass>[];
               for (final d in groupDocs) {
-                String? lastMessage;
-                DateTime? lastMessageTime;
+                final data = d.data();
+                final groupId = d.id;
                 
-                try {
-                  final messagesSnap = await FirebaseFirestore.instance
-                      .collection('classes')
-                      .doc(classCode)
-                      .collection('groups')
-                      .doc(d.id)
-                      .collection('messages')
-                      .orderBy('createdAt', descending: true)
-                      .limit(1)
-                      .get();
-                  
-                  if (messagesSnap.docs.isNotEmpty) {
-                    final msgData = messagesSnap.docs.first.data();
-                    final msgType = msgData['type'] as String?;
-                    final senderId = msgData['senderId'] as String?;
-                    final senderName = msgData['senderName'] as String? ?? 'Unknown';
-                    final fileType = msgData['fileType'] as String?;
-                    
-                    // Format message content based on type
-                    String messageContent;
-                    if (msgType == 'image' || fileType == 'image') {
-                      messageContent = '📷 Photo';
-                    } else if (msgType == 'file' || fileType == 'file') {
-                      messageContent = '📎 File';
-                    } else if (msgType == 'voice') {
-                      messageContent = '🎤 Voice message';
-                    } else if (msgType == 'meeting') {
-                      messageContent = '📹 Meeting';
-                    } else {
-                      messageContent = msgData['text'] as String? ?? '';
-                    }
-                    
-                    // Format as "You: message" or "Name: message"
-                    if (senderId == widget.uid) {
-                      lastMessage = 'You: $messageContent';
-                    } else {
-                      // Get first name only
-                      final firstName = senderName.split(' ').first;
-                      lastMessage = '$firstName: $messageContent';
-                    }
-                    
-                    final ts = msgData['createdAt'];
-                    if (ts != null) {
-                      lastMessageTime = (ts as Timestamp).toDate();
-                    }
-                  } else {
-                    lastMessage = 'No messages yet';
-                  }
-                } catch (e) {
-                  lastMessage = 'Tap to start chatting';
+                // --- Real Data from Group Doc ---
+                final lastMessageText = data['lastMessage'] as String?;
+                final senderName = data['lastSenderName'] as String? ?? 'Unknown';
+                final senderId = data['lastSenderId'] as String?;
+                
+                String? lastMessage;
+                if (lastMessageText != null) {
+                   if (senderId == widget.uid) {
+                     lastMessage = 'You: $lastMessageText';
+                   } else {
+                     final firstName = senderName.split(' ').first;
+                     lastMessage = '$firstName: $lastMessageText'; 
+                   }
+                } else {
+                   lastMessage = 'Tap to start chatting';
                 }
+
+                DateTime? lastMessageTime;
+                final ts = data['lastMessageTime'];
+                if (ts is Timestamp) {
+                  lastMessageTime = ts.toDate();
+                }
+
+                // --- Real Unread Count Logic ---
+                // Store raw total message count in the model, calculate unread in build() 
+                // to allow state updates (readCounts) to refresh the UI immediately.
+                final totalMessages = (data['messageCount'] as num?)?.toInt() ?? 0;
                 
                 groups.add(_GroupWithClass(
                   classCode: classCode,
-                  groupId: d.id,
-                  groupName: d.data()['groupName'] ?? 'Unnamed',
-                  memberCount: List.from(d.data()['members'] ?? []).length,
+                  groupId: groupId,
+                  groupName: data['groupName'] ?? 'Unnamed',
+                  memberCount: List.from(data['members'] ?? []).length,
                   lastMessage: lastMessage,
                   lastMessageTime: lastMessageTime,
-                  // Simulate unread count (in production, track per-user last read timestamp)
-                  unreadCount: lastMessageTime != null && 
-                      DateTime.now().difference(lastMessageTime!).inHours < 24 
-                      ? (d.id.hashCode % 5) : 0,
-                  // Simulate active status based on recent message
+                  messageCount: totalMessages, // Store TOTAL here
                   isActive: lastMessageTime != null && 
-                      DateTime.now().difference(lastMessageTime!).inMinutes < 30,
+                      DateTime.now().difference(lastMessageTime).inMinutes < 30,
                 ));
               }
               
@@ -284,17 +267,15 @@ class _AllGroupsListState extends State<_AllGroupsList> {
                 return b.lastMessageTime!.compareTo(a.lastMessageTime!);
               });
               
-              if (mounted) {
-                setState(() {
-                  _groupsByClass[classCode] = groups;
-                  _isLoading = false;
-                });
-              }
+              setState(() {
+                _groupsByClass[classCode] = groups;
+                _isLoading = false;
+              });
             });
       }
     }
     
-    // If no classes, we are done loading
+    // If no classes
     if (enrolledClasses.isEmpty && mounted) {
       setState(() {
         _isLoading = false;
@@ -321,7 +302,16 @@ class _AllGroupsListState extends State<_AllGroupsList> {
       itemCount: allGroups.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (_, index) {
-        return _MessageStyleGroupTile(group: allGroups[index], index: index);
+        final group = allGroups[index];
+        // Calculate unread dynamically based on latest state
+        final readCount = (_readCounts[group.groupId] as num?)?.toInt() ?? 0;
+        final unreadCount = (group.messageCount - readCount).clamp(0, 99);
+        
+        return _MessageStyleGroupTile(
+          group: group, 
+          index: index, 
+          unreadCount: unreadCount,
+        );
       },
     );
   }
@@ -337,7 +327,7 @@ class _GroupWithClass {
     required this.memberCount,
     this.lastMessage,
     this.lastMessageTime,
-    this.unreadCount = 0,
+    this.messageCount = 0, // Changed from unreadCount
     this.isActive = false,
   });
 
@@ -347,7 +337,7 @@ class _GroupWithClass {
   final int memberCount;
   final String? lastMessage;
   final DateTime? lastMessageTime;
-  final int unreadCount;
+  final int messageCount; // Total messages in group
   final bool isActive;
 }
 
@@ -355,8 +345,13 @@ class _GroupWithClass {
 class _MessageStyleGroupTile extends StatelessWidget {
   final _GroupWithClass group;
   final int index;
+  final int unreadCount; // Passed explicitly
 
-  const _MessageStyleGroupTile({required this.group, required this.index});
+  const _MessageStyleGroupTile({
+    required this.group, 
+    required this.index,
+    required this.unreadCount,
+  });
 
   // Avatar colors
   static const List<Color> _avatarColors = [
@@ -514,8 +509,8 @@ class _MessageStyleGroupTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        // Unread badge (show for groups with recent messages and random simulation)
-                        if (group.unreadCount > 0)
+                        // Unread badge
+                        if (unreadCount > 0)
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             decoration: BoxDecoration(
@@ -523,7 +518,7 @@ class _MessageStyleGroupTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
-                              '${group.unreadCount}',
+                              '$unreadCount',
                               style: AppFonts.clashGrotesk(
                                 color: Colors.white,
                                 fontSize: 11,
