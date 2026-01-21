@@ -881,10 +881,6 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                         _isTextMode = false;
                     });
                   }),
-                  _buildToolItem(Icons.comment_outlined, 'Comment', onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Comment tool not implemented')));
-                  }),
                   _buildToolItem(Icons.edit_outlined, 'Pen', onTap: () {
                      Navigator.pop(context);
                      setState(() {
@@ -899,10 +895,6 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                     // Show Shapes Grid
                     Navigator.pop(context);
                     _showShapePicker(context);
-                  }),
-                  _buildToolItem(Icons.grid_3x3, 'Frame', onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Frame tool not implemented')));
                   }),
                    _buildToolItem(Icons.upload_file, 'Upload', onTap: () {
                     Navigator.pop(context);
