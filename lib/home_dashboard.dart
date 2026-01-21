@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'video_call_page.dart';
 
 import 'app_theme.dart';
 import 'services/notification_service.dart';
@@ -1904,158 +1906,13 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
                   );
                 }
                 
-                return FutureBuilder<List<_ScheduleEvent>>(
-                  future: _fetchScheduleEvents(enrolledClasses),
-                  builder: (context, scheduleSnap) {
-                    if (!scheduleSnap.hasData) {
-                      return const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
-                      );
-                    }
-                    
-                    final events = scheduleSnap.data!;
-                    
-                    if (events.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Column(
-                          children: [
-                            Icon(Icons.event_available, 
-                                 color: Colors.grey[700], size: 32),
-                            const SizedBox(height: 8),
-                            Text(
-                              'No scheduled classes this week',
-                              style: AppFonts.clashGrotesk(color: Colors.grey[500]),
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-                    
-                    // Group events by day of week
-                    final eventsByDay = <int, List<_ScheduleEvent>>{};
-                    for (final event in events) {
-                      final dayIndex = event.dayOfWeek;
-                      eventsByDay.putIfAbsent(dayIndex, () => []).add(event);
-                    }
-                    
-                    // Time labels from 8am to 6pm
-                    const startHour = 8;
-                    const endHour = 18;
-                    const hourHeight = 50.0;
-                    
-                    return SizedBox(
-                      height: 280,
-                      child: SingleChildScrollView(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Time labels column (left side)
-                            SizedBox(
-                              width: 45,
-                              child: Column(
-                                children: List.generate(endHour - startHour + 1, (index) {
-                                  final hour = startHour + index;
-                                  final label = hour < 12 
-                                      ? '${hour}am' 
-                                      : hour == 12 
-                                          ? '12pm' 
-                                          : '${hour - 12}pm';
-                                  return SizedBox(
-                                    height: hourHeight,
-                                    child: Align(
-                                      alignment: Alignment.topRight,
-                                      child: Padding(
-                                        padding: const EdgeInsets.only(right: 8, top: 0),
-                                        child: Text(
-                                          label,
-                                          style: AppFonts.clashGrotesk(
-                                            color: Colors.grey[600],
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ),
-                            ),
-                            
-                            // Grid with events
-                            Expanded(
-                              child: SingleChildScrollView(
-                                controller: _scrollController,
-                                scrollDirection: Axis.horizontal,
-                                child: SizedBox(
-                                  width: 7 * 90.0, // 7 days × width per day
-                                  child: Stack(
-                                    children: [
-                                      // Grid lines
-                                      Column(
-                                        children: List.generate(endHour - startHour + 1, (index) {
-                                          return Container(
-                                            height: hourHeight,
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                top: BorderSide(
-                                                  color: Colors.grey[800]!.withValues(alpha: 0.5),
-                                                  width: 0.5,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                      
-                                      // Vertical day dividers
-                                      Row(
-                                        children: List.generate(7, (index) {
-                                          return Container(
-                                            width: 90,
-                                            height: (endHour - startHour + 1) * hourHeight,
-                                            decoration: BoxDecoration(
-                                              border: Border(
-                                                right: BorderSide(
-                                                  color: Colors.grey[800]!.withValues(alpha: 0.3),
-                                                  width: 0.5,
-                                                ),
-                                              ),
-                                            ),
-                                          );
-                                        }),
-                                      ),
-                                      
-                                      // Event cards positioned by time
-                                      ...events.map((event) {
-                                        final startHourEvent = _parseHour(event.startTime);
-                                        final endHourEvent = _parseHour(event.endTime);
-                                        final top = (startHourEvent - startHour) * hourHeight;
-                                        final height = (endHourEvent - startHourEvent) * hourHeight;
-                                        final left = event.dayOfWeek * 90.0 + 2;
-                                        
-                                        return Positioned(
-                                          top: top.clamp(0, double.infinity),
-                                          left: left,
-                                          width: 86,
-                                          height: height.clamp(hourHeight * 0.8, double.infinity),
-                                          child: _TimeGridEventCard(event: event),
-                                        );
-                                      }),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+                return _LiveScheduleGrid(
+                  enrolledClasses: enrolledClasses,
+                  weekStart: _currentWeekStart,
                 );
-              },
+              }, // StreamBuilder builder
             ),
+
         ],
       ),
     );
@@ -2083,83 +1940,7 @@ class _WeekScheduleCalendarState extends State<_WeekScheduleCalendar> {
     return date.year == now.year && date.month == now.month && date.day == now.day;
   }
 
-  double _parseHour(String time) {
-    // Parse "HH:MM" or "H:MM" format to decimal hours
-    final parts = time.split(':');
-    if (parts.length != 2) return 9.0; // Default
-    final hours = int.tryParse(parts[0]) ?? 9;
-    final minutes = int.tryParse(parts[1]) ?? 0;
-    return hours + (minutes / 60.0);
-  }
 
-  Future<List<_ScheduleEvent>> _fetchScheduleEvents(List<String> classCodes) async {
-    final events = <_ScheduleEvent>[];
-    
-    // Define schedule colors
-    final colors = [
-      const Color(0xFFFDE68A), // Amber
-      const Color(0xFF86EFAC), // Green
-      const Color(0xFF93C5FD), // Blue
-      const Color(0xFFFCA5A5), // Red
-      const Color(0xFFD8B4FE), // Purple
-      const Color(0xFF67E8F9), // Cyan
-    ];
-    
-    for (int i = 0; i < classCodes.length; i++) {
-      final classCode = classCodes[i];
-      try {
-        final classDoc = await FirebaseFirestore.instance
-            .collection('classes')
-            .doc(classCode)
-            .get();
-        
-        if (classDoc.exists) {
-          final data = classDoc.data()!;
-          final className = data['className'] ?? classCode;
-          final schedule = data['schedule'] as Map<String, dynamic>?;
-          
-          if (schedule != null) {
-            // Parse schedule format: { "dayOfWeek": 0-6, "startTime": "09:00", "endTime": "11:00", "room": "Lab 1" }
-            final dayOfWeek = schedule['dayOfWeek'] as int? ?? 0;
-            final startTime = schedule['startTime'] as String? ?? '09:00';
-            final endTime = schedule['endTime'] as String? ?? '10:00';
-            final room = schedule['room'] as String? ?? '';
-            
-            events.add(_ScheduleEvent(
-              className: className,
-              classCode: classCode,
-              dayOfWeek: dayOfWeek,
-              startTime: startTime,
-              endTime: endTime,
-              room: room,
-              color: colors[i % colors.length],
-            ));
-          } else {
-            // If no schedule, assign a default based on index
-            events.add(_ScheduleEvent(
-              className: className,
-              classCode: classCode,
-              dayOfWeek: i % 5, // Mon-Fri
-              startTime: '${9 + (i % 4)}:00',
-              endTime: '${10 + (i % 4)}:00',
-              room: '',
-              color: colors[i % colors.length],
-            ));
-          }
-        }
-      } catch (e) {
-        debugPrint('Error fetching class $classCode: $e');
-      }
-    }
-    
-    // Sort by day and time
-    events.sort((a, b) {
-      if (a.dayOfWeek != b.dayOfWeek) return a.dayOfWeek.compareTo(b.dayOfWeek);
-      return a.startTime.compareTo(b.startTime);
-    });
-    
-    return events;
-  }
 }
 
 class _ScheduleEvent {
@@ -2171,6 +1952,11 @@ class _ScheduleEvent {
   final String room;
   final Color color;
 
+  final String? meetingCode;
+  final String? groupId;
+  final DateTime? validStart;
+  final DateTime? validEnd;
+
   _ScheduleEvent({
     required this.className,
     required this.classCode,
@@ -2179,6 +1965,10 @@ class _ScheduleEvent {
     required this.endTime,
     required this.room,
     required this.color,
+    this.meetingCode,
+    this.groupId,
+    this.validStart,
+    this.validEnd,
   });
 }
 
@@ -2248,51 +2038,403 @@ class _TimeGridEventCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(6),
-      decoration: BoxDecoration(
-        color: event.color.withValues(alpha: 0.25),
-        borderRadius: BorderRadius.circular(6),
-        border: Border(
-          left: BorderSide(color: event.color, width: 3),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(
-            '${event.startTime} - ${event.endTime}',
-            style: AppFonts.clashGrotesk(
-              color: event.color,
-              fontSize: 9,
-              fontWeight: FontWeight.w600,
-            ),
+    return GestureDetector(
+      onTap: () => _handleJoin(context),
+      child: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: event.color.withValues(alpha: 0.25),
+          borderRadius: BorderRadius.circular(6),
+          border: Border(
+            left: BorderSide(color: event.color, width: 3),
           ),
-          const SizedBox(height: 2),
-          Flexible(
-            child: Text(
-              event.className,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${event.startTime} - ${event.endTime}',
               style: AppFonts.clashGrotesk(
-                color: Colors.white,
-                fontSize: 10,
+                color: event.color,
+                fontSize: 9,
                 fontWeight: FontWeight.w600,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
             ),
-          ),
-          if (event.room.isNotEmpty) 
-            Text(
-              event.room,
-              style: AppFonts.clashGrotesk(
-                color: Colors.grey[400],
-                fontSize: 8,
+            const SizedBox(height: 2),
+            Flexible(
+              child: Text(
+                event.className,
+                style: AppFonts.clashGrotesk(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
             ),
-        ],
+            if (event.room.isNotEmpty) 
+              Text(
+                event.room,
+                style: AppFonts.clashGrotesk(
+                  color: Colors.grey[400],
+                  fontSize: 8,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _handleJoin(BuildContext context) async {
+      if (event.meetingCode == null || event.validStart == null || event.validEnd == null) return;
+      
+      final now = DateTime.now();
+      if (now.isBefore(event.validStart!)) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Class not yet started"), 
+            backgroundColor: Colors.orange
+         ));
+         return;
+      }
+      if (now.isAfter(event.validEnd!)) {
+         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Class has ended"), 
+            backgroundColor: Colors.red
+         ));
+         return;
+      }
+      
+      // Permissions
+      final permissions = await [Permission.camera, Permission.microphone].request();
+      if (!permissions[Permission.camera]!.isGranted || !permissions[Permission.microphone]!.isGranted) {
+         if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permissions required to join')));
+         return;
+      }
+      
+      if (context.mounted) {
+         Navigator.push(
+            context,
+            MaterialPageRoute(
+               builder: (context) => VideoCallPage(
+                  channelName: event.meetingCode!,
+                  classCode: event.classCode,
+                  groupId: event.groupId ?? 'schedule',
+                  groupName: event.className,
+               ),
+            ),
+         );
+      }
+  }
+}
+
+class _LiveScheduleGrid extends StatefulWidget {
+  final List<String> enrolledClasses;
+  final DateTime weekStart;
+
+  const _LiveScheduleGrid({
+    super.key,
+    required this.enrolledClasses,
+    required this.weekStart,
+  });
+
+  @override
+  State<_LiveScheduleGrid> createState() => _LiveScheduleGridState();
+}
+
+class _LiveScheduleGridState extends State<_LiveScheduleGrid> {
+  final Map<String, List<_ScheduleEvent>> _eventsByClass = {};
+  final List<StreamSubscription> _subscriptions = [];
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupListeners();
+  }
+
+  @override
+  void didUpdateWidget(_LiveScheduleGrid oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.weekStart != oldWidget.weekStart || 
+        widget.enrolledClasses.length != oldWidget.enrolledClasses.length ||
+        !_listsEqual(widget.enrolledClasses, oldWidget.enrolledClasses)) {
+      _cleanupListeners();
+      if (mounted) {
+        setState(() {
+           _eventsByClass.clear();
+           _isLoading = true;
+        });
+      }
+      _setupListeners();
+    }
+  }
+  
+  bool _listsEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i=0; i< a.length; i++) {
+        if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  void dispose() {
+    _cleanupListeners();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _cleanupListeners() {
+    for (var sub in _subscriptions) {
+      sub.cancel();
+    }
+    _subscriptions.clear();
+  }
+
+  void _setupListeners() {
+    if (widget.enrolledClasses.isEmpty) {
+      if (mounted) setState(() => _isLoading = false);
+      return;
+    }
+
+    final weekEnd = widget.weekStart.add(const Duration(days: 7));
+    
+    int processedCount = 0;
+    
+    // Define schedule colors
+    final colors = [
+      const Color(0xFFFDE68A), // Amber
+      const Color(0xFF86EFAC), // Green
+      const Color(0xFF93C5FD), // Blue
+      const Color(0xFFFCA5A5), // Red
+      const Color(0xFFD8B4FE), // Purple
+      const Color(0xFF67E8F9), // Cyan
+    ];
+
+    for (int i = 0; i < widget.enrolledClasses.length; i++) {
+       final classCode = widget.enrolledClasses[i];
+       final color = colors[i % colors.length];
+
+       // First fetch class name (single fetch, reasonable optimization)
+       FirebaseFirestore.instance.collection('classes').doc(classCode).get().then((classDoc) {
+          if (!classDoc.exists) {
+             _checkLoadingComplete(++processedCount);
+             return;
+          }
+          final className = classDoc.data()?['className'] ?? classCode;
+          
+          // Listen to schedules
+          // Note: If you have index issues, ensure composite index (startTime ASC) exists
+          final sub = FirebaseFirestore.instance
+              .collection('classes').doc(classCode).collection('schedules')
+              .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(widget.weekStart))
+              .where('startTime', isLessThan: Timestamp.fromDate(weekEnd))
+              .snapshots()
+              .listen((snapshot) {
+                  
+                  final events = <_ScheduleEvent>[];
+                  for (final doc in snapshot.docs) {
+                      final data = doc.data();
+                      final startTs = data['startTime'] as Timestamp?;
+                      final endTs = data['endTime'] as Timestamp?;
+                      if (startTs == null || endTs == null) continue;
+                      
+                      final dtStart = startTs.toDate();
+                      final dtEnd = endTs.toDate();
+                      final dayIndex = dtStart.weekday - 1; // Mon=1 -> 0
+
+                      events.add(_ScheduleEvent(
+                        className: className,
+                        classCode: classCode,
+                        dayOfWeek: dayIndex,
+                        startTime: DateFormat('H:mm').format(dtStart),
+                        endTime: DateFormat('H:mm').format(dtEnd),
+                        room: 'Online',
+                        color: color,
+                        meetingCode: data['meetingCode'],
+                        groupId: data['groupId'],
+                        validStart: dtStart,
+                        validEnd: dtEnd,
+                      ));
+                  }
+                  
+                  if (mounted) {
+                    setState(() {
+                      _eventsByClass[classCode] = events;
+                      _isLoading = false; // At least one loaded/updated
+                    });
+                  }
+              }, onError: (e) {
+                 debugPrint("Error listening to schedule for $classCode: $e");
+              });
+              
+           _subscriptions.add(sub);
+           _checkLoadingComplete(++processedCount);
+       });
+    }
+  }
+  
+  void _checkLoadingComplete(int count) {
+     if (count == widget.enrolledClasses.length && mounted) {
+        // Just ensuring spinner goes away if all fetched empty using the counter
+        if (_eventsByClass.isEmpty) {
+           setState(() => _isLoading = false);
+        }
+     }
+  }
+
+  double _parseHour(String time) {
+    final parts = time.split(':');
+    if (parts.length != 2) return 9.0;
+    final hours = int.tryParse(parts[0]) ?? 9;
+    final minutes = int.tryParse(parts[1]) ?? 0;
+    return hours + (minutes / 60.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading && _eventsByClass.isEmpty) {
+        return const Padding(
+          padding: EdgeInsets.all(24),
+          child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+    }
+    
+    // Flatten and sort
+    final allEvents = _eventsByClass.values.expand((e) => e).toList();
+    allEvents.sort((a, b) {
+       if (a.dayOfWeek != b.dayOfWeek) return a.dayOfWeek.compareTo(b.dayOfWeek);
+       return a.startTime.compareTo(b.startTime);
+    });
+
+    if (allEvents.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(Icons.event_available, color: Colors.grey[700], size: 32),
+            const SizedBox(height: 8),
+            Text(
+              'No scheduled classes this week',
+              style: AppFonts.clashGrotesk(color: Colors.grey[500]),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Time labels from 8am to 6pm
+    const startHour = 8;
+    const endHour = 18;
+    const hourHeight = 50.0;
+    
+    return SizedBox(
+      height: 280,
+      child: SingleChildScrollView(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Time labels column (left side)
+            SizedBox(
+              width: 45,
+              child: Column(
+                children: List.generate(endHour - startHour + 1, (index) {
+                  final hour = startHour + index;
+                  final label = hour < 12 ? '${hour}am' : hour == 12 ? '12pm' : '${hour - 12}pm';
+                  return SizedBox(
+                    height: hourHeight,
+                    child: Align(
+                      alignment: Alignment.topRight,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 8, top: 0),
+                        child: Text(
+                          label,
+                          style: AppFonts.clashGrotesk(
+                            color: Colors.grey[600],
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+            
+            // Grid with events
+            Expanded(
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: 7 * 90.0, // 7 days × width per day
+                  child: Stack(
+                    children: [
+                      // Grid lines
+                      Column(
+                        children: List.generate(endHour - startHour + 1, (index) {
+                          return Container(
+                            height: hourHeight,
+                            decoration: BoxDecoration(
+                              border: Border(
+                                top: BorderSide(
+                                  color: Colors.grey[800]!.withValues(alpha: 0.5),
+                                  width: 0.5,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      
+                      // Vertical day dividers
+                      Row(
+                        children: List.generate(7, (index) {
+                          return Container(
+                            width: 90,
+                            height: (endHour - startHour + 1) * hourHeight,
+                            decoration: BoxDecoration(
+                              border: Border(
+                                right: BorderSide(
+                                  color: Colors.grey[800]!.withValues(alpha: 0.3),
+                                  width: 0.5,
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      ),
+                      
+                      // Event cards positioned by time
+                      ...allEvents.map((event) {
+                        final startHourEvent = _parseHour(event.startTime);
+                        final endHourEvent = _parseHour(event.endTime);
+                        final top = (startHourEvent - startHour) * hourHeight;
+                        final height = (endHourEvent - startHourEvent) * hourHeight;
+                        final left = event.dayOfWeek * 90.0 + 2;
+                        
+                        return Positioned(
+                          top: top.clamp(0, double.infinity),
+                          left: left,
+                          width: 86,
+                          height: height.clamp(hourHeight * 0.8, double.infinity),
+                          child: _TimeGridEventCard(event: event),
+                        );
+                      }),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -169,90 +169,24 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 
 
 
-  // --- Meeting Logic ---
-  String _generateMeetingCode() {
-    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
-    final rnd = Random();
-    String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
-        length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
-    return '${getRandomString(3)}-${getRandomString(3)}-${getRandomString(3)}';
-    return '${getRandomString(3)}-${getRandomString(3)}-${getRandomString(3)}';
-  }
-
-  Future<void> _cleanupStaleMeetingParticipation() async {
+  // --- Meeting & Scheduling Logic ---
+  
+  void _showMeetingOptions() async {
+    // Determine if user is lecturer
+    // (For robustness, we could fetch role, but for now let's rely on cached role or just show it and let server rules strictly block if needed. 
+    // Ideally pass 'role' to this page. Assuming we can fetch or check local. 
+    // Let's check the user doc quickly locally or rely on what we have.)
+    
+    // Quick role check
     final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
-
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('classes').doc(widget.classCode)
-          .collection('groups').doc(widget.groupId)
-          .collection('messages')
-          .where('type', isEqualTo: 'meeting')
-          .where('participants', arrayContains: uid)
-          .get();
-
-      for (var doc in querySnapshot.docs) {
-        // Run cleanup for each document found
-        await FirebaseFirestore.instance.runTransaction((transaction) async {
-            final snapshot = await transaction.get(doc.reference);
-            if (!snapshot.exists) return;
-            
-            List<String> participants = List<String>.from(snapshot.data()?['participants'] ?? []);
-            if (participants.contains(uid)) {
-              participants.remove(uid);
-              if (participants.isEmpty) {
-                 transaction.update(doc.reference, {'participants': participants, 'status': 'ended'});
-              } else {
-                 transaction.update(doc.reference, {'participants': participants});
-              }
-            }
-        });
-      }
-    } catch (e) {
-      debugPrint("Error cleaning up stale meetings: $e");
+    String role = 'student';
+    if (uid != null) {
+      final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+      role = doc.data()?['role'] ?? 'student';
     }
 
-    _garbageCollectAbandonedMeetings();
-  }
+    if (!mounted) return;
 
-  Future<void> _garbageCollectAbandonedMeetings() async {
-    try {
-      final now = DateTime.now();
-      final twoMinutesAgo = now.subtract(const Duration(minutes: 2));
-
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('classes').doc(widget.classCode)
-          .collection('groups').doc(widget.groupId)
-          .collection('messages')
-          .where('type', isEqualTo: 'meeting')
-          .get(); // Fetch all meetings to client-side filter (avoid composite index issues for now)
-
-      for (var doc in querySnapshot.docs) {
-        final data = doc.data();
-        final status = data['status'] as String? ?? 'active';
-        final participants = List<String>.from(data['participants'] ?? []);
-        final createdAtRaw = data['createdAt'];
-        DateTime? createdAt;
-
-        if (createdAtRaw is Timestamp) {
-          createdAt = createdAtRaw.toDate();
-        }
-
-        // Check if abandoned: Active, Empty, and Old (> 2 mins)
-        if (status != 'ended' && participants.isEmpty) {
-          if (createdAt != null && createdAt.isBefore(twoMinutesAgo)) {
-             debugPrint("🗑️ Garbage collecting abandoned meeting: ${doc.id}");
-             await doc.reference.update({'status': 'ended'});
-          }
-        }
-      }
-    } catch (e) {
-      debugPrint("Error garbage collecting meetings: $e");
-    }
-  }
-
-  void _showMeetingOptions() {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -266,17 +200,39 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                 margin: const EdgeInsets.only(bottom: 20),
                 decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
               ),
+              
+              // Only lecturers can schedule
+              if (role == 'lecturer')
+                ListTile(
+                  leading: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF8B5CF6).withOpacity(0.1), // Purple
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.calendar_today_rounded, color: Color(0xFF8B5CF6)),
+                  ),
+                  title: const Text("Schedule Class", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  subtitle: const Text("Set a date and time (8am - 6pm)", style: TextStyle(color: Colors.white54)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _showScheduleClassDialog();
+                  },
+                ),
+                
+              if (role == 'lecturer') const SizedBox(height: 10),
+
               ListTile(
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF22D3EE).withValues(alpha: 0.1),
+                    color: const Color(0xFF22D3EE).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.video_call_rounded, color: Color(0xFF22D3EE)),
                 ),
-                title: const Text("New Meeting", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                subtitle: const Text("Create a link to share", style: TextStyle(color: Colors.white54)),
+                title: const Text("Instant Meeting", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                subtitle: const Text("Start a call right now", style: TextStyle(color: Colors.white54)),
                 onTap: () {
                   Navigator.pop(context);
                   _showCreatedMeetingDialog();
@@ -287,7 +243,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                 leading: Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF59E0B).withValues(alpha: 0.1),
+                    color: const Color(0xFFF59E0B).withOpacity(0.1),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(Icons.keyboard_alt_rounded, color: Color(0xFFF59E0B)),
@@ -305,6 +261,201 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
         );
       },
     );
+  }
+
+  void _showScheduleClassDialog() async {
+    final now = DateTime.now();
+    DateTime selectedDate = now;
+    TimeOfDay startTime = const TimeOfDay(hour: 9, minute: 0);
+    TimeOfDay endTime = const TimeOfDay(hour: 10, minute: 0);
+    
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return _GlassDialog(
+              title: "Schedule Class",
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("Select Date & Time (8am - 6pm)", style: TextStyle(color: Colors.white70)),
+                  const SizedBox(height: 16),
+                  
+                  // Date Picker
+                  ListTile(
+                    tileColor: Colors.white10,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    leading: const Icon(Icons.calendar_month, color: Colors.white),
+                    title: Text(DateFormat('EEE, MMM d, yyyy').format(selectedDate), style: const TextStyle(color: Colors.white)),
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: selectedDate,
+                        firstDate: now,
+                        lastDate: now.add(const Duration(days: 365)),
+                        builder: (context, child) => Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: const ColorScheme.dark(primary: Color(0xFF22D3EE), onPrimary: Colors.black, surface: Color(0xFF1E1E1E)),
+                            ),
+                            child: child!
+                        ),
+                      );
+                      if (picked != null) setState(() => selectedDate = picked);
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  
+                  // Start Time
+                  ListTile(
+                    tileColor: Colors.white10,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    leading: const Icon(Icons.access_time, color: Colors.white),
+                    title: Text("Start: ${startTime.format(context)}", style: const TextStyle(color: Colors.white)),
+                    onTap: () async {
+                      final picked = await showTimePicker(
+                          context: context, 
+                          initialTime: startTime,
+                             builder: (context, child) => Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: const ColorScheme.dark(primary: Color(0xFF22D3EE), onPrimary: Colors.black, surface: Color(0xFF1E1E1E)),
+                            ),
+                            child: child!
+                        ),
+                      );
+                      if (picked != null) setState(() => startTime = picked);
+                    },
+                  ),
+                   const SizedBox(height: 10),
+                   
+                   // End Time
+                   ListTile(
+                    tileColor: Colors.white10,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    leading: const Icon(Icons.access_time_filled, color: Colors.white),
+                    title: Text("End: ${endTime.format(context)}", style: const TextStyle(color: Colors.white)),
+                    onTap: () async {
+                       final picked = await showTimePicker(
+                          context: context, 
+                          initialTime: endTime,
+                             builder: (context, child) => Theme(
+                            data: ThemeData.dark().copyWith(
+                              colorScheme: const ColorScheme.dark(primary: Color(0xFF22D3EE), onPrimary: Colors.black, surface: Color(0xFF1E1E1E)),
+                            ),
+                            child: child!
+                        ),
+                      );
+                      if (picked != null) setState(() => endTime = picked);
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context), 
+                  child: const Text("Cancel", style: TextStyle(color: Colors.white54))
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF8B5CF6), foregroundColor: Colors.white),
+                  child: const Text("Confirm"),
+                  onPressed: () {
+                    // Validation: 8am - 6pm
+                    final startTotal = startTime.hour * 60 + startTime.minute;
+                    final endTotal = endTime.hour * 60 + endTime.minute;
+                    
+                    if (startTotal < 8 * 60 || startTotal >= 18 * 60) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Start time must be between 8:00 AM and 6:00 PM")));
+                      return;
+                    }
+                     if (endTotal <= startTotal || endTotal > 18 * 60) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("End time must be after start time and before 6:00 PM")));
+                      return;
+                    }
+                    
+                    Navigator.pop(context);
+                    _scheduleClass(selectedDate, startTime, endTime);
+                  },
+                ),
+              ],
+            );
+          }
+        );
+      },
+    );
+  }
+  
+  Future<void> _scheduleClass(DateTime date, TimeOfDay start, TimeOfDay end) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    
+    try {
+      final startDt = DateTime(date.year, date.month, date.day, start.hour, start.minute);
+      final endDt = DateTime(date.year, date.month, date.day, end.hour, end.minute);
+      final meetingCode = _generateMeetingCode();
+      
+      // 1. Create Schedule Doc
+      await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('schedules').add({
+            'topic': 'Class: ${widget.groupName}',
+            'startTime': Timestamp.fromDate(startDt),
+            'endTime': Timestamp.fromDate(endDt),
+            'meetingCode': meetingCode,
+            'createdBy': uid,
+            'groupId': widget.groupId,
+          });
+          
+      // 2. Send Message to Chat
+      await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .collection('messages').add({
+            'text': "Scheduled a class", // Fallback text
+            'senderId': uid,
+            'senderName': _currentUserName,
+            'createdAt': FieldValue.serverTimestamp(),
+            'deletedBy': [],
+            'type': 'scheduled_class',
+            'meetingCode': meetingCode,
+            'startTime': Timestamp.fromDate(startDt),
+            'endTime': Timestamp.fromDate(endDt),
+            'participants': [],
+      });
+      
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error scheduling: $e')));
+    }
+  }
+
+  void _handleJoinClass(String meetingCode, DateTime start, DateTime end) {
+      final now = DateTime.now();
+      
+      if (now.isBefore(start)) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Class not yet started"), 
+            backgroundColor: Colors.orange
+          ));
+          return;
+      }
+      
+      if (now.isAfter(end)) {
+           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text("Class has ended"), 
+            backgroundColor: Colors.red
+          ));
+          return;
+      }
+      
+      _joinMeetingWithCode(meetingCode);
+  }
+
+  // --- Meeting Utils ---
+  String _generateMeetingCode() {
+    const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    final rnd = Random();
+    String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
+        length, (_) => chars.codeUnitAt(rnd.nextInt(chars.length))));
+    return '${getRandomString(3)}-${getRandomString(3)}-${getRandomString(3)}';
   }
 
   void _showCreatedMeetingDialog() {
@@ -434,6 +585,79 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           ),
         ),
       );
+    }
+  }
+
+  Future<void> _cleanupStaleMeetingParticipation() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .collection('messages')
+          .where('type', isEqualTo: 'meeting')
+          .where('participants', arrayContains: uid)
+          .get();
+
+      for (var doc in querySnapshot.docs) {
+        // Run cleanup for each document found
+        await FirebaseFirestore.instance.runTransaction((transaction) async {
+            final snapshot = await transaction.get(doc.reference);
+            if (!snapshot.exists) return;
+            
+            List<String> participants = List<String>.from(snapshot.data()?['participants'] ?? []);
+            if (participants.contains(uid)) {
+              participants.remove(uid);
+              if (participants.isEmpty) {
+                 transaction.update(doc.reference, {'participants': participants, 'status': 'ended'});
+              } else {
+                 transaction.update(doc.reference, {'participants': participants});
+              }
+            }
+        });
+      }
+    } catch (e) {
+      debugPrint("Error cleaning up stale meetings: $e");
+    }
+
+    _garbageCollectAbandonedMeetings();
+  }
+
+  Future<void> _garbageCollectAbandonedMeetings() async {
+    try {
+      final now = DateTime.now();
+      final twoMinutesAgo = now.subtract(const Duration(minutes: 2));
+
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('classes').doc(widget.classCode)
+          .collection('groups').doc(widget.groupId)
+          .collection('messages')
+          .where('type', isEqualTo: 'meeting')
+          .get(); // Fetch all meetings to client-side filter (avoid composite index issues for now)
+
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data();
+        final status = data['status'] as String? ?? 'active';
+        final participants = List<String>.from(data['participants'] ?? []);
+        final createdAtRaw = data['createdAt'];
+        DateTime? createdAt;
+
+        if (createdAtRaw is Timestamp) {
+          createdAt = createdAtRaw.toDate();
+        }
+
+        // Check if abandoned: Active, Empty, and Old (> 2 mins)
+        if (status != 'ended' && participants.isEmpty) {
+          if (createdAt != null && createdAt.isBefore(twoMinutesAgo)) {
+             debugPrint("🗑️ Garbage collecting abandoned meeting: ${doc.id}");
+             await doc.reference.update({'status': 'ended'});
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint("Error garbage collecting meetings: $e");
     }
   }
 
@@ -800,8 +1024,15 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
                           formatTime: _formatTime, fileUrl: item.fileUrl, fileType: item.fileType,
                           fileName: item.fileName, messageId: item.messageId!, onDelete: _deleteMessage, isDeleted: item.isDeleted,
                           type: item.type, meetingCode: item.meetingCode, participants: item.participants,
-                          onJoinMeeting: (code, msgId) => _joinMeetingWithCode(code, messageId: msgId),
+                          onJoinMeeting: (code, msgId, {start, end}) {
+                              if (start != null && end != null) {
+                                _handleJoinClass(code, start, end);
+                              } else {
+                                _joinMeetingWithCode(code, messageId: msgId);
+                              }
+                          },
                           status: item.status,
+                          startTime: item.startTime, endTime: item.endTime,
                           isSharedContent: item.isSharedContent,
                           contentTitle: item.contentTitle,
                           contentType: item.contentType,
@@ -833,11 +1064,13 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
 // --- HELPERS ---
 
 class _MessageItem {
-  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false, type = null, meetingCode = null, participants = const [], status = 'active', isSharedContent = false, contentTitle = null, contentType = null, sharedData = null;
+  _MessageItem.dateHeader(this.dateStr) : isDateHeader = true, text = null, senderId = null, senderName = null, createdAt = null, fileUrl = null, fileType = null, fileName = null, messageId = null, isDeleted = false, type = null, meetingCode = null, participants = const [], status = 'active', isSharedContent = false, contentTitle = null, contentType = null, sharedData = null, startTime = null, endTime = null;
   _MessageItem.message({required DocumentSnapshot doc, required Map<String, dynamic> data, required DateTime createdAt, required String? uid}) : isDateHeader = false, dateStr = null, text = data['text'] as String? ?? '', senderId = data['senderId'] as String? ?? '', senderName = data['senderName'] as String? ?? 'User', createdAt = createdAt, fileUrl = data['fileUrl'] as String?, fileType = data['fileType'] as String?, fileName = data['fileName'] as String?, messageId = doc.id, isDeleted = data['isDeleted'] as bool? ?? false, type = data['type'] as String?, meetingCode = data['meetingCode'] as String?, participants = List<String>.from(data['participants'] ?? []), status = data['status'] as String? ?? 'active',
-      isSharedContent = data['isSharedContent'] as bool? ?? false, contentTitle = data['contentTitle'] as String?, contentType = data['contentType'] as String?, sharedData = data['sharedData'] as String?;
+      isSharedContent = data['isSharedContent'] as bool? ?? false, contentTitle = data['contentTitle'] as String?, contentType = data['contentType'] as String?, sharedData = data['sharedData'] as String?,
+      startTime = (data['startTime'] as Timestamp?)?.toDate(), endTime = (data['endTime'] as Timestamp?)?.toDate();
   final bool isDateHeader; final String? dateStr; final String? text; final String? senderId; final String? senderName; final DateTime? createdAt; final String? fileUrl; final String? fileType; final String? fileName; final String? messageId; final bool isDeleted; final String? type; final String? meetingCode; final List<String> participants; final String status;
   final bool isSharedContent; final String? contentTitle; final String? contentType; final String? sharedData;
+  final DateTime? startTime; final DateTime? endTime;
 }
 
 class _MessageBubble extends StatelessWidget {
@@ -848,7 +1081,7 @@ class _MessageBubble extends StatelessWidget {
     required this.onDelete, required this.isDeleted,
     this.type, this.meetingCode, this.participants = const [], this.onJoinMeeting, this.status = 'active',
     this.isSharedContent = false, this.contentTitle, this.contentType, this.sharedData,
-    this.classCode,
+    this.classCode, this.startTime, this.endTime,
   });
 
   final String text; final String senderId; final String senderName; final DateTime? createdAt;
@@ -856,9 +1089,9 @@ class _MessageBubble extends StatelessWidget {
   final String? fileType; final String? fileName; final String messageId;
   final Function(String, bool) onDelete; final bool isDeleted;
   final String? type; final String? meetingCode; final List<String> participants;
-  final Function(String, String)? onJoinMeeting; final String status;
+  final Function(String, String, {DateTime? start, DateTime? end})? onJoinMeeting; final String status;
   final bool isSharedContent; final String? contentTitle; final String? contentType; final String? sharedData;
-  final String? classCode;
+  final String? classCode; final DateTime? startTime; final DateTime? endTime;
 
   void _showOptions(BuildContext context) {
     if (isDeleted) return;
@@ -962,8 +1195,16 @@ class _MessageBubble extends StatelessWidget {
                     participantCount: participants.length,
                     onJoin: () => onJoinMeeting?.call(meetingCode ?? '', messageId),
                     isMe: isMe,
-                    status: status ?? 'active',
+                    status: status,
                   )
+                : type == 'scheduled_class'
+                  ? _ScheduledClassCard(
+                      meetingCode: meetingCode ?? '',
+                      startTime: startTime,
+                      endTime: endTime,
+                      onJoin: () => onJoinMeeting?.call(meetingCode ?? '', messageId, start: startTime, end: endTime),
+                      isMe: isMe,
+                    )
                 : isSharedContent 
                   ? _SharedContentCard(
                       title: contentTitle ?? 'Shared Content', 
@@ -1404,5 +1645,95 @@ class _SharedContentCard extends StatelessWidget {
              )),
           ]),
       );
+  }
+}
+
+class _ScheduledClassCard extends StatelessWidget {
+  const _ScheduledClassCard({
+    required this.meetingCode,
+    required this.startTime,
+    required this.endTime,
+    required this.onJoin,
+    required this.isMe,
+  });
+
+  final String meetingCode;
+  final DateTime? startTime;
+  final DateTime? endTime;
+  final VoidCallback onJoin;
+  final bool isMe;
+
+  @override
+  Widget build(BuildContext context) {
+    // Format times
+    String timeRange = "";
+    String dateStr = "";
+    if (startTime != null && endTime != null) {
+      timeRange = "${DateFormat('h:mm a').format(startTime!)} - ${DateFormat('h:mm a').format(endTime!)}";
+      dateStr = DateFormat('EEE, MMM d').format(startTime!);
+    } else {
+      timeRange = "Flexible";
+    }
+
+    final bool isStarted = startTime != null && DateTime.now().isAfter(startTime!) && DateTime.now().isBefore(endTime!);
+
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F0F1A).withOpacity(0.4),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF8B5CF6).withOpacity(0.3)), // Purple border
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.school, color: Color(0xFF8B5CF6), size: 20),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Scheduled Class', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  if (dateStr.isNotEmpty) Text(dateStr, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+           Row(
+            children: [
+              Icon(Icons.access_time_filled, size: 14, color: Colors.white.withOpacity(0.5)),
+              const SizedBox(width: 4),
+              Text(
+                timeRange,
+                style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isStarted ? const Color(0xFF22D3EE) : Colors.white10,
+                foregroundColor: isStarted ? Colors.black : Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: onJoin,
+              child: Text(isStarted ? 'Join Class' : 'View Class'),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
