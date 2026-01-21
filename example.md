@@ -5,8 +5,6 @@ Select mode: "Deep Focus" (40Hz Binaural), "Creative" (Lo-fi), or "Cram" (Fast-p
 Visualizer bars animate on the homepage.
 Homepage Widget: Mini-player with wave visualization and quick-toggle modes
 
-
-
 🎧 Audio & Ambient (17-23)
 Brainwave Station: Binaural beats player (40Hz, Alpha/Theta waves) with visualized audio.
 Subliminal Mode: Flashes keywords on screen for milliseconds while you do other tasks (experimental).
@@ -15,7 +13,6 @@ Study Trance: Audio that speeds up slightly as you get deeper into a session to 
 Haptic Metronome: Phone vibrates rhythmically to set your reading pace.
 Silent Disco Study: Sync music with friends. Everyone hears the same track at the same time.
 Voice Notes Roulette: Listen to a random 10s snippet of your own voice notes to refresh memory.
-
 
 Collaborative Canvas: Infinite whiteboard where a whole class can draw/mind-map simultaneously.
 

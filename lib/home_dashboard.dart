@@ -9,6 +9,7 @@ import 'package:intl/intl.dart';
 import 'app_theme.dart';
 import 'services/notification_service.dart';
 import 'widgets/animated_components.dart';
+import 'widgets/brainwave_mini_player.dart';
 import 'assignment_service.dart';
 import 'assignment_details_page.dart';
 import 'classes_page.dart';
@@ -324,7 +325,12 @@ class _HomeDashboardPageState extends State<HomeDashboardPage> {
                             // Quick Action Icons Row
                             const _QuickActionsRow(),
                             const SizedBox(height: 24),
+
+                            // Brainwave Station Mini Player
+                            const BrainwaveMiniPlayer(),
+                            // No need for extra SizedBox here as MiniPlayer has bottom margin
                             
+                            // Schedule Calendar
                             // Schedule Calendar
                             Text(
                               'Schedule',

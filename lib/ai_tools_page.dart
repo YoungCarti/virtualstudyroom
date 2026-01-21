@@ -4,6 +4,7 @@ import 'forest_timer_page.dart';
 import 'notes_helper_page.dart';
 import 'quiz_maker_page.dart';
 import 'flashcard_generator_page.dart';
+import 'brainwave_page.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -11,9 +12,11 @@ const Color _midnightBlue = Color(0xFF122A46);
 const Color _electricBlue = Color(0xFF2196F3);
 const Color _coralPink = Color(0xFFFF6B6B);
 const Color _mintGreen = Color(0xFF4ECDC4);
+
 const Color _softOrange = Color(0xFFFFB347);
 const Color _purpleAccent = Color(0xFF9B59B6);
 const Color _pureWhite = Color(0xFFFFFFFF);
+const Color _neonCyan = Color(0xFF00E5FF);
 
 class AiToolsPage extends StatelessWidget {
   const AiToolsPage({super.key});
@@ -112,6 +115,18 @@ class AiToolsPage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const NotesHelperPage(),
+                        ),
+                      ),
+                    ),
+                    _FeatureCard(
+                      icon: Icons.headphones_rounded,
+                      title: 'Brainwave',
+                      description: 'Ambient station for focus and flow',
+                      color: _neonCyan,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const BrainwavePage(),
                         ),
                       ),
                     ),

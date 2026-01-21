@@ -7,6 +7,7 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'app_fonts.dart';
+import 'services/notification_service.dart';
 
 class ToDoPage extends StatefulWidget {
   const ToDoPage({super.key});
@@ -44,8 +45,9 @@ class _ToDoPageState extends State<ToDoPage> {
       'createdAt': FieldValue.serverTimestamp(),
     };
 
+    DateTime? finalDateTime;
     if (dueDate != null) {
-      DateTime finalDateTime = dueDate;
+      finalDateTime = dueDate;
       if (dueTime != null) {
         finalDateTime = DateTime(
           dueDate.year,
@@ -58,14 +60,23 @@ class _ToDoPageState extends State<ToDoPage> {
       data['dueDate'] = Timestamp.fromDate(finalDateTime);
     }
 
-    FirebaseFirestore.instance
+    final ref = await FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
         .collection('todos')
         .add(data);
+
+    if (finalDateTime != null) {
+      await NotificationService().scheduleNotification(
+        id: ref.id.hashCode,
+        title: title,
+        body: description.isNotEmpty ? description : 'Time to do your task!',
+        scheduledDate: finalDateTime,
+      );
+    }
   }
 
-  void _updateTask(String docId, String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl, List<Map<String, dynamic>> checklist) {
+  void _updateTask(String docId, String title, String description, String? descriptionBottom, DateTime? dueDate, TimeOfDay? dueTime, int priority, String? imageUrl, List<Map<String, dynamic>> checklist) async {
     if (uid == null) return;
 
     final data = <String, dynamic>{
@@ -78,8 +89,9 @@ class _ToDoPageState extends State<ToDoPage> {
       'updatedAt': FieldValue.serverTimestamp(),
     };
 
+    DateTime? finalDateTime;
     if (dueDate != null) {
-      DateTime finalDateTime = dueDate;
+      finalDateTime = dueDate;
       if (dueTime != null) {
         finalDateTime = DateTime(
           dueDate.year,
@@ -92,6 +104,19 @@ class _ToDoPageState extends State<ToDoPage> {
       data['dueDate'] = Timestamp.fromDate(finalDateTime);
     } else {
       data['dueDate'] = null;
+    }
+
+    // Update notification
+    final notificationService = NotificationService();
+    await notificationService.cancelNotification(docId.hashCode);
+    
+    if (finalDateTime != null) {
+      await notificationService.scheduleNotification(
+        id: docId.hashCode,
+        title: title,
+        body: description.isNotEmpty ? description : 'Time to do your task!',
+        scheduledDate: finalDateTime,
+      );
     }
 
     FirebaseFirestore.instance
@@ -156,6 +181,11 @@ class _ToDoPageState extends State<ToDoPage> {
 
   void _toggleTask(String taskId, bool currentStatus) {
     if (uid == null) return;
+    if (!currentStatus) {
+      // If marking as completed, cancel notification
+      NotificationService().cancelNotification(taskId.hashCode);
+    }
+    
     FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
@@ -166,6 +196,7 @@ class _ToDoPageState extends State<ToDoPage> {
 
   void _deleteTask(String taskId) {
     if (uid == null) return;
+    NotificationService().cancelNotification(taskId.hashCode);
     FirebaseFirestore.instance
         .collection('users')
         .doc(uid)
