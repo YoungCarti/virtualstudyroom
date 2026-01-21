@@ -201,22 +201,32 @@ class _ProfilePageState extends State<ProfilePage> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF2196F3).withValues(alpha: 0.15),
+                                color: ((data['role'] == 'lecturer') 
+                                    ? const Color(0xFF9C27B0) // Purple for lecturer
+                                    : const Color(0xFF2196F3) // Blue for student
+                                ).withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: const Color(0xFF2196F3).withValues(alpha: 0.3),
+                                  color: ((data['role'] == 'lecturer') 
+                                      ? const Color(0xFF9C27B0) 
+                                      : const Color(0xFF2196F3)
+                                  ).withValues(alpha: 0.3),
                                   width: 1,
                                 ),
                               ),
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  const Icon(Icons.school, color: Color(0xFF2196F3), size: 14),
+                                  Icon(
+                                    (data['role'] == 'lecturer') ? Icons.history_edu : Icons.school, 
+                                    color: (data['role'] == 'lecturer') ? const Color(0xFF9C27B0) : const Color(0xFF2196F3), 
+                                    size: 14
+                                  ),
                                   const SizedBox(width: 6),
                                   Text(
-                                    "Active Student",
+                                    (data['role'] == 'lecturer') ? "Active Lecturer" : "Active Student",
                                     style: AppFonts.clashGrotesk(
-                                      color: const Color(0xFF2196F3),
+                                      color: (data['role'] == 'lecturer') ? const Color(0xFF9C27B0) : const Color(0xFF2196F3),
                                       fontSize: 13,
                                       fontWeight: FontWeight.w500,
                                     ),
