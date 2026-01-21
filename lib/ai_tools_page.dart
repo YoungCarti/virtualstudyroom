@@ -5,6 +5,7 @@ import 'notes_helper_page.dart';
 import 'quiz_maker_page.dart';
 import 'flashcard_generator_page.dart';
 import 'brainwave_page.dart';
+import 'collaborative_canvas_page.dart';
 
 // Ocean Sunset Color Palette
 const Color _deepNavy = Color(0xFF0A1929);
@@ -127,6 +128,18 @@ class AiToolsPage extends StatelessWidget {
                         context,
                         MaterialPageRoute(
                           builder: (context) => const BrainwavePage(),
+                        ),
+                      ),
+                    ),
+                    _FeatureCard(
+                      icon: Icons.brush_rounded,
+                      title: 'Canvas',
+                      description: 'Collaborative infinite whiteboard',
+                      color: _purpleAccent,
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CollaborativeCanvasPage(),
                         ),
                       ),
                     ),
