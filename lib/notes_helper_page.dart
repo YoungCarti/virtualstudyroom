@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:file_picker/file_picker.dart';
 import 'widgets/share_dialogs.dart';
 
 // Ocean Sunset Color Palette
@@ -31,6 +34,10 @@ class NotesHelperPage extends StatefulWidget {
 
 class _NotesHelperPageState extends State<NotesHelperPage> {
   final TextEditingController _notesController = TextEditingController();
+  
+  // Attached files/images
+  List<File> _attachedImages = [];
+  List<Map<String, dynamic>> _attachedFiles = []; // {file, name, extension}
   
   @override
   void initState() {
@@ -58,9 +65,9 @@ class _NotesHelperPageState extends State<NotesHelperPage> {
   }
 
   Future<void> _generateOutline() async {
-    if (_notesController.text.trim().isEmpty) {
+    if (_notesController.text.trim().isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter your notes first.')),
+        const SnackBar(content: Text('Please enter text or upload a file first.')),
       );
       return;
     }
@@ -96,15 +103,57 @@ Student Notes:
 ${_notesController.text}
 ''';
 
+      // Build parts list with text prompt and images
+      List<Map<String, dynamic>> parts = [
+        {'text': prompt}
+      ];
+      
+      // Add attached images as base64
+      for (final imageFile in _attachedImages) {
+        final bytes = await imageFile.readAsBytes();
+        final base64Image = base64Encode(bytes);
+        parts.add({
+          'inlineData': {
+            'mimeType': 'image/jpeg',
+            'data': base64Image
+          }
+        });
+      }
+      
+      // Add attached documents (PDF, DOC, DOCX) as base64
+      for (final fileData in _attachedFiles) {
+        final file = fileData['file'] as File;
+        final extension = fileData['extension'] as String;
+        final bytes = await file.readAsBytes();
+        final base64Data = base64Encode(bytes);
+        
+        // Determine MIME type based on extension
+        String mimeType;
+        if (extension == 'pdf') {
+          mimeType = 'application/pdf';
+        } else if (extension == 'docx') {
+          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        } else if (extension == 'doc') {
+          mimeType = 'application/msword';
+        } else {
+          continue; // Skip unsupported file types
+        }
+        
+        parts.add({
+          'inlineData': {
+            'mimeType': mimeType,
+            'data': base64Data
+          }
+        });
+      }
+
       final response = await http.post(
         Uri.parse('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=$_geminiApiKey'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'contents': [
             {
-              'parts': [
-                {'text': prompt}
-              ]
+              'parts': parts
             }
           ]
         }),
@@ -152,6 +201,157 @@ ${_notesController.text}
         );
       }
     }
+  }
+
+  // --- Upload Helpers ---
+
+  Future<void> _pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    
+    if (image != null) {
+      setState(() {
+        _attachedImages.add(File(image.path));
+      });
+    }
+  }
+
+  Future<void> _pickFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx'],
+    );
+
+    if (result != null) {
+      final file = File(result.files.single.path!);
+      final extension = result.files.single.extension ?? '';
+      final name = result.files.single.name;
+      
+      setState(() {
+        _attachedFiles.add({
+          'file': file,
+          'name': name,
+          'extension': extension,
+        });
+      });
+    }
+  }
+
+  void _showUploadOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(24),
+        decoration: const BoxDecoration(
+          color: _midnightBlue,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: _pureWhite.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Upload Content',
+              style: GoogleFonts.outfit(
+                color: _pureWhite,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Extract text from your files or images',
+              style: GoogleFonts.outfit(
+                color: _pureWhite.withValues(alpha: 0.6),
+                fontSize: 14,
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Upload File Option
+            ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                _pickFile();
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _electricBlue.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.description, color: _electricBlue),
+              ),
+              title: Text(
+                'Upload File',
+                style: GoogleFonts.outfit(
+                  color: _pureWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'PDF, DOC, DOCX files',
+                style: GoogleFonts.outfit(
+                  color: _pureWhite.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
+              ),
+              trailing: Icon(
+                Icons.arrow_forward_ios,
+                color: _pureWhite.withValues(alpha: 0.5),
+                size: 16,
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+            // Upload Image Option
+            ListTile(
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage();
+              },
+              leading: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: _mintGreen.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.image, color: _mintGreen),
+              ),
+              title: Text(
+                'Upload Image',
+                style: GoogleFonts.outfit(
+                  color: _pureWhite,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              subtitle: Text(
+                'Extract text from photos of notes',
+                style: GoogleFonts.outfit(
+                  color: _pureWhite.withValues(alpha: 0.5),
+                  fontSize: 12,
+                ),
+              ),
+              trailing: Icon(
+                Icons.arrow_forward_ios,
+                color: _pureWhite.withValues(alpha: 0.5),
+                size: 16,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -230,18 +430,177 @@ ${_notesController.text}
                   ),
                 ),
                 
-                // Character count
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 8, right: 4),
-                    child: Text(
-                      '$charCount/100,000 characters',
-                      style: GoogleFonts.outfit(
-                        color: _pureWhite.withValues(alpha: 0.5),
-                        fontSize: 12,
-                      ),
+                // Attached Images and Files display
+                if (_attachedImages.isNotEmpty || _attachedFiles.isNotEmpty)
+                  Container(
+                    height: 90,
+                    margin: const EdgeInsets.only(top: 16),
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        // Display attached images
+                        ..._attachedImages.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final imageFile = entry.value;
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            child: Stack(
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: Image.file(
+                                    imageFile,
+                                    height: 80,
+                                    width: 80,
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _attachedImages.removeAt(index);
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                        
+                        // Display attached files
+                        ..._attachedFiles.asMap().entries.map((entry) {
+                          final index = entry.key;
+                          final fileData = entry.value;
+                          final extension = fileData['extension'] as String;
+                          final fileName = fileData['name'] as String;
+                          
+                          // Choose icon based on file type
+                          IconData fileIcon;
+                          Color iconColor;
+                          if (extension == 'pdf') {
+                            fileIcon = Icons.picture_as_pdf;
+                            iconColor = Colors.red.shade400;
+                          } else if (extension == 'doc' || extension == 'docx') {
+                            fileIcon = Icons.description;
+                            iconColor = Colors.blue.shade400;
+                          } else {
+                            fileIcon = Icons.insert_drive_file;
+                            iconColor = Colors.grey.shade400;
+                          }
+                          
+                          return Container(
+                            margin: const EdgeInsets.only(right: 8),
+                            child: Stack(
+                              children: [
+                                Container(
+                                  height: 80,
+                                  width: 80,
+                                  decoration: BoxDecoration(
+                                    color: _deepNavy,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: _pureWhite.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(fileIcon, color: iconColor, size: 28),
+                                      const SizedBox(height: 4),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        child: Text(
+                                          fileName.length > 10 
+                                              ? '${fileName.substring(0, 8)}...'
+                                              : fileName,
+                                          style: GoogleFonts.outfit(
+                                            color: _pureWhite.withValues(alpha: 0.7),
+                                            fontSize: 9,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Positioned(
+                                  top: 4,
+                                  right: 4,
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      setState(() {
+                                        _attachedFiles.removeAt(index);
+                                      });
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withValues(alpha: 0.6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 14,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
                     ),
+                  ),
+
+                // Upload Button and Char count row
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Upload Icon Button
+                      GestureDetector(
+                        onTap: _showUploadOptions,
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: _electricBlue.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.attach_file,
+                            color: _electricBlue,
+                            size: 22,
+                          ),
+                        ),
+                      ),
+                      // Character count
+                      Text(
+                        '$charCount/100,000 characters',
+                        style: GoogleFonts.outfit(
+                          color: _pureWhite.withValues(alpha: 0.5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 
@@ -310,14 +669,14 @@ ${_notesController.text}
               ),
               const SizedBox(width: 16),
               ElevatedButton(
-                onPressed: _isGenerating || _notesController.text.trim().isEmpty
+                onPressed: _isGenerating || (_notesController.text.trim().isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty)
                     ? null
                     : _generateOutline,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _notesController.text.trim().isEmpty
+                  backgroundColor: (_notesController.text.trim().isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty)
                       ? _midnightBlue
                       : _mintGreen,
-                  foregroundColor: _notesController.text.trim().isEmpty
+                  foregroundColor: (_notesController.text.trim().isEmpty && _attachedImages.isEmpty && _attachedFiles.isEmpty)
                       ? _pureWhite.withValues(alpha: 0.4)
                       : _deepNavy,
                   padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
