@@ -421,7 +421,7 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
     setState(() => _showMentionSuggestions = false);
   }
 
-  Future<void> _sendMessage() async {
+    Future<void> _sendMessage() async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
     final text = _msgController.text.trim();
@@ -454,6 +454,41 @@ class _GroupChatMessagesPageState extends State<GroupChatMessagesPage> {
           'fileType': _selectedFileType,
           'fileName': _selectedFileName,
         }
+      });
+      
+      // --- Update Fav Group Logic ---
+      final userRef = FirebaseFirestore.instance.collection('users').doc(uid);
+      
+      // Use transaction to safely increment and check
+      FirebaseFirestore.instance.runTransaction((transaction) async {
+        final snapshot = await transaction.get(userRef);
+        if (!snapshot.exists) return; // Should not happen
+
+        final currentData = snapshot.data() ?? {};
+        final groupCounts = Map<String, dynamic>.from(currentData['groupMessageCounts'] ?? {});
+        
+        // Key sanitization (dots not allowed in map keys, usually okay for groupIds but safe to check)
+        final groupKey = widget.groupId; 
+        
+        final currentCount = (groupCounts[groupKey] as num?)?.toInt() ?? 0;
+        final newCount = currentCount + 1;
+        
+        groupCounts[groupKey] = newCount;
+        
+        final updates = <String, dynamic>{
+          'groupMessageCounts': groupCounts,
+        };
+        
+        // Threshold check (5 messages)
+        if (newCount >= 5) {
+          // Check if this is already the fav group to avoid redundant writes? 
+          // Actually, let's just update it to be safe and ensure it switched.
+          updates['favGroup'] = widget.groupName;
+        }
+        
+        transaction.update(userRef, updates);
+      }).catchError((e) {
+         debugPrint("Error updating fav group stats: $e");
       });
       
       _msgController.clear();
