@@ -5,6 +5,7 @@ import 'package:demoflutter/services/canvas_service.dart';
 import 'package:demoflutter/widgets/canvas_painter.dart';
 import 'package:demoflutter/widgets/grid_painter.dart';
 import 'package:demoflutter/widgets/text_element_widget.dart';
+import 'package:demoflutter/widgets/sticky_note_widget.dart';
 
 class CollaborativeCanvasPage extends StatefulWidget {
   final String roomId;
@@ -27,21 +28,25 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   bool _isEraser = false;
   bool _isPanMode = false;
   bool _isTextMode = false;
+  bool _isStickyNoteMode = false;
   
   String? _selectedTextElementId;
+  String? _selectedStickyNoteId;
 
   late Stream<List<Stroke>> _strokesStream;
   late Stream<List<TextElement>> _textElementsStream;
+  late Stream<List<StickyNoteElement>> _stickyNotesStream;
 
   @override
   void initState() {
     super.initState();
     _strokesStream = _canvasService.getStrokes(widget.roomId);
     _textElementsStream = _canvasService.getTextElements(widget.roomId);
+    _stickyNotesStream = _canvasService.getStickyNotes(widget.roomId);
   }
 
   void _startStroke(Offset localPosition) {
-    if (_isPanMode || _isTextMode) return; 
+    if (_isPanMode || _isTextMode || _isStickyNoteMode) return; 
 
     final newStroke = Stroke(
       id: const Uuid().v4(),
@@ -57,7 +62,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   }
 
   void _updateStroke(Offset localPosition) {
-    if (_isPanMode || _isTextMode || _currentStroke == null) return;
+    if (_isPanMode || _isTextMode || _isStickyNoteMode || _currentStroke == null) return;
 
     setState(() {
       final updatedPoints = List<CanvasPoint>.from(_currentStroke!.points)
@@ -95,6 +100,24 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
     setState(() {
       _selectedTextElementId = newText.id;
       _isTextMode = false; // Initial creation done, switch to edit mode
+    });
+  }
+
+  void _addStickyNote(Offset localPosition) {
+    final newNote = StickyNoteElement(
+      id: const Uuid().v4(),
+      text: '',
+      x: localPosition.dx - 75,
+      y: localPosition.dy - 75,
+      width: 150,
+      height: 150,
+      color: const Color(0xFFFFF59D), // Light yellow
+      fontSize: 16,
+    );
+    _canvasService.addStickyNote(widget.roomId, newNote);
+    setState(() {
+      _selectedStickyNoteId = newNote.id;
+      _isStickyNoteMode = false;
     });
   }
 
@@ -155,9 +178,12 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
               onTapUp: (details) {
                   if (_isTextMode) {
                       _addTextElement(details.localPosition);
+                  } else if (_isStickyNoteMode) {
+                      _addStickyNote(details.localPosition);
                   } else {
                      setState(() {
                         _selectedTextElementId = null; // Deselect text
+                        _selectedStickyNoteId = null; // Deselect sticky note
                      });
                   }
               },
@@ -196,6 +222,30 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                       }
                   ),
                   
+                  // Sticky Notes Layer (Below Text)
+                  StreamBuilder<List<StickyNoteElement>>(
+                    stream: _stickyNotesStream,
+                    builder: (context, snapshot) {
+                      final notes = snapshot.data ?? [];
+                      return Stack(
+                        children: notes.map((note) {
+                          return StickyNoteWidget(
+                            element: note,
+                            isSelected: _selectedStickyNoteId == note.id,
+                            onSelect: (id) => setState(() {
+                              _selectedStickyNoteId = id;
+                              _selectedTextElementId = null; // Deselect text
+                              _isPanMode = false;
+                            }),
+                            onUpdate: (updatedNote) {
+                              _canvasService.updateStickyNote(widget.roomId, updatedNote);
+                            },
+                          );
+                        }).toList(),
+                      );
+                    }
+                  ),
+
                   // Text Elements Layer
                   StreamBuilder<List<TextElement>>(
                     stream: _textElementsStream,
@@ -208,6 +258,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                             isSelected: _selectedTextElementId == element.id,
                             onSelect: (id) => setState(() {
                               _selectedTextElementId = id;
+                              _selectedStickyNoteId = null; // Deselect sticky note
                               _isPanMode = false; // Disable pan when text selected
                             }),
                             onUpdate: (updatedElement) {
@@ -249,7 +300,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
           ),
 
           // Tools Menu
-          if (_selectedTextElementId == null)
+          if (_selectedTextElementId == null && _selectedStickyNoteId == null)
           Positioned(
             bottom: 30,
             left: 0,
@@ -275,8 +326,15 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                      ),
                      Container(width: 1, height: 24, color: Colors.white24),
                      IconButton(
-                       icon: Icon(_isTextMode ? Icons.text_fields : Icons.add, color: _isTextMode ? Colors.blueAccent : Colors.white),
-                       onPressed: () => _isTextMode ? setState(() => _isTextMode = false) : _showToolsMenu(context),
+                       icon: Icon(_isTextMode 
+                           ? Icons.text_fields 
+                           : (_isStickyNoteMode ? Icons.note_alt : Icons.add), 
+                           color: (_isTextMode || _isStickyNoteMode) ? Colors.blueAccent : Colors.white),
+                       onPressed: () {
+                           if (_isTextMode) setState(() => _isTextMode = false);
+                           else if (_isStickyNoteMode) setState(() => _isStickyNoteMode = false);
+                           else _showToolsMenu(context);
+                       },
                      ),
                   ],
                 ),
@@ -287,11 +345,15 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
           // Contextual Text Toolbar
           if (_selectedTextElementId != null)
              _buildTextToolbar(),
+
+          // Contextual Sticky Note Toolbar
+          if (_selectedStickyNoteId != null)
+             _buildStickyNoteToolbar(),
              
           // Contextual Drawing Toolbar (only if not text mode and not selecting text)
           // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
           // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
-          if (!_isPanMode && !_isTextMode)
+          if (!_isPanMode && !_isTextMode && !_isStickyNoteMode)
             Positioned(
               top: 100,
               right: 20,
@@ -495,6 +557,116 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
       );
   }
 
+  Widget _buildStickyNoteToolbar() {
+      return StreamBuilder<List<StickyNoteElement>>(
+        stream: _stickyNotesStream,
+        builder: (context, snapshot) {
+            final elements = snapshot.data ?? [];
+            StickyNoteElement? selectedElement;
+            try {
+              selectedElement = elements.firstWhere((e) => e.id == _selectedStickyNoteId);
+            } catch (e) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned(
+              bottom: 30,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                    height: 56,
+                    constraints: const BoxConstraints(maxWidth: 400),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                            // Sticky Note Icon
+                            const Icon(Icons.note_alt, color: Colors.white, size: 24),
+                            
+                            const SizedBox(width: 16),
+                            Container(width: 1, height: 24, color: Colors.white24),
+                            const SizedBox(width: 16),
+                            
+                            // Size Controls (Content Size / Font Size)
+                            IconButton(
+                                icon: const Icon(Icons.remove, color: Colors.white, size: 20),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                     _canvasService.updateStickyNote(widget.roomId, selectedElement!.copyWith(
+                                         fontSize: (selectedElement.fontSize - 2).clamp(8.0, 72.0)
+                                     ));
+                                },
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              selectedElement!.fontSize.round().toString(), 
+                              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600)
+                            ),
+                            const SizedBox(width: 12),
+                            IconButton(
+                                icon: const Icon(Icons.add, color: Colors.white, size: 20),
+                                constraints: const BoxConstraints(),
+                                padding: EdgeInsets.zero,
+                                onPressed: () {
+                                     _canvasService.updateStickyNote(widget.roomId, selectedElement!.copyWith(
+                                         fontSize: (selectedElement.fontSize + 2).clamp(8.0, 72.0)
+                                     ));
+                                },
+                            ),
+                            
+                            const SizedBox(width: 16),
+                            Container(width: 1, height: 24, color: Colors.white24),
+                            const SizedBox(width: 16),
+
+                            // Delete
+                               IconButton(
+                                  icon: const Icon(Icons.delete_outline, color: Colors.white),
+                                  onPressed: () {
+                                       _canvasService.deleteStickyNote(widget.roomId, selectedElement!.id);
+                                       setState(() => _selectedStickyNoteId = null);
+                                  },
+                              ),
+
+                              // Duplicate
+                               IconButton(
+                                  icon: const Icon(Icons.copy_all_outlined, color: Colors.white), 
+                                  onPressed: () {
+                                       final newId = const Uuid().v4();
+                                       _canvasService.addStickyNote(widget.roomId, selectedElement!.copyWith(
+                                            id: newId,
+                                            x: selectedElement.x + 20,
+                                            y: selectedElement.y + 20,
+                                       ));
+                                       setState(() => _selectedStickyNoteId = newId);
+                                  },
+                              ),
+                              
+                              // More
+                              IconButton(
+                                icon: const Icon(Icons.more_vert, color: Colors.white),
+                                onPressed: () {
+                                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('More options: Color, Layering...')));
+                                },
+                              ),
+                          ],
+                      ),
+                    ),
+                ),
+              ),
+            );
+        }
+      );
+  }
+
   void _showToolsMenu(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -523,11 +695,17 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                         _isTextMode = true;
                         _isPanMode = false;
                         _isEraser = false;
+                        _isStickyNoteMode = false;
                     });
                   }),
                   _buildToolItem(Icons.note_alt_outlined, 'Sticky note', onTap: () {
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sticky note tool not implemented')));
+                    setState(() {
+                        _isStickyNoteMode = true;
+                        _isPanMode = false;
+                        _isEraser = false;
+                        _isTextMode = false;
+                    });
                   }),
                   _buildToolItem(Icons.comment_outlined, 'Comment', onTap: () {
                     Navigator.pop(context);
@@ -539,6 +717,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                        _isPanMode = false;
                        _isEraser = false;
                        _isTextMode = false;
+                       _isStickyNoteMode = false;
                      });
                   }),
                   _buildToolItem(Icons.category_outlined, 'Shapes and lines', onTap: () {

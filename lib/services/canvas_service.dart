@@ -62,6 +62,44 @@ class CanvasService {
         .delete();
   }
 
+  Stream<List<StickyNoteElement>> getStickyNotes(String roomId) {
+    return _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('sticky_notes')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => StickyNoteElement.fromMap(doc.data())).toList();
+    });
+  }
+
+  Future<void> addStickyNote(String roomId, StickyNoteElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('sticky_notes')
+        .doc(element.id)
+        .set(element.toMap());
+  }
+
+  Future<void> updateStickyNote(String roomId, StickyNoteElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('sticky_notes')
+        .doc(element.id)
+        .update(element.toMap());
+  }
+
+  Future<void> deleteStickyNote(String roomId, String elementId) async {
+      await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('sticky_notes')
+        .doc(elementId)
+        .delete();
+  }
+
   Future<void> clearCanvas(String roomId) async {
     final batch = _firestore.batch();
     
@@ -84,6 +122,17 @@ class CanvasService {
         .get();
 
     for (var doc in textSnapshots.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Clear sticky notes
+    final noteSnapshots = await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('sticky_notes')
+        .get();
+
+    for (var doc in noteSnapshots.docs) {
       batch.delete(doc.reference);
     }
 

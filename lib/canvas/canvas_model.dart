@@ -106,3 +106,73 @@ class TextElement {
     );
   }
 }
+
+class StickyNoteElement {
+  final String id;
+  final String text;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final Color color;
+  final double fontSize;
+
+  StickyNoteElement({
+    required this.id,
+    required this.text,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.color,
+    required this.fontSize,
+  });
+
+  StickyNoteElement copyWith({
+    String? id,
+    String? text,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    Color? color,
+    double? fontSize,
+  }) {
+    return StickyNoteElement(
+      id: id ?? this.id,
+      text: text ?? this.text,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      color: color ?? this.color,
+      fontSize: fontSize ?? this.fontSize,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'text': text,
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'color': color.value,
+      'fontSize': fontSize,
+    };
+  }
+
+  factory StickyNoteElement.fromMap(Map<String, dynamic> map) {
+    return StickyNoteElement(
+      id: map['id'] ?? '',
+      text: map['text'] ?? '',
+      x: (map['x'] as num).toDouble(),
+      y: (map['y'] as num).toDouble(),
+      width: (map['width'] as num).toDouble(),
+      height: (map['height'] as num).toDouble(),
+      color: Color(map['color'] as int),
+      fontSize: (map['fontSize'] as num).toDouble(),
+    );
+  }
+}
