@@ -4,6 +4,8 @@ import 'package:demoflutter/canvas/canvas_model.dart';
 import 'package:demoflutter/services/canvas_service.dart';
 import 'package:demoflutter/widgets/canvas_painter.dart';
 import 'package:demoflutter/widgets/grid_painter.dart';
+import 'package:demoflutter/widgets/shape_widget.dart';
+import 'package:demoflutter/widgets/shape_painter.dart';
 import 'package:demoflutter/widgets/text_element_widget.dart';
 import 'package:demoflutter/widgets/sticky_note_widget.dart';
 
@@ -30,13 +32,18 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   bool _isTextMode = false;
   bool _isStickyNoteMode = false;
   bool _isHighlighter = false;
+  bool _isShapeMode = false;
   
   String? _selectedTextElementId;
   String? _selectedStickyNoteId;
+  String? _selectedShapeId;
+  ShapeType _selectedShapeType = ShapeType.rectangle;
+  ShapeElement? _tempShape;
 
   late Stream<List<Stroke>> _strokesStream;
   late Stream<List<TextElement>> _textElementsStream;
   late Stream<List<StickyNoteElement>> _stickyNotesStream;
+  late Stream<List<ShapeElement>> _shapesStream;
 
   @override
   void initState() {
@@ -44,6 +51,80 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
     _strokesStream = _canvasService.getStrokes(widget.roomId);
     _textElementsStream = _canvasService.getTextElements(widget.roomId);
     _stickyNotesStream = _canvasService.getStickyNotes(widget.roomId);
+    _shapesStream = _canvasService.getShapes(widget.roomId);
+  }
+
+  void _startShape(Offset localPosition) {
+    if (!_isShapeMode) return;
+    
+    // Snap to grid (20px)
+    final x = (localPosition.dx / 20).round() * 20.0;
+    final y = (localPosition.dy / 20).round() * 20.0;
+
+    setState(() {
+      _tempShape = ShapeElement(
+        id: const Uuid().v4(),
+        type: _selectedShapeType,
+        x: x,
+        y: y,
+        width: 0,
+        height: 0,
+        color: _selectedColor,
+        strokeWidth: _selectedStrokeWidth,
+      );
+    });
+  }
+
+  void _updateShape(Offset localPosition) {
+    if (_tempShape == null) return;
+    
+    // Snap current point to grid
+    final currentX = (localPosition.dx / 20).round() * 20.0;
+    final currentY = (localPosition.dy / 20).round() * 20.0;
+
+    setState(() {
+        final width = (currentX - _tempShape!.x);
+        final height = (currentY - _tempShape!.y);
+        
+        // Allow negative dragging by normalizing rect in UI or here?
+        // keeping it simple: width/height can be negative for now, implementation handles it
+        _tempShape = _tempShape!.copyWith(
+          width: width,
+          height: height,
+        );
+    });
+  }
+
+  void _endShape() {
+    if (_tempShape != null) {
+      // Normalize negative width/height
+      double finalX = _tempShape!.x;
+      double finalY = _tempShape!.y;
+      double finalW = _tempShape!.width;
+      double finalH = _tempShape!.height;
+
+      if (finalW < 0) {
+          finalX += finalW;
+          finalW = finalW.abs();
+      }
+      if (finalH < 0) {
+          finalY += finalH;
+          finalH = finalH.abs();
+      }
+      
+      if (finalW > 5 && finalH > 5) {
+          _canvasService.addShape(widget.roomId, _tempShape!.copyWith(
+              x: finalX, y: finalY, width: finalW, height: finalH
+          ));
+      }
+      setState(() {
+        _tempShape = null;
+        _isShapeMode = false; // Switch back to View/Edit Mode after creation? Or keep drawing shapes? 
+        // Let's keep shape mode for multi-shape, but user said "Drag to create... Once placed, shape becomes editable"
+        // Usually safer to revert to pointer to avoid accidental shapes
+        _isPanMode = true; 
+      });
+    }
   }
 
   void _startStroke(Offset localPosition) {
@@ -214,25 +295,32 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                       _addTextElement(details.localPosition);
                   } else if (_isStickyNoteMode) {
                       _addStickyNote(details.localPosition);
-                  } else {
+                  } else if (!_isShapeMode) {
                      setState(() {
                         _selectedTextElementId = null; // Deselect text
                         _selectedStickyNoteId = null; // Deselect sticky note
+                        _selectedShapeId = null; // Deselect shape
                      });
                   }
               },
               onScaleStart: (details) {
-                  if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null) {
+                  if (_isShapeMode) {
+                      _startShape(details.localFocalPoint);
+                  } else if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null && _selectedShapeId == null) {
                       _startStroke(details.localFocalPoint);
                   }
               },
               onScaleUpdate: (details) {
-                  if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null) {
+                  if (_isShapeMode) {
+                      _updateShape(details.localFocalPoint);
+                  } else if (!_isPanMode && !_isTextMode && details.pointerCount == 1 && _selectedTextElementId == null && _selectedShapeId == null) {
                        _updateStroke(details.localFocalPoint);
                   }
               },
               onScaleEnd: (details) {
-                   if (_currentStroke != null) {
+                   if (_isShapeMode) {
+                       _endShape();
+                   } else if (_currentStroke != null) {
                        _endStroke();
                    }
               },
@@ -249,7 +337,6 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                       stream: _strokesStream,
                       builder: (context, snapshot) {
                         final remoteStrokes = snapshot.data ?? [];
-                        // We also need to paint the current stroke being drawn locally or else it won't appear until end
                         return CustomPaint(
                              size: const Size(5000, 5000),
                              painter: CanvasPainter([...remoteStrokes, if (_currentStroke != null) _currentStroke!]),
@@ -257,6 +344,52 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                       }
                   ),
                   
+                  // Shapes Layer
+                  StreamBuilder<List<ShapeElement>>(
+                    stream: _shapesStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                          // Defer error showing to next frame to avoid build phase errors
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error loading shapes: ${snapshot.error}')));
+                          });
+                          return const SizedBox.shrink();
+                      }
+                      final shapes = snapshot.data ?? [];
+                      return Stack(
+                        children: [
+                            ...shapes.map((shape) {
+                                return ShapeWidget(
+                                    element: shape, 
+                                    isSelected: _selectedShapeId == shape.id, 
+                                    onSelect: (id) => setState(() {
+                                        _selectedShapeId = id;
+                                        _selectedTextElementId = null;
+                                        _selectedStickyNoteId = null;
+                                        _isPanMode = false;
+                                    }), 
+                                    onUpdate: (updatedShape) {
+                                        _canvasService.updateShape(widget.roomId, updatedShape);
+                                    }
+                                );
+                            }),
+                            // Temp Shape being drawn
+                            if (_tempShape != null)
+                                Positioned(
+                                    left: _tempShape!.width < 0 ? _tempShape!.x + _tempShape!.width : _tempShape!.x,
+                                    top: _tempShape!.height < 0 ? _tempShape!.y + _tempShape!.height : _tempShape!.y,
+                                    child: CustomPaint(
+                                        size: Size(_tempShape!.width.abs(), _tempShape!.height.abs()),
+                                        painter: ShapePainter(element: _tempShape!.copyWith(
+                                            width: _tempShape!.width.abs(), height: _tempShape!.height.abs()
+                                        )),
+                                    ),
+                                ),
+                        ],
+                      );
+                    }
+                  ),
+
                   // Sticky Notes Layer (Below Text)
                   StreamBuilder<List<StickyNoteElement>>(
                     stream: _stickyNotesStream,
@@ -294,6 +427,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                             onSelect: (id) => setState(() {
                               _selectedTextElementId = id;
                               _selectedStickyNoteId = null; // Deselect sticky note
+                              _selectedShapeId = null;
                               _isPanMode = false; // Disable pan when text selected
                             }),
                             onUpdate: (updatedElement) {
@@ -334,9 +468,8 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
              ),
           ),
 
-          // Tools Menu (Main Bottom Bar)
-          // Visible only when in Pan Mode (Default) and no element selected
-          if (_selectedTextElementId == null && _selectedStickyNoteId == null && _isPanMode)
+          // Tools Menu
+          if (_selectedTextElementId == null && _selectedStickyNoteId == null && _selectedShapeId == null && _isPanMode)
           Positioned(
             bottom: 30,
             left: 0,
@@ -379,8 +512,13 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
           if (_selectedStickyNoteId != null)
              _buildStickyNoteToolbar(),
              
+          // Contextual Shape Toolbar
+          if (_selectedShapeId != null)
+             _buildShapeToolbar(),
+             
           // Horizontal Drawing Toolbar
-          if (!_isPanMode && !_isTextMode && !_isStickyNoteMode)
+          // Horizontal Drawing Toolbar
+          if (!_isPanMode && !_isTextMode && !_isStickyNoteMode && !_isShapeMode && _selectedShapeId == null)
             Positioned(
               bottom: 30,
               left: 20,
@@ -754,11 +892,13 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                        _isEraser = false;
                        _isTextMode = false;
                        _isStickyNoteMode = false;
+                       _isShapeMode = false;
                      });
                   }),
-                  _buildToolItem(Icons.category_outlined, 'Shapes and lines', onTap: () {
+                  _buildToolItem(Icons.category_outlined, 'Shapes', onTap: () {
+                    // Show Shapes Grid
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Shapes and lines tool not implemented')));
+                    _showShapePicker(context);
                   }),
                   _buildToolItem(Icons.grid_3x3, 'Frame', onTap: () {
                     Navigator.pop(context);
@@ -872,5 +1012,144 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
         ],
       ),
     );
+  }
+
+  void _showShapePicker(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      isScrollControlled: true, // Allow taller sheet
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(24),
+          height: 400,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+               Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)))),
+               const SizedBox(height: 16),
+               const Text('Shapes', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+               const SizedBox(height: 16),
+               Expanded(
+                   child: GridView.count(
+                       crossAxisCount: 4,
+                       crossAxisSpacing: 16,
+                       mainAxisSpacing: 16,
+                       children: [
+                           _buildShapeIcon(ShapeType.rectangle, Icons.crop_square_outlined),
+                           _buildShapeIcon(ShapeType.circle, Icons.circle_outlined),
+                           _buildShapeIcon(ShapeType.triangle, Icons.change_history),
+                           _buildShapeIcon(ShapeType.star, Icons.star_border),
+                           _buildShapeIcon(ShapeType.line, Icons.horizontal_rule),
+                           _buildShapeIcon(ShapeType.arrow, Icons.arrow_right_alt),
+                       ],
+                   ),
+               )
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildShapeIcon(ShapeType type, IconData icon) {
+      return GestureDetector(
+          onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                  _isShapeMode = true;
+                  _isPanMode = false;
+                  _isTextMode = false;
+                  _isStickyNoteMode = false;
+                  _isEraser = false;
+                  _selectedShapeType = type;
+              });
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Drag to create shape')));
+          },
+          child: Container(
+              decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+              ),
+              child: Icon(icon, color: Colors.white, size: 32),
+          ),
+      );
+  }
+
+  Widget _buildShapeToolbar() {
+      return StreamBuilder<List<ShapeElement>>(
+        stream: _shapesStream,
+        builder: (context, snapshot) {
+            final elements = snapshot.data ?? [];
+            ShapeElement? selectedElement;
+            try {
+              selectedElement = elements.firstWhere((e) => e.id == _selectedShapeId);
+            } catch (e) {
+              return const SizedBox.shrink();
+            }
+
+            return Positioned(
+              bottom: 30,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                        color: const Color(0xFF1E1E1E),
+                        borderRadius: BorderRadius.circular(28),
+                        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10, offset: const Offset(0, 4))],
+                    ),
+                    child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                            // Color
+                            GestureDetector(
+                                onTap: () => _showStrokeSettings(context),
+                                child: Container(
+                                    width: 28, height: 28,
+                                    decoration: BoxDecoration(
+                                        color: selectedElement!.color,
+                                        shape: BoxShape.circle,
+                                        border: Border.all(color: Colors.white, width: 2),
+                                    ),
+                                ),
+                            ),
+                            
+                            const SizedBox(width: 16),
+                            Container(width: 1, height: 24, color: Colors.white24),
+                            const SizedBox(width: 16),
+                            
+                            // Delete
+                            IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Colors.white),
+                                onPressed: () {
+                                    _canvasService.deleteShape(widget.roomId, selectedElement!.id);
+                                    setState(() => _selectedShapeId = null);
+                                },
+                            ),
+                            
+                            // Duplicate
+                            IconButton(
+                                icon: const Icon(Icons.copy_all_outlined, color: Colors.white), 
+                                onPressed: () {
+                                    final newId = const Uuid().v4();
+                                    _canvasService.addShape(widget.roomId, selectedElement!.copyWith(
+                                        id: newId,
+                                        x: selectedElement.x + 20,
+                                        y: selectedElement.y + 20,
+                                    ));
+                                    setState(() => _selectedShapeId = newId);
+                                },
+                            ),
+                        ],
+                    ),
+                ),
+              ),
+            );
+        }
+      );
   }
 }

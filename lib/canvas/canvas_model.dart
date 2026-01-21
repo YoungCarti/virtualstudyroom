@@ -180,3 +180,91 @@ class StickyNoteElement {
     );
   }
 }
+
+enum ShapeType {
+  rectangle,
+  circle,
+  triangle,
+  star,
+  line,
+  arrow,
+}
+
+class ShapeElement {
+  final String id;
+  final ShapeType type;
+  final double x;
+  final double y;
+  final double width;
+  final double height;
+  final Color color;
+  final double strokeWidth;
+  final bool isFilled;
+
+  ShapeElement({
+    required this.id,
+    required this.type,
+    required this.x,
+    required this.y,
+    required this.width,
+    required this.height,
+    required this.color,
+    this.strokeWidth = 2.0,
+    this.isFilled = false,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'type': type.name,
+      'x': x,
+      'y': y,
+      'width': width,
+      'height': height,
+      'color': color.value,
+      'strokeWidth': strokeWidth,
+      'isFilled': isFilled,
+    };
+  }
+
+  factory ShapeElement.fromMap(Map<String, dynamic> map) {
+    return ShapeElement(
+      id: map['id'] ?? '',
+      type: ShapeType.values.firstWhere(
+            (e) => e.name == map['type'],
+        orElse: () => ShapeType.rectangle,
+      ),
+      x: (map['x'] as num?)?.toDouble() ?? 0.0,
+      y: (map['y'] as num?)?.toDouble() ?? 0.0,
+      width: (map['width'] as num?)?.toDouble() ?? 100.0,
+      height: (map['height'] as num?)?.toDouble() ?? 100.0,
+      color: Color((map['color'] is num) ? (map['color'] as num).toInt() : 0xFF000000),
+      strokeWidth: (map['strokeWidth'] as num?)?.toDouble() ?? 2.0,
+      isFilled: map['isFilled'] ?? false,
+    );
+  }
+
+  ShapeElement copyWith({
+    String? id,
+    ShapeType? type,
+    double? x,
+    double? y,
+    double? width,
+    double? height,
+    Color? color,
+    double? strokeWidth,
+    bool? isFilled,
+  }) {
+    return ShapeElement(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      x: x ?? this.x,
+      y: y ?? this.y,
+      width: width ?? this.width,
+      height: height ?? this.height,
+      color: color ?? this.color,
+      strokeWidth: strokeWidth ?? this.strokeWidth,
+      isFilled: isFilled ?? this.isFilled,
+    );
+  }
+}

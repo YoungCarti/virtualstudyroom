@@ -109,6 +109,44 @@ class CanvasService {
         .delete();
   }
 
+  Stream<List<ShapeElement>> getShapes(String roomId) {
+    return _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('shapes')
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) => ShapeElement.fromMap(doc.data())).toList();
+    });
+  }
+
+  Future<void> addShape(String roomId, ShapeElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('shapes')
+        .doc(element.id)
+        .set(element.toMap());
+  }
+
+  Future<void> updateShape(String roomId, ShapeElement element) async {
+     await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('shapes')
+        .doc(element.id)
+        .update(element.toMap());
+  }
+
+  Future<void> deleteShape(String roomId, String elementId) async {
+      await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('shapes')
+        .doc(elementId)
+        .delete();
+  }
+
   Future<void> clearCanvas(String roomId) async {
     final batch = _firestore.batch();
     
@@ -142,6 +180,17 @@ class CanvasService {
         .get();
 
     for (var doc in noteSnapshots.docs) {
+      batch.delete(doc.reference);
+    }
+
+    // Clear shapes
+    final shapeSnapshots = await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('shapes')
+        .get();
+
+    for (var doc in shapeSnapshots.docs) {
       batch.delete(doc.reference);
     }
 
