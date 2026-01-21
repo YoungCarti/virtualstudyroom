@@ -430,7 +430,7 @@ class _ActionButton extends StatelessWidget {
   }
 }
 
-class _ClassCard extends StatelessWidget {
+class _ClassCard extends StatefulWidget {
   final String classCode;
   final String className;
   final String? lecturerId;
@@ -445,6 +445,11 @@ class _ClassCard extends StatelessWidget {
     required this.index,
   });
 
+  @override
+  State<_ClassCard> createState() => _ClassCardState();
+}
+
+class _ClassCardState extends State<_ClassCard> {
   // Gradients for cover
   static const List<LinearGradient> _gradients = [
      LinearGradient(colors: [Color(0xFFFCA5A5), Color(0xFFFECACA)], begin: Alignment.topLeft, end: Alignment.bottomRight), // Red
@@ -455,24 +460,24 @@ class _ClassCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gradient = _gradients[index % _gradients.length];
+    final gradient = _gradients[widget.index % _gradients.length];
     
-    // Simulate progress (deterministic based on code length to keep it consistent but varied)
-    final totalMaterials = 10 + (classCode.hashCode % 10); 
-    final completedMaterials = (classCode.hashCode % totalMaterials);
-    final progressColor = index % 2 == 0 ? const Color(0xFF991B1B) : const Color(0xFF10B981); // Red or Green pill bg
+    // Progress is now just a label for the total items until individual tracking is added
+    final progressColor = widget.index % 2 == 0 ? const Color(0xFF991B1B) : const Color(0xFF10B981); 
 
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
+      onTap: () async {
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => ClassDetailsPage(
-              classCode: classCode,
-              className: className,
-              isLecturer: isLecturer,
+              classCode: widget.classCode,
+              className: widget.className,
+              isLecturer: widget.isLecturer,
             ),
           ),
         );
+        // Trigger rebuild to refresh material count
+        if (mounted) setState(() {});
       },
       child: Container(
         height: 220,
@@ -514,7 +519,7 @@ class _ClassCard extends StatelessWidget {
                   Positioned(
                     bottom: 12,
                     left: 16,
-                    child: _LecturerChip(lecturerId: lecturerId),
+                    child: _LecturerChip(lecturerId: widget.lecturerId),
                   ),
                 ],
               ),
@@ -525,53 +530,66 @@ class _ClassCard extends StatelessWidget {
               flex: 2,
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            className,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                child: FutureBuilder<AggregateQuerySnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('classes')
+                      .doc(widget.classCode)
+                      .collection('materials')
+                      .where(FieldPath.documentId, isNotEqualTo: '_placeholder') 
+                      .count()
+                      .get(),
+                  builder: (context, snapshot) {
+                    final totalMaterials = snapshot.data?.count ?? 0;
+                    
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.className,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppFonts.clashGrotesk(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                '$totalMaterials materials',
+                                style: AppFonts.clashGrotesk(
+                                  color: Colors.grey[400],
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Count Badge
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: progressColor.withValues(alpha: 0.2),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: progressColor.withValues(alpha: 0.5)),
+                          ),
+                          child: Text(
+                            '$totalMaterials Items',
                             style: AppFonts.clashGrotesk(
                               color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '$totalMaterials materials',
-                            style: AppFonts.clashGrotesk(
-                              color: Colors.grey[400],
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Progress Pill
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: progressColor.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: progressColor.withValues(alpha: 0.5)),
-                      ),
-                      child: Text(
-                        '$completedMaterials/$totalMaterials',
-                        style: AppFonts.clashGrotesk(
-                          color: Colors.white,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
                         ),
-                      ),
-                    ),
-                  ],
+                      ],
+                    );
+                  }
                 ),
               ),
             ),
@@ -580,7 +598,7 @@ class _ClassCard extends StatelessWidget {
       ),
     );
   }
-}
+} // End of _ClassCard widget
 
 class _LecturerChip extends StatelessWidget {
   final String? lecturerId;
