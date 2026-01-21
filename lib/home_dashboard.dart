@@ -1387,10 +1387,12 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<int>(
-      future: _getAssignmentsCount(),
-      builder: (context, assignmentSnap) {
-        final assignmentsCount = assignmentSnap.data ?? 0;
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getDashboardStats(),
+      builder: (context, snapshot) {
+        final data = snapshot.data ?? {'assignments': 0, 'completeness': 100};
+        final assignmentsCount = data['assignments'] as int;
+        final completeness = data['completeness'] as int;
         
         return Column(
           children: [
@@ -1429,7 +1431,7 @@ class _StatsGrid extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: _StatCard(
-                    value: '100%',
+                    value: '$completeness%',
                     label: 'Completeness',
                     icon: Icons.check_circle_outline,
                     color: const Color(0xFFFFB347), // Orange
@@ -1443,26 +1445,108 @@ class _StatsGrid extends StatelessWidget {
     );
   }
 
-  Future<int> _getAssignmentsCount() async {
+  Future<Map<String, dynamic>> _getDashboardStats() async {
     try {
       final uid = FirebaseAuth.instance.currentUser?.uid;
-      if (uid == null) return 0;
+      if (uid == null) return {'assignments': 0, 'completeness': 100};
       
       final userDoc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
-      final enrolledClasses = (userDoc.data()?['enrolledClasses'] as List<dynamic>?) ?? [];
+      final enrolledClasses = List<String>.from(userDoc.data()?['enrolledClasses'] ?? []);
       
-      int total = 0;
-      for (final classCode in enrolledClasses) {
-        final assignmentsSnap = await FirebaseFirestore.instance
-            .collection('classes')
-            .doc(classCode.toString())
-            .collection('assignments')
-            .get();
-        total += assignmentsSnap.docs.length;
+      if (enrolledClasses.isEmpty) return {'assignments': 0, 'completeness': 100};
+      
+      int totalAssignments = 0;
+      int completedCount = 0;
+
+      // Process classes in parallel
+      await Future.wait(enrolledClasses.map((classCode) async {
+        try {
+          // Get Assignments for this class
+          final assignmentsSnap = await FirebaseFirestore.instance
+              .collection('classes')
+              .doc(classCode)
+              .collection('assignments')
+              .get();
+              
+          if (assignmentsSnap.docs.isEmpty) return;
+          
+          // Filter: Only include assignments due in the future
+          final now = DateTime.now();
+          final assignments = assignmentsSnap.docs.where((doc) {
+            final data = doc.data();
+            if (data['dueDate'] is Timestamp) {
+               return (data['dueDate'] as Timestamp).toDate().isAfter(now);
+            }
+            return false;
+          }).toList();
+
+          if (assignments.isEmpty) return;
+
+          totalAssignments += assignments.length; // Dart is single-threaded, += is safe after await in this context
+          
+          // Check for group assignments to fetch group ID if needed
+          String? groupId;
+          final hasGroupAssignments = assignments.any((d) => d.data()['submissionType'] == 'group');
+          
+          if (hasGroupAssignments) {
+            final groupInfo = await AssignmentService.instance.getStudentGroup(classCode, uid);
+            groupId = groupInfo?['groupId'];
+          }
+
+          // Check submissions in parallel
+          int localCompleted = 0;
+          await Future.wait(assignments.map((doc) async {
+            final data = doc.data();
+            final type = data['submissionType'] ?? 'individual';
+            final assignmentId = doc.id;
+            bool isCompleted = false;
+
+            if (type == 'group') {
+               if (groupId != null) {
+                  final sub = await FirebaseFirestore.instance
+                       .collection('classes')
+                       .doc(classCode)
+                       .collection('assignments')
+                       .doc(assignmentId)
+                       .collection('submissions')
+                       .doc(groupId)
+                       .get();
+                  if (sub.exists) isCompleted = true;
+               }
+            } else {
+               final sub = await FirebaseFirestore.instance
+                   .collection('classes')
+                   .doc(classCode)
+                   .collection('assignments')
+                   .doc(assignmentId)
+                   .collection('submissions')
+                   .doc(uid)
+                   .get();
+               if (sub.exists) isCompleted = true;
+            }
+            
+            if (isCompleted) localCompleted++;
+          }));
+          
+          completedCount += localCompleted;
+
+        } catch (e) {
+          print('Error processing class $classCode: $e');
+        }
+      }));
+      
+      int completeness = 100;
+      if (totalAssignments > 0) {
+        completeness = ((completedCount / totalAssignments) * 100).toInt();
       }
-      return total;
+
+      return {
+        'assignments': totalAssignments,
+        'completeness': completeness,
+      };
     } catch (e) {
-      return 0;
+      print('Error calculating stats: $e');
+      return {'assignments': 0, 'completeness': 100}; // Default to 100 on error? or 0? 100 keeps UI clean.
     }
   }
 }
