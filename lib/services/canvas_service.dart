@@ -35,6 +35,15 @@ class CanvasService {
         .set(stroke.toMap());
   }
 
+  Future<void> deleteStroke(String roomId, String strokeId) async {
+    await _firestore
+        .collection('rooms')
+        .doc(roomId)
+        .collection('strokes')
+        .doc(strokeId)
+        .delete();
+  }
+
   Future<void> addTextElement(String roomId, TextElement element) async {
      await _firestore
         .collection('rooms')

@@ -26,12 +26,14 @@ class Stroke {
   final List<CanvasPoint> points;
   final Color color;
   final double strokeWidth;
+  final bool isHighlight;
 
   Stroke({
     required this.id,
     required this.points,
     required this.color,
     required this.strokeWidth,
+    this.isHighlight = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -40,6 +42,7 @@ class Stroke {
       'points': points.map((p) => p.toMap()).toList(),
       'color': color.value,
       'strokeWidth': strokeWidth,
+      'isHighlight': isHighlight,
     };
   }
 
@@ -51,6 +54,7 @@ class Stroke {
           .toList(),
       color: Color(map['color'] as int),
       strokeWidth: (map['strokeWidth'] as num).toDouble(),
+      isHighlight: map['isHighlight'] ?? false,
     );
   }
 }

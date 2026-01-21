@@ -12,10 +12,14 @@ class CanvasPainter extends CustomPainter {
       if (stroke.points.isEmpty) continue;
 
       final paint = Paint()
-        ..color = stroke.color
+        ..color = stroke.isHighlight ? stroke.color.withOpacity(0.5) : stroke.color
         ..strokeCap = StrokeCap.round
         ..strokeWidth = stroke.strokeWidth
         ..style = PaintingStyle.stroke;
+      
+      if (stroke.isHighlight) {
+          paint.blendMode = BlendMode.multiply;
+      }
 
       final path = Path();
       if (stroke.points.length > 1) {

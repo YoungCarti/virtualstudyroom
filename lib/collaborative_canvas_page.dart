@@ -26,9 +26,10 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   Color _selectedColor = Colors.black;
   double _selectedStrokeWidth = 4.0;
   bool _isEraser = false;
-  bool _isPanMode = false;
+  bool _isPanMode = true; // Default to Pan Mode (View only)
   bool _isTextMode = false;
   bool _isStickyNoteMode = false;
+  bool _isHighlighter = false;
   
   String? _selectedTextElementId;
   String? _selectedStickyNoteId;
@@ -48,11 +49,14 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   void _startStroke(Offset localPosition) {
     if (_isPanMode || _isTextMode || _isStickyNoteMode) return; 
 
+    if (_isEraser) return;
+
     final newStroke = Stroke(
       id: const Uuid().v4(),
       points: [CanvasPoint(x: localPosition.dx, y: localPosition.dy)],
-      color: _isEraser ? Colors.white : _selectedColor,
+      color: _isEraser ? Colors.white : _selectedColor, // Eraser color doesn't matter if we skip stroke
       strokeWidth: _selectedStrokeWidth, 
+      isHighlight: _isHighlighter,
     );
 
     setState(() {
@@ -62,7 +66,36 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
   }
 
   void _updateStroke(Offset localPosition) {
-    if (_isPanMode || _isTextMode || _isStickyNoteMode || _currentStroke == null) return;
+    if (_isPanMode || _isTextMode || _isStickyNoteMode) return;
+
+    if (_isEraser) {
+        // Intersection Eraser Logic
+        // Check if localPosition is close to any point of any existing stroke
+        // Simple hit detection
+        final threshold = 20.0; // Hit radius
+        final strokesToDelete = <String>[];
+        
+        for (final stroke in _strokes) {
+            for (final point in stroke.points) {
+                if ((point.x - localPosition.dx).abs() < threshold && (point.y - localPosition.dy).abs() < threshold) {
+                    strokesToDelete.add(stroke.id);
+                    break; 
+                }
+            }
+        }
+
+        if (strokesToDelete.isNotEmpty) {
+             for (final id in strokesToDelete) {
+                 _canvasService.deleteStroke(widget.roomId, id);
+                 setState(() {
+                    _strokes.removeWhere((s) => s.id == id);
+                 });
+             }
+        }
+        return;
+    }
+
+    if (_currentStroke == null) return;
 
     setState(() {
       final updatedPoints = List<CanvasPoint>.from(_currentStroke!.points)
@@ -73,6 +106,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
         points: updatedPoints,
         color: _currentStroke!.color,
         strokeWidth: _currentStroke!.strokeWidth,
+        isHighlight: _currentStroke!.isHighlight,
       );
       _strokes.removeLast();
       _strokes.add(_currentStroke!);
@@ -215,6 +249,7 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                       stream: _strokesStream,
                       builder: (context, snapshot) {
                         final remoteStrokes = snapshot.data ?? [];
+                        // We also need to paint the current stroke being drawn locally or else it won't appear until end
                         return CustomPaint(
                              size: const Size(5000, 5000),
                              painter: CanvasPainter([...remoteStrokes, if (_currentStroke != null) _currentStroke!]),
@@ -299,8 +334,9 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
              ),
           ),
 
-          // Tools Menu
-          if (_selectedTextElementId == null && _selectedStickyNoteId == null)
+          // Tools Menu (Main Bottom Bar)
+          // Visible only when in Pan Mode (Default) and no element selected
+          if (_selectedTextElementId == null && _selectedStickyNoteId == null && _isPanMode)
           Positioned(
             bottom: 30,
             left: 0,
@@ -326,15 +362,8 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                      ),
                      Container(width: 1, height: 24, color: Colors.white24),
                      IconButton(
-                       icon: Icon(_isTextMode 
-                           ? Icons.text_fields 
-                           : (_isStickyNoteMode ? Icons.note_alt : Icons.add), 
-                           color: (_isTextMode || _isStickyNoteMode) ? Colors.blueAccent : Colors.white),
-                       onPressed: () {
-                           if (_isTextMode) setState(() => _isTextMode = false);
-                           else if (_isStickyNoteMode) setState(() => _isStickyNoteMode = false);
-                           else _showToolsMenu(context);
-                       },
+                       icon: const Icon(Icons.add, color: Colors.white),
+                       onPressed: () => _showToolsMenu(context),
                      ),
                   ],
                 ),
@@ -350,73 +379,80 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
           if (_selectedStickyNoteId != null)
              _buildStickyNoteToolbar(),
              
-          // Contextual Drawing Toolbar (only if not text mode and not selecting text)
-          // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
-          // Vertical Drawing Toolbar (Visible when Pen/Eraser is active)
+          // Horizontal Drawing Toolbar
           if (!_isPanMode && !_isTextMode && !_isStickyNoteMode)
             Positioned(
-              top: 100,
+              bottom: 30,
+              left: 20,
               right: 20,
-              child: Container(
-                width: 56,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(28),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                      // Pen Icon
-                      Icon(Icons.edit, color: !_isEraser ? Colors.black : Colors.grey, size: 24),
-                      const SizedBox(height: 12),
-                      
-                      // Divider
-                      Container(height: 1, width: 20, color: Colors.grey[300]),
-                      const SizedBox(height: 12),
-                      
-                      // Colors
-                      ...[Colors.black, const Color(0xFFF44336), const Color(0xFF2196F3), const Color(0xFF4CAF50)].map((color) {
-                          final isSelected = _selectedColor == color && !_isEraser;
-                          return GestureDetector(
-                             onTap: () => setState(() {
-                                 _selectedColor = color;
-                                 _isEraser = false;
-                             }),
-                             child: Padding(
-                               padding: const EdgeInsets.symmetric(vertical: 6),
-                               child: Container(
-                                 width: 24, height: 24,
-                                 decoration: BoxDecoration(
-                                    color: color,
-                                    shape: BoxShape.circle,
-                                    border: isSelected ? Border.all(color: Colors.blue, width: 2) : null,
-                                 ),
-                                 child: isSelected ? Center(child: Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))) : null,
-                               ),
+              child: Center(
+                child: Container(
+                  height: 60,
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E1E1E),
+                    borderRadius: BorderRadius.circular(30),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                        // Pen
+                        IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.white),
+                            onPressed: () => setState(() {
+                                _isEraser = false;
+                                _isHighlighter = false;
+                            }),
+                            color: (!_isEraser && !_isHighlighter) ? Colors.blueAccent : Colors.white,
+                        ),
+                        // Highlighter
+                        IconButton(
+                            icon: const Icon(Icons.brush, color: Colors.white),
+                            onPressed: () => setState(() {
+                                _isEraser = false;
+                                _isHighlighter = true;
+                            }),
+                            color: _isHighlighter ? Colors.blueAccent : Colors.white,
+                        ),
+                         // Eraser
+                        IconButton(
+                            icon: const Icon(Icons.cleaning_services_outlined, color: Colors.white),
+                            onPressed: () => setState(() {
+                                _isEraser = true;
+                                _isHighlighter = false;
+                            }),
+                             color: _isEraser ? Colors.blueAccent : Colors.white,
+                        ),
+                        
+                        Container(width: 1, height: 24, color: Colors.white24, margin: const EdgeInsets.symmetric(horizontal: 8)),
+
+                         // Colors
+                        // Current Color / Settings Trigger
+                        GestureDetector(
+                           onTap: () => _showStrokeSettings(context),
+                           child: Container(
+                             width: 28, height: 28,
+                             decoration: BoxDecoration(
+                                color: _selectedColor,
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
                              ),
-                          );
-                      }),
-                      
-                      const SizedBox(height: 12),
-                      
-                      // Eraser
-                      GestureDetector(
-                        onTap: () => setState(() => _isEraser = !_isEraser),
-                        child: Icon(Icons.cleaning_services, color: _isEraser ? Colors.blue : Colors.grey, size: 24),
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      // Close
-                      GestureDetector(
-                        onTap: () => setState(() => _isPanMode = true),
-                        child: const Icon(Icons.close, color: Colors.grey, size: 24),
-                      ),
-                  ],
+                           ),
+                        ),
+                        
+                        Container(width: 1, height: 24, color: Colors.white24, margin: const EdgeInsets.symmetric(horizontal: 8)),
+
+                        // Close (Exit Drawing Mode)
+                        IconButton(
+                            icon: const Icon(Icons.close, color: Colors.grey),
+                            onPressed: () => setState(() => _isPanMode = true),
+                        ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -520,8 +556,8 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
                                   },
                               ),
 
-                              // Duplicate
-                               IconButton(
+                               // Duplicate
+                                IconButton(
                                   icon: const Icon(Icons.copy_all_outlined, color: Colors.white), // Use outlined/square style
                                   onPressed: () {
                                        final newId = const Uuid().v4();
@@ -736,6 +772,83 @@ class _CollaborativeCanvasPageState extends State<CollaborativeCanvasPage> {
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+  void _showStrokeSettings(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E1E1E),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Container(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[600], borderRadius: BorderRadius.circular(2)))),
+                  const SizedBox(height: 24),
+                  
+                  const Text('Stroke Color', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 16,
+                    children: [Colors.black, Colors.white, const Color(0xFFF44336), const Color(0xFF2196F3), const Color(0xFF4CAF50), const Color(0xFFFFEB3B), Colors.purple, Colors.orange].map((color) {
+                      final isSelected = _selectedColor == color;
+                      return GestureDetector(
+                        onTap: () {
+                           setModalState(() => _selectedColor = color);
+                           setState(() {
+                               _selectedColor = color;
+                               _isEraser = false;
+                           });
+                        },
+                        child: Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: color,
+                            shape: BoxShape.circle,
+                            border: isSelected ? Border.all(color: Colors.white, width: 3) : Border.all(color: Colors.white24, width: 1),
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 24),
+                  
+                  const Text('Stroke Thickness', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                        const Icon(Icons.circle, size: 8, color: Colors.white70),
+                        Expanded(
+                            child: Slider(
+                                value: _selectedStrokeWidth,
+                                min: 2.0,
+                                max: 20.0,
+                                activeColor: _selectedColor == Colors.white ? Colors.grey : _selectedColor,
+                                inactiveColor: Colors.white24,
+                                onChanged: (value) {
+                                   setModalState(() => _selectedStrokeWidth = value);
+                                   setState(() => _selectedStrokeWidth = value);
+                                },
+                            ),
+                        ),
+                        const Icon(Icons.circle, size: 24, color: Colors.white70),
+                    ],
+                  ),
+                ],
+              ),
+            );
+          }
         );
       },
     );
